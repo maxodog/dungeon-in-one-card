@@ -664,7 +664,21 @@ function chooseMove(lv, st, m) {
       if (rd > bestRd || (rd === bestRd && D.dist[i] < bestCost)) { bestRd = rd; bestCost = D.dist[i]; target = i; }
     }
   }
-  if (target >= 0) return walkToward(D, me, target, m.spd, others);
+  if (target >= 0) {
+    if (D.dist[target] <= m.spd) return target;          // llega este turno
+    // No llega: gasta toda su velocidad acercándose al máximo al destino. Se elige entre todas las
+    // casillas alcanzables, no solo a lo largo de un camino, para no desperdiciar puntos de velocidad.
+    const T = dijkstra(lv, target, blocked, blocked).dist;
+    let best = me, bestT = T[me], bestR = rangeDist(lv, me, advI), bestC = 0;
+    for (let i = 0; i < N; i++) {
+      if (!free(i) || D.dist[i] > m.spd) continue;
+      const r = rangeDist(lv, i, advI);
+      if (T[i] < bestT || (T[i] === bestT && (r < bestR || (r === bestR && D.dist[i] < bestC)))) {
+        best = i; bestT = T[i]; bestR = r; bestC = D.dist[i];
+      }
+    }
+    return best;
+  }
   // 3) acercarse todo lo posible
   let best = me, bestD = rangeDist(lv, me, advI), bestC = 0;
   for (let i = 0; i < N; i++) {

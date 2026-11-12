@@ -22,3 +22,14 @@ t('muro + monstruo: diagonal abierta (el monstruo es transitable)', go([[1,0]],[
 const hb=arr([]); t('héroe: muro+muro cerrado', E.dijkstra(lv([[1,0],[0,1]]),I(0,0),hb).dist[I(1,1)]>3, true);
 t('héroe: un muro abierto', E.dijkstra(lv([[1,0]]),I(0,0),hb).dist[I(1,1)], 3);
 console.log(bad?'FALLOS '+bad:'todo bien');
+// Araña (vel 5, alc 3) en el nivel 1: no llega al alcance, pero debe gastar toda su velocidad.
+{
+  const st=E.newRun('paladin'); const m=E.LEVELS[0].mon;
+  st.adv.x=4; st.adv.y=2;
+  st.mons=[{id:1,x:1,y:0,hp:m.hp,maxHp:m.hp,spd:m.spd,atk:m.atk,def:m.def,rng:m.rng}];
+  const before=E.rangeDist(E.LEVELS[0],E.idx(1,0),E.idx(4,2));
+  E.playMonsters(st);
+  const after=E.rangeDist(E.LEVELS[0],E.idx(st.mons[0].x,st.mons[0].y),E.idx(4,2));
+  console.log('araña: distancia', before, '→', after, 'en', st.mons[0].x+','+st.mons[0].y);
+  if (after!==4) { console.log('MAL: debía quedar a 4'); process.exitCode=1; }
+}
