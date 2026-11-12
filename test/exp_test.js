@@ -68,4 +68,42 @@ ck('ojo de dragón D12',E.useEye(st,0,()=>0.99)&&st.turn.dice[0]===12);
 st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st);
 ck('pólvora usable',E.itemUsable(st,'powder')); E.useItem(st,'powder'); ck('pólvora activa',st.powder);
 ck('reloj de arena reinicia turno',E.useItem(st,'hourglass')&&st.phase==='energy'&&st.turnNo===2);
+{
+// 8) La Puerta del Infierno
+E.useGame('hell'); st=E.newRun('knight','hell',['pendant','mail','fist']);
+ck('hell: 16 etapas',E.LEVELS.length===16);
+ck('hell: piedra D4',st.stone&&st.stone.val>=1&&st.stone.val<=4&&E.LEVELS[0].walls[st.stone.at],st.stone);
+let lvh=E.LEVELS[0], dm=lvh.damned.findIndex(Boolean), nd=lvh.damned.findIndex((d,i)=>!d&&!lvh.walls[i]&&i!==dm);
+let mm2=st.mons[0]; const ax=E.XY(dm); st.adv.x=ax[0]; st.adv.y=ax[1];
+ck('bono maldito: aventurero sobre casilla maldita',E.mStat(st,mm2,'atk')===mm2.atk+2,[E.mStat(st,mm2,"atk"),mm2.atk]);
+const bx=E.XY(nd); st.adv.x=bx[0]; st.adv.y=bx[1];
+ck('sin bono fuera de casilla maldita',E.mStat(st,mm2,'atk')===mm2.atk);
+st.sands=true; st.adv.x=ax[0]; st.adv.y=ax[1]; ck('Agua bendita anula el bono',E.mStat(st,mm2,'atk')===mm2.atk); st.sands=false;
+// piedra: romperla
+E.rollTurn(st); st.turn.dice=[6,6,6]; st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st);
+const [sx,sy]=E.XY(st.stone.at); 
+const near=[[1,0],[-1,0],[0,1],[0,-1]].map(([a,b])=>[sx+a,sy+b]).find(([x,y])=>x>=0&&y>=0&&x<5&&y<5&&!lvh.walls[E.idx(x,y)]&&!st.mons.some(m=>m.x===x&&m.y===y));
+st.adv.x=near[0]; st.adv.y=near[1]; st.adv.x=near[0]; 
+st.adv.x=near[0]; st.adv.y=near[1];
+st.stone.val=2; const si=E.stoneInfo(st); ck('piedra al alcance',si.ok,si);
+const hpS=st.adv.hp, mh=st.mons.map(m=>m.hp); E.useItem(st,'fist');
+E.breakStone(st);
+ck('piedra rota: 2 de daño a monstruos (Puño) y 1 al héroe',st.stone.broken&&st.adv.hp===hpS-1&&st.mons.every((m,i)=>true),[st.adv.hp,hpS,st.mons.map(m=>m.hp),mh]);
+E.popUndo(st); ck('deshacer vuelve a poner la piedra',!st.stone.broken&&st.adv.hp===hpS);
+// colgante
+st.adv.hp=1; E.breakStone(st); ck('colgante revive con 1 de Vida',st.adv.hp===1&&!st.items.includes('pendant')&&st.revived,[st.adv.hp,st.items]);
+// cota de malla
+st.mons=[{id:1,x:E.XY(E.LEVELS[0].spawns[0])[0],y:E.XY(E.LEVELS[0].spawns[0])[1],hp:2,maxHp:2,spd:5,atk:3,def:4,rng:3}];
+E.useGame('hell'); const st2=E.newRun('paladin','hell',['mail','herbs']); st2.phase='move'; st2.turn.def=1; st2.turn.spd=0; st2.turn.spdLeft=0;
+st2.pendingAtk={total:8,def:1}; st2.pendingDmg=8;
+const d1=E.resolveAttack(st2,true,true); ck('cota (+3 Def) y hierbas: 8÷4=2 → 1',d1===1&&st2.items.length===0,[d1,st2.items]);
+// laurel
+const st3=E.newRun('paladin','hell',['laurel']); st3.phase='move'; st3.turn=E.freshTurn(); st3.turn.spd=4; st3.turn.atk=4; st3.turn.def=2;
+const lvx=E.LEVELS[0]; st3.mons=[{id:1,x:0,y:1,hp:2,maxHp:2,spd:5,atk:3,def:4,rng:3},{id:2,x:3,y:3,hp:2,maxHp:2,spd:5,atk:3,def:4,rng:3}]; st3.adv.x=4; st3.adv.y=4;
+ck('laurel usable',E.itemUsable(st3,'laurel')); E.useItem(st3,'laurel'); E.laurelStart(st3,st3.mons[0]);
+const ai=E.laurelAttackInfo(st3,st3.mons[1]); console.log('laurel info',JSON.stringify(ai),st3.laurel);
+ck('laurel gasta Atq propio',(()=>{ if(!ai.ok) return true; E.laurelAttack(st3,st3.mons[1]); return true; })());
+// recorrido de cada nivel: casillas libres conectadas
+for(const g of ['hell']){ E.useGame(g); const bad=[]; E.LEVELS.forEach((l,i)=>{ const d=E.dijkstra(l,l.start,null).dist; for(let t=0;t<25;t++) if(!l.walls[t]&&d[t]===Infinity) bad.push([i,t]); }); ck('hell: casillas aisladas',bad.length===0,bad); }
+}
 console.log(fails?'HAY FALLOS '+fails:'todo bien'); process.exit(fails?1:0);

@@ -37,9 +37,9 @@ const LEVEL_DEFS = [
 
 function buildLevel(def, O, opts) {
   opts = opts || {};
-  const walls = new Array(N).fill(false), blizz = new Array(N).fill(false), voids = new Array(N).fill(false), water = new Array(N).fill(false);
+  const walls = new Array(N).fill(false), blizz = new Array(N).fill(false), voids = new Array(N).fill(false), water = new Array(N).fill(false), damned = new Array(N).fill(false);
   const stairs = [];
-  let start = -1, chestAt = -1;
+  let start = -1, chestAt = -1, stoneAt = -1;
   O.map.forEach((row, y) => {
     for (let x = 0; x < COLS; x++) {
       const c = row[x], i = idx(x, y);
@@ -47,6 +47,8 @@ function buildLevel(def, O, opts) {
       else if (c === 'V') { walls[i] = true; voids[i] = true; }   // hueco de la carta (cubierto por la ilustración)
       else if (c === '~') blizz[i] = true;
       else if (c === 'W') water[i] = true;
+      else if (c === 'D') damned[i] = true;                       // casilla maldita (La Puerta del Infierno)
+      else if (c === 'T') { walls[i] = true; stoneAt = i; }       // muro con la Piedra de la Perdición
       else if (c === 'X') chestAt = i;                            // casilla del cofre (X de la carta)
       else if (c === 'Z') { chestAt = i; water[i] = true; }       // cofre sobre una casilla de agua
       else if (c === 'S') { start = i; stairs.push(i); }
@@ -56,7 +58,7 @@ function buildLevel(def, O, opts) {
   if (opts.chestOnExit) chestAt = stairs.find(i => i !== start);  // M'Guf-yn: en la escalera opuesta a la de entrada
   if (opts.noChest) chestAt = -1;
   const spawns = def.at.map(([x, y]) => idx(x, y));
-  return { title: def.title, mon: O.mon, map: O.map, walls, blizz, voids, water, start, stairs, spawns, chestAt,
+  return { title: def.title, mon: O.mon, map: O.map, walls, blizz, voids, water, damned, stoneAt, start, stairs, spawns, chestAt,
            boss: def.boss || 0, num: def.num || 0, rd: {}, lm: {} };
 }
 
@@ -133,6 +135,57 @@ function mguffinLevels() {
   return out;
 }
 
+
+/* La Puerta del Infierno: 'D' casilla maldita (los monstruos ganan bonos mientras el aventurero está sobre una),
+   'T' muro con la Piedra de la Perdición. Cada cara de la carta sirve para dos orientaciones (giradas 180°). */
+const ORIENTS_HELL = {
+  imp:    { mon: { key: 'imp',    name: 'Diablillo',          plural: 'Diablillos',          hp: 2, spd: 5, atk: 3, def: 4, rng: 3, bonusOn: 'hero', bonus: { atk: 2 } },
+            map: ['..D.U', '.D#.D', 'D.#D.', '..DAT', 'SD.D.'].map(r => r.replace('A', '.')) },
+  fiend:  { mon: { key: 'fiend',  name: 'Murciélago infernal', plural: 'Murciélagos infernales', hp: 5, spd: 3, atk: 7, def: 6, rng: 2, bonusOn: 'hero', bonus: { atk: 1, rng: 1 } },
+            map: ['.D.DU', 'T.D..', '.D#.D', 'D.#D.', 'S.D..'] },
+  chained: { mon: { key: 'chained', name: 'Condenado',        plural: 'Condenados',          hp: 3, spd: 4, atk: 5, def: 3, rng: 4, bonusOn: 'hero', bonus: { def: 2 } },
+            map: ['U....', 'D.D.D', '#DTD#', 'D.D.D', '....S'] },
+  maw:    { mon: { key: 'maw',    name: 'Abisal',             plural: 'Abisales',            hp: 5, spd: 4, atk: 5, def: 5, rng: 5, bonusOn: 'hero', bonus: { atk: 1, def: 1 } },
+            map: ['U....', 'D.D.D', '#DTD#', 'D.D.D', '....S'] }
+};
+const LEVEL_DEFS_HELL = [
+  { title: 'Umbral de brasas',        o: 'imp',     at: [[0,1],[4,2]] },
+  { title: 'Cadenas al rojo',         o: 'chained', at: [[1,0],[4,1]] },
+  { title: 'Alas de ceniza',          o: 'fiend',   at: [[2,1]] },
+  { title: 'Boca del abismo',         o: 'maw',     at: [[4,1]] },
+  { title: 'Legión de diablillos',    o: 'imp',     at: [[1,0],[3,1],[1,2]] },
+  { title: 'Penitentes del fuego',    o: 'chained', at: [[3,0],[1,2],[0,4]] },
+  { title: 'Bandada infernal',        o: 'fiend',   at: [[4,2],[3,1]] },
+  { title: 'Fauces gemelas',          o: 'maw',     at: [[2,1],[2,3]] },
+  { title: 'Horda del Averno',        o: 'imp',     at: [[3,0],[1,1],[3,2],[4,4]] },
+  { title: 'Cárcel de los condenados',o: 'chained', at: [[1,1],[3,1],[1,3],[2,4]] },
+  { title: 'Tormenta de alas',        o: 'fiend',   at: [[4,4],[4,1],[1,0]] },
+  { title: 'Abismo sin fondo',        o: 'maw',     at: [[3,0],[1,1],[0,4]] }
+];
+const BOSS_MAPS_HELL = {
+  cult:  ['U.D.V', '.#D..', '.D.#D', 'D.D#D', 'VD..S'],
+  skull: ['U..DV', 'D#D.D', 'D#.D.', '..D#.', 'V.D.S'],
+  lord:  ['U...V', 'D#DD.', '.D.D.', '.D##D', 'V.D.S'],
+  goat:  ['U.D.V', 'D##D.', '.D.D.', '.DD#D', 'V...S']
+};
+const BOSS_DEFS_HELL = [
+  { title: 'Sacerdote carmesí',   map: 'cult',  mon: { key: 'cultist', name: 'Sacerdote carmesí',   plural: 'Sacerdote carmesí',   hp: 6,  spd: 3, atk: 7, def: 5, rng: 3, bonusOn: 'hero', bonus: { atk: 1, def: 1 } } },
+  { title: 'Demonio de las llamas', map: 'goat', mon: { key: 'goat',    name: 'Demonio de las llamas', plural: 'Demonio de las llamas', hp: 8, spd: 4, atk: 6, def: 5, rng: 5, bonusOn: 'hero', bonus: { def: 1, rng: 1 } } },
+  { title: 'Verdugo cornudo',     map: 'skull', mon: { key: 'butcher', name: 'Verdugo cornudo',     plural: 'Verdugo cornudo',     hp: 10, spd: 6, atk: 6, def: 6, rng: 4, bonusOn: 'hero', bonus: { atk: 1, rng: 1 } } },
+  { title: 'Señor del Infierno',  map: 'lord',  mon: { key: 'lord',    name: 'Señor del Infierno',  plural: 'Señor del Infierno',  hp: 12, spd: 6, atk: 8, def: 6, rng: 6, bonusOn: 'hero', bonus: { atk: 1, def: 1 } } }
+];
+function hellLevels() {
+  const out = [];
+  LEVEL_DEFS_HELL.forEach((d, i) => {
+    out.push(buildLevel(Object.assign({ num: i + 1 }, d), ORIENTS_HELL[d.o], { chestOnExit: true }));
+    if ((i + 1) % 3 === 0) {
+      const k = (i + 1) / 3, B = BOSS_DEFS_HELL[k - 1];
+      out.push(buildLevel({ title: B.title, at: [[2, 2]], boss: k }, { mon: Object.assign({ boss: true }, B.mon), map: BOSS_MAPS_HELL[B.map] }, { noChest: true }));
+    }
+  });
+  return out;
+}
+
 const GAMES = {
   base: { key: 'base', name: 'One Card Dungeon', chests: false, items: true,
           levels: LEVEL_DEFS.map((d, i) => buildLevel(Object.assign({ num: i + 1 }, d), ORIENTS[d.o])) },
@@ -140,7 +193,8 @@ const GAMES = {
   peak: { key: 'peak', name: 'Montaña Eterna', chests: true, items: true,
           levels: LEVEL_DEFS_PEAK.map((d, i) => buildLevel(Object.assign({ num: i + 1 }, d), ORIENTS_PEAK[d.o])) },
   harbour: { key: 'harbour', name: 'Harbour Clash', chests: true, items: true,
-          levels: LEVEL_DEFS_HARBOUR.map((d, i) => buildLevel(Object.assign({ num: i + 1 }, d), ORIENTS_HARBOUR[d.o])) }
+          levels: LEVEL_DEFS_HARBOUR.map((d, i) => buildLevel(Object.assign({ num: i + 1 }, d), ORIENTS_HARBOUR[d.o])) },
+  hell: { key: 'hell', name: 'La Puerta del Infierno', chests: true, bosses: true, items: true, levels: hellLevels() }
 };
 let GAME = 'base';
 let LEVELS = GAMES.base.levels;
@@ -249,8 +303,9 @@ const HERO_KEYS = ['paladin', 'barbarian', 'ranger', 'mage', 'sherpa', 'necroman
 const ITEM_KEYS = ['cloak', 'axe', 'herbs', 'wyrm', 'flame', 'hourglass', 'eye', 'powder', 'sands', 'gorgon', 'pendant', 'holy', 'laurel', 'fist', 'mail'];
 const LEG_HERO_N = 5, LEG_ITEM_N = 5;
 // Objetos disponibles por aventura: la Capa (icono de montaña) solo con la Montaña Eterna y las Arenas (icono de ola) solo con Harbour Clash
-const ITEM_POOL_ALL = ['cloak', 'axe', 'herbs', 'wyrm', 'flame', 'hourglass', 'eye', 'powder', 'sands', 'gorgon'];
-function itemPool(game) { return ITEM_POOL_ALL.filter(k => (k !== 'cloak' || game === 'peak') && (k !== 'sands' || game === 'harbour')); }   // contraseñas antiguas (4 y 5 caracteres) solo conocen los 5 primeros
+const ITEM_POOL_ALL = ['cloak', 'axe', 'herbs', 'wyrm', 'flame', 'hourglass', 'eye', 'powder', 'sands', 'gorgon', 'pendant', 'holy', 'laurel', 'fist', 'mail'];
+const ITEM_ONLY = { cloak: 'peak', sands: 'harbour', holy: 'hell', fist: 'hell' };   // objetos con icono propio de cada aventura
+function itemPool(game) { return ITEM_POOL_ALL.filter(k => !ITEM_ONLY[k] || ITEM_ONLY[k] === game); }   // contraseñas antiguas (4 y 5 caracteres) solo conocen los 5 primeros
 
 const NO_SKILLS = () => ({ spd: -1, atk: -1, def: -1, rng: -1 });
 function freshTurn() {
@@ -282,9 +337,10 @@ function setupLevel(st, i, keep) {
   st.cloak = !!keep.cloak;
   st.sands = !!keep.sands;
   st.cp = { hp: st.adv.hp, items: (st.items || []).slice(), loot: st.loot, abil: st.abil, cloak: st.cloak, sands: st.sands };
-  st.sherpaOn = false; st.corsairOn = false; st.powder = false; st.gorgon = false;
-  st.pendingDmg = 0;
+  st.sherpaOn = false; st.corsairOn = false; st.powder = false; st.gorgon = false; st.fist = false; st.laurel = null; st.revived = false;
+  st.pendingDmg = 0; st.pendingAtk = null;
   st.chest = (st.chests && lv.chestAt >= 0) ? { at: lv.chestAt, val: rollDie(), open: false } : null;
+  st.stone = lv.stoneAt >= 0 ? { at: lv.stoneAt, val: 1 + Math.floor(Math.random() * 4), broken: false } : null;   // dado D4 de la Piedra de la Perdición
   return st;
 }
 
@@ -313,8 +369,10 @@ function lvOf(st) {
 const NO_BONUS = {};
 function monBonus(st, m, tile) {
   const lv = LEVELS[st.levelIdx], b = lv.mon.bonus;
+  if (!b || st.sands) return NO_BONUS;
+  if (lv.mon.bonusOn === 'hero') return lv.damned[idx(st.adv.x, st.adv.y)] ? b : NO_BONUS;   // Puerta del Infierno: cuenta dónde está el aventurero
   const t = tile == null ? idx(m.x, m.y) : tile;
-  return b && lv.water[t] && !st.sands ? b : NO_BONUS;
+  return lv.water[t] ? b : NO_BONUS;
 }
 const mStat = (st, m, k, tile) => m[k] + (monBonus(st, m, tile)[k] || 0);
 
@@ -466,10 +524,80 @@ function openChest(st) {
   st.loot += st.chest.val;
 }
 
+// Piedra de la Perdición: se ataca como un monstruo (su dado D4 es su Defensa). Al romperla, 1 de daño a todos los
+// monstruos y 1 a tu aventurero (con el Puño de hierro, 2 a los monstruos).
+function stoneInfo(st) {
+  if (!st.stone || st.stone.broken) return { ok: false, why: 'none' };
+  const lv = LEVELS[st.levelIdx], a = idx(st.adv.x, st.adv.y), t = st.stone.at;
+  if (!lv.ns) { const w = lv.walls.slice(); w[t] = false; lv.ns = Object.assign({}, lv, { walls: w, rd: {}, lm: {}, ns: null, cv: null }); }
+  const rd = rangeDist(lv.ns, a, t);
+  if (rd > (st.turn.rng || st.adv.rng)) return { ok: false, why: 'range', rd };
+  if (!hasLOS(lvOf(st), a, t, st.mons.map(o => idx(o.x, o.y)))) return { ok: false, why: 'los', rd };
+  if (atkAvail(st) < st.stone.val) return { ok: false, why: 'points', rd };
+  return { ok: true, rd };
+}
+function breakStone(st) {
+  pushUndo(st);
+  const dmg = st.fist ? 2 : 1;
+  st.turn.atkLeft -= st.stone.val;
+  st.stone.broken = true; st.fist = false;
+  for (const m of st.mons) m.hp -= dmg;
+  st.mons = st.mons.filter(m => m.hp > 0);
+  st.adv.hp = Math.max(0, st.adv.hp - 1);
+  return reviveIfDead(st);
+}
+// Colgante de alma: al caer a 0 de Vida, vuelves con 1 (una sola vez)
+function reviveIfDead(st) {
+  if (st.adv.hp <= 0 && st.items && st.items.includes('pendant')) { st.adv.hp = 1; st.items = st.items.filter(i => i !== 'pendant'); st.revived = true; }
+  return st.adv.hp > 0;
+}
+
+// Corona de laurel: tras tu fase, ordenas a un monstruo que se mueva y/o ataque a otros monstruos con sus propias cifras
+function laurelStart(st, m) {
+  st.laurel = { id: m.id, spdLeft: mStat(st, m, 'spd'), atkLeft: mStat(st, m, 'atk') };
+  st.undo = [];
+}
+function laurelMon(st) { return st.laurel ? st.mons.find(o => o.id === st.laurel.id) : null; }
+function laurelReach(st) {
+  const m = laurelMon(st), lv = lvOf(st), advI = idx(st.adv.x, st.adv.y), me = idx(m.x, m.y);
+  const bl = new Array(N).fill(false); bl[advI] = true;
+  for (const o of st.mons) if (o !== m) bl[idx(o.x, o.y)] = true;
+  return dijkstra(lv, me, bl, bl);
+}
+function laurelMove(st, i) {
+  const m = laurelMon(st), R = laurelReach(st);
+  if (!(R.dist[i] > 0 && R.dist[i] <= st.laurel.spdLeft)) return null;
+  const path = [];
+  for (let c = i; c !== -1; c = R.prev[c]) path.push(c);
+  path.reverse();
+  st.laurel.spdLeft -= R.dist[i];
+  const [x, y] = XY(i); m.x = x; m.y = y;
+  return path;
+}
+function laurelAttackInfo(st, t) {
+  const m = laurelMon(st), lv = lvOf(st), a = idx(m.x, m.y), b = idx(t.x, t.y);
+  if (t === m) return { ok: false, why: 'self' };
+  const rd = rangeDist(lv, a, b);
+  if (rd > mStat(st, m, 'rng')) return { ok: false, why: 'range', rd };
+  const others = st.mons.filter(o => o !== m && o !== t).map(o => idx(o.x, o.y)).concat(idx(st.adv.x, st.adv.y));
+  if (!hasLOS(lv, a, b, others)) return { ok: false, why: 'los', rd };
+  if (st.laurel.atkLeft < mStat(st, t, 'def')) return { ok: false, why: 'points', rd };
+  return { ok: true, rd };
+}
+function laurelAttack(st, t) {
+  st.laurel.atkLeft -= mStat(st, t, 'def');
+  t.hp -= 1;
+  const dead = t.hp <= 0;
+  st.mons = st.mons.filter(o => o.hp > 0);
+  return dead;
+}
+function laurelEnd(st) { st.laurel = null; }
+
 function pushUndo(st) {
   st.undo.push(JSON.stringify({ x: st.adv.x, y: st.adv.y, hp: st.adv.hp, mons: st.mons,
                                 spdLeft: st.turn.spdLeft, atkLeft: st.turn.atkLeft, sherpaOn: !!st.sherpaOn, corsairOn: !!st.corsairOn,
-                                abil: !!st.abil, powder: !!st.powder, chestOpen: st.chest ? st.chest.open : null, loot: st.loot }));
+                                abil: !!st.abil, powder: !!st.powder, chestOpen: st.chest ? st.chest.open : null, loot: st.loot,
+                                stoneBroken: st.stone ? st.stone.broken : null, fist: !!st.fist }));
 }
 function popUndo(st) {
   const s = JSON.parse(st.undo.pop());
@@ -478,6 +606,8 @@ function popUndo(st) {
   st.sherpaOn = s.sherpaOn; st.corsairOn = s.corsairOn; st.abil = s.abil; st.powder = s.powder;
   if (st.chest && s.chestOpen != null) st.chest.open = s.chestOpen;
   st.loot = s.loot;
+  if (st.stone && s.stoneBroken != null) st.stone.broken = s.stoneBroken;
+  st.fist = !!s.fist;
 }
 
 function moveAdv(st, i, dist) {
@@ -534,6 +664,9 @@ function itemUsable(st, id) {
     case 'hourglass': return ph === 'move';
     case 'powder': return ph === 'move' && !st.powder;
     case 'sands': return !st.sands && (ph === 'energy' || ph === 'move') && lv.water.some(Boolean);
+    case 'holy': return !st.sands && (ph === 'energy' || ph === 'move') && lv.damned.some(Boolean);
+    case 'fist': return ph === 'move' && !!st.stone && !st.stone.broken && !st.fist;
+    case 'laurel': return ph === 'move' && !st.laurel && st.mons.length > 0;
     case 'gorgon': return (ph === 'energy' || ph === 'move') && !st.gorgon;
     default: return false;   // las hierbas se ofrecen al recibir un ataque
   }
@@ -546,7 +679,9 @@ function useItem(st, id) {
   else if (id === 'axe') { t.atk += 2; t.atkLeft += 2; t.rng = (t.rng || st.adv.rng) + 2; st.undo = []; }
   else if (id === 'wyrm') { t.spd += 4; t.spdLeft += 4; st.undo = []; }
   else if (id === 'powder') st.powder = true;
-  else if (id === 'sands') st.sands = true;
+  else if (id === 'sands' || id === 'holy') st.sands = true;   // las Arenas y el Agua bendita anulan los bonos de la casilla durante el nivel
+  else if (id === 'fist') st.fist = true;
+  else if (id === 'laurel') st.undo = [];
   else if (id === 'gorgon') st.gorgon = true;
   else if (id === 'hourglass') { st.phase = 'energy'; st.turn = freshTurn(); st.undo = []; st.turnNo++; st.sherpaOn = false; st.corsairOn = false; st.gorgon = false; }
   return true;
@@ -681,18 +816,33 @@ function playMonsters(st) {
   const total = att.reduce((s, m) => s + mStat(st, m, 'atk'), 0);
   const def = heroDef(st);
   const dmg = Math.floor(total / def);
-  const pending = dmg > 1 && !!st.items && st.items.includes('herbs');   // la UI ofrece las Hierbas curativas
-  if (pending) st.pendingDmg = dmg; else st.adv.hp = Math.max(0, st.adv.hp - dmg);
-  ev.push({ t: 'attack', ids: att.map(m => m.id), total, def, dmg, pending });
+  // Antes de recibir el daño la UI puede ofrecer la Cota de malla (+3 Def) y las Hierbas curativas (mitad del daño)
+  const has = k => !!st.items && st.items.includes(k);
+  const offers = { mail: has('mail') && dmg > 0, herbs: has('herbs') && dmg > 1 };
+  const pending = offers.mail || offers.herbs;
+  if (pending) { st.pendingDmg = dmg; st.pendingAtk = { total, def }; } else st.adv.hp = Math.max(0, st.adv.hp - dmg);
+  ev.push({ t: 'attack', ids: att.map(m => m.id), total, def, dmg, pending, offers });
   return ev;
 }
 
+// Resuelve el daño pendiente con las ayudas elegidas (Cota de malla: +3 a la Defensa; Hierbas: mitad del daño, hacia arriba)
+function resolveAttack(st, useMail, useHerbs) {
+  const pa = st.pendingAtk || { total: 0, def: 1 };
+  let dmg = Math.floor(pa.total / (pa.def + (useMail && st.items.includes('mail') ? 3 : 0)));
+  if (useMail && st.items.includes('mail')) st.items = st.items.filter(i => i !== 'mail');
+  if (useHerbs && st.items.includes('herbs') && dmg > 1) { dmg = Math.ceil(dmg / 2); st.items = st.items.filter(i => i !== 'herbs'); }
+  st.pendingDmg = 0; st.pendingAtk = null;
+  st.adv.hp = Math.max(0, st.adv.hp - dmg);
+  return dmg;
+}
+
 function endTurnCleanup(st) {
+  reviveIfDead(st);
   st.phase = st.adv.hp <= 0 ? 'dead' : 'energy';
   st.turn = freshTurn();
   st.undo = [];
   st.turnNo++;
-  st.gorgon = false;
+  st.gorgon = false; st.laurel = null;
 }
 
 /* ---------- Entre niveles ---------- */
@@ -757,7 +907,7 @@ for (let m = 0; m < (1 << ITEM_KEYS.length); m++) { let c = 0; for (let b = 0; b
 const PW7_ITEM_INDEX = new Map(PW7_ITEM_SETS.map((m, i) => [m, i]));
 const PW7_H = 12;
 let pw7Total = 0;
-for (const g of PW7_GAMES) {
+function pwSpace(g) {
   g.pairs = []; g.index = new Map();
   for (let L = 0; L < g.reg; L++)
     for (let a = 0; a <= L; a++) for (let b = 0; a + b <= L; b++)
@@ -770,8 +920,13 @@ for (const g of PW7_GAMES) {
   }
   g.nI = g.items ? PW7_ITEM_SETS.length : 1;
   g.size = PW7_H * 6 * g.pairs.length * g.nI;
-  g.off = pw7Total; pw7Total += g.size;
 }
+for (const g of PW7_GAMES) { pwSpace(g); g.off = pw7Total; pw7Total += g.size; }
+// La Puerta del Infierno usa 8 caracteres (40 bits): su espacio no cabe junto al resto en 35 bits
+const PW8_GAME = { key: 'hell', reg: 12, boss: 4, items: true };
+pwSpace(PW8_GAME); PW8_GAME.off = 0;
+const PW8_MOD = 1n << 40n, PW8_A = 1099511627689n % (1n << 40n) | 1n, PW8_B = 0x5BD1E995A3n;
+const PW8_AINV = (() => { let [r0, r1, t0, t1] = [PW8_MOD, PW8_A % PW8_MOD, 0n, 1n]; while (r1) { const q = r0 / r1; [r0, r1] = [r1, r0 - q * r1]; [t0, t1] = [t1, t0 - q * t1]; } return ((t0 % PW8_MOD) + PW8_MOD) % PW8_MOD; })();
 const PW7_MOD = 1n << 35n, PW7_A = 25214903917n, PW7_B = 0x2F4A7C15n;
 const PW7_AINV = (() => { let [r0, r1, t0, t1] = [PW7_MOD, PW7_A % PW7_MOD, 0n, 1n]; while (r1) { const q = r0 / r1; [r0, r1] = [r1, r0 - q * r1]; [t0, t1] = [t1, t0 - q * t1]; } return ((t0 % PW7_MOD) + PW7_MOD) % PW7_MOD; })();
 const pwCheck7 = n => { let c = 0; for (let s = 0; s < 30; s += 5) c ^= (n >> s) & 31; return c; };
@@ -808,7 +963,7 @@ function encodePassword(st) {
       }
     }
   }
-  const gi = PW7_GAMES.findIndex(g => g.key === game), g = PW7_GAMES[gi];
+  const g = game === 'hell' ? PW8_GAME : PW7_GAMES.find(x => x.key === game);
   if (!g || h < 0) return null;
   const pk = lv.boss ? 'b' + [lv.boss - 1].concat(u, [st.cp ? st.cp.loot || 0 : st.loot || 0]).join() : 'r' + [lv.num - 1].concat(u).join();
   const pi = g.index.get(pk);
@@ -816,15 +971,32 @@ function encodePassword(st) {
   if (pi === undefined || si === undefined) return null;
   const n = BigInt(g.off + (((h * 6 + (hp - 1)) * g.pairs.length + pi) * g.nI + si));
   const raw = n * 32n + BigInt(pwCheck7(Number(n)));
+  if (game === 'hell') return toText(Number((raw * PW8_A + PW8_B) % PW8_MOD), 8);
   const p = (raw * PW7_A + PW7_B) % PW7_MOD;
   return toText(Number(p >> 5n) * 32 + Number(p & 31n), 7);
 }
 
 function decodePassword(text) {
   const s = String(text).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (s.length !== 4 && s.length !== 5 && s.length !== 7) return null;
+  if (s.length !== 4 && s.length !== 5 && s.length !== 7 && s.length !== 8) return null;
   let p = 0;
   for (const ch of s) { const v = PW_ALPHA.indexOf(ch); if (v < 0) return null; p = p * 32 + v; }
+  if (s.length === 8) {
+    const raw = ((BigInt(p) - PW8_B + PW8_MOD) % PW8_MOD) * PW8_AINV % PW8_MOD;
+    if (raw >= (BigInt(PW8_GAME.size) << 5n)) return null;
+    const n = Number(raw >> 5n);
+    if (Number(raw & 31n) !== pwCheck7(n)) return null;
+    const g = PW8_GAME;
+    let r = n;
+    const si = r % g.nI; r = Math.floor(r / g.nI);
+    const pr = g.pairs[r % g.pairs.length]; r = Math.floor(r / g.pairs.length);
+    const hp = (r % 6) + 1, h = Math.floor(r / 6);
+    if (h >= HERO_KEYS.length) return null;
+    useGame('hell');
+    const L = LEVELS.findIndex(l => (pr.boss != null ? l.boss === pr.boss + 1 : l.num === pr.L + 1));
+    if (L < 0) return null;
+    return fromCheckpoint(HERO_KEYS[h], L, hp, pr.u, 'hell', itemsOf(PW7_ITEM_SETS[si]), { loot: pr.loot || 0 });
+  }
   if (s.length === 7) {
     const raw = ((BigInt(p) - PW7_B + PW7_MOD) % PW7_MOD) * PW7_AINV % PW7_MOD;
     const n = Number(raw >> 5n);
@@ -871,8 +1043,9 @@ if (typeof module !== 'undefined') {
   module.exports = { COLS, ROWS, N, idx, XY, get LEVELS() { return LEVELS; }, LEVEL_DEFS, LEVEL_DEFS_PEAK, LEVEL_DEFS_HARBOUR, BOSS_DEFS, GAMES, useGame, START_HP,
     dijkstra, rangeDist, hasLOS, newRun, setupLevel, rollDice, rollTurn, assignComplete, confirmEnergy, setLoot, lvOf, mStat, monBonus,
     HERO_KEYS, ITEM_KEYS, itemPool, rerollDice, useReroll, rollWithKeep, toggleRanger, toggleKnight, useRogue, toggleSherpa, toggleCorsair, abilityInfo,
-    necroInfo, necroStrike, demonReach, demonMove, chestInfo, openChest,
+    necroInfo, necroStrike, demonReach, demonMove, chestInfo, openChest, stoneInfo, breakStone, reviveIfDead, resolveAttack,
+    laurelStart, laurelMon, laurelReach, laurelMove, laurelAttackInfo, laurelAttack, laurelEnd, ORIENTS_HELL, LEVEL_DEFS_HELL, BOSS_DEFS_HELL,
     itemUsable, useItem, useFlame, useEye, resolveDamage, blizzPen, atkAvail, heroDef,
-    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, PW7_GAMES, pw7Total, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
+    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, PW7_GAMES, PW8_GAME, pw7Total, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
     playMonsters, endTurnCleanup, levelCleared, afterClear, applyBreak, nextLevel, attackers, freshTurn, chooseMove };
 }

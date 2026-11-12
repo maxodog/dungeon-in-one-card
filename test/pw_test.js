@@ -27,14 +27,14 @@ const old=E.decodePassword('DAY3'); ck('DAY3',old&&old.hero==='paladin'&&old.lev
 let seen7=new Map(), n7=0, bad7=0; const seenS=new Set();
 function check7(st){
   n7++; const pw=E.encodePassword(st); const items=st.cp.items.slice().sort((a,b)=>E.ITEM_KEYS.indexOf(a)-E.ITEM_KEYS.indexOf(b));
-  if(!pw||pw.length!==7){bad7++;console.log('sin contraseña',st.game,st.hero,st.levelIdx,pw);return;}
+  if(!pw||pw.length!==(st.game==='hell'?8:7)){bad7++;console.log('sin contraseña',st.game,st.hero,st.levelIdx,pw);return;}
   const sk=[st.game,st.hero,st.levelIdx,st.adv.hp,st.adv.spd,st.adv.atk,st.adv.def,st.adv.rng,items.join(),st.loot||0].join('|');
   if(seenS.has(sk)){n7--;return;} seenS.add(sk);
   if(seen7.has(pw)){bad7++;console.log('colisión',pw);return;} seen7.set(pw,1);
   if(!same(E.decodePassword(pw),st,items)){bad7++;console.log('no coincide',pw,st.game,st.hero,st.levelIdx);}
 }
 const ik=E.ITEM_KEYS;
-for(const g of E.PW7_GAMES){ 
+for(const g of [...E.PW7_GAMES,E.PW8_GAME]){ 
   const heroes=E.HERO_KEYS;
   for(const hero of heroes){
     E.useGame(g.key);
@@ -49,7 +49,7 @@ for(const g of E.PW7_GAMES){
           E.setupLevel(st,L,lv.boss?{loot:(hp+L)%7}:null);
           // base/hasta héroes originales solo usan 7 car. cuando no entran en el formato antiguo
           const pw=E.encodePassword(st);
-          if(pw&&pw.length!==7) continue;   // formato antiguo, ya validado arriba
+          if(pw&&pw.length!==7&&pw.length!==8) continue;   // formato antiguo, ya validado arriba
           check7(st);
         }
       }
@@ -60,8 +60,8 @@ console.log('7 caracteres:',n7,'estados, únicos',seen7.size,'errores',bad7); ck
 console.log('espacio 7 car.:',E.pw7Total.toLocaleString(),'de',(2**30).toLocaleString());
 // aleatorias
 let ok4=0,ok5=0,ok7=0,T=200000;
-for(const [len,fn] of [[4,()=>ok4++],[5,()=>ok5++],[7,()=>ok7++]]) for(let i=0;i<T;i++){let s='';for(let j=0;j<len;j++)s+=A[Math.floor(Math.random()*32)]; if(E.decodePassword(s))fn();}
-console.log('aleatorias válidas 4:',(100*ok4/T).toFixed(1)+'% | 5:',(100*ok5/T).toFixed(1)+'% | 7:',(100*ok7/T).toFixed(2)+'%');
+let ok8=0; for(const [len,fn] of [[4,()=>ok4++],[5,()=>ok5++],[7,()=>ok7++],[8,()=>ok8++]]) for(let i=0;i<T;i++){let s='';for(let j=0;j<len;j++)s+=A[Math.floor(Math.random()*32)]; if(E.decodePassword(s))fn();}
+console.log('aleatorias válidas 4:',(100*ok4/T).toFixed(1)+'% | 5:',(100*ok5/T).toFixed(1)+'% | 7:',(100*ok7/T).toFixed(2)+'% | 8:',(100*ok8/T).toFixed(2)+'%');
 ck('inválidas',E.decodePassword('0000')===null&&E.decodePassword('ABC')===null&&E.decodePassword('ABCDEF')===null&&E.decodePassword('ABCDEFGH')===null);
 console.log(fails?'HAY FALLOS '+fails:'todo bien');
 process.exit(fails?1:0);

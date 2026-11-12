@@ -5,7 +5,8 @@
   const E = { newRun, rollTurn, assignComplete, confirmEnergy, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo, playMonsters, endTurnCleanup, levelCleared, applyBreak, nextLevel,
     rerollDice, useReroll, rollWithKeep, toggleRanger, toggleKnight, useRogue, toggleCorsair, abilityInfo, encodePassword, decodePassword, retryLevel,
     toggleSherpa, itemUsable, useItem, useFlame, useEye, resolveDamage, blizzPen, atkAvail, heroDef, useGame, afterClear, lvOf, mStat, itemPool,
-    chestInfo, openChest, setLoot, necroInfo, necroStrike, demonReach, demonMove };
+    chestInfo, openChest, setLoot, necroInfo, necroStrike, demonReach, demonMove,
+    stoneInfo, breakStone, resolveAttack, laurelStart, laurelMon, laurelReach, laurelMove, laurelAttackInfo, laurelAttack, laurelEnd };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const SAVE_KEY = 'dioc-run-v3', BEST_KEY = 'dioc-best-v1';
   const svg = inner => `<svg viewBox="0 0 32 32" aria-hidden="true">${inner}</svg>`;
@@ -36,6 +37,18 @@
     drake: svg(`<path d="M16 8l-5-5-1 7L3 8l5 7-3 4 7 1 4 7 4-7 7-1-3-4 5-7-7 2-1-7z" ${F}/><circle cx="13.500" cy="14" r="1.300" ${S}/><circle cx="18.500" cy="14" r="1.300" ${S}/><path d="M13 19l3 2 3-2M16 8v4"/>`),
     mguf: svg(`<path d="M5 12 3 4l6 4 4-6 3 5 3-5 4 6 6-4-2 8z" ${F}/><path d="M7 12h18"/><path d="M8 12v8c0 5 3 9 8 10 5-1 8-5 8-10v-8" ${F}/><path d="M11 17l4 2M21 17l-4 2"/><circle cx="12.500" cy="19" r="1" ${S}/><circle cx="19.500" cy="19" r="1" ${S}/><path d="M12 25l2 2 2-2 2 2 2-2"/>`)
   };
+  Object.assign(ICONS, {
+    imp: svg(`<path d="M8 12 5 3l8 5M24 12l3-9-8 5"/><path d="M5 18c-3-1-3-5-2-7l5 3M27 18c3-1 3-5 2-7l-5 3" ${F}/><circle cx="16" cy="17" r="8" ${F}/><path d="M11 15l3 1.500M21 15l-3 1.500"/><circle cx="13" cy="17" r="1" ${S}/><circle cx="19" cy="17" r="1" ${S}/><path d="M12 22q4 3 8 0M16 25c0 3 3 4 5 2"/>`),
+    fiend: svg(`<path d="M16 8c-3-4-8-5-13-3 2 2 2 5 1 8 3-2 6-1 8 2 1-2 2-4 4-7zM16 8c3-4 8-5 13-3-2 2-2 5-1 8-3-2-6-1-8 2-1-2-2-4-4-7z" ${F}/><ellipse cx="16" cy="17" rx="4" ry="6" ${F}/><path d="M13 12l-2-5M19 12l2-5"/><circle cx="14.500" cy="15" r="1" ${S}/><circle cx="17.500" cy="15" r="1" ${S}/><path d="M16 23c0 4 3 5 6 4"/>`),
+    chained: svg(`<circle cx="16" cy="9" r="5" ${F}/><circle cx="14" cy="8.500" r="1" ${S}/><circle cx="18" cy="8.500" r="1" ${S}/><path d="M12 15c-3 2-3 8-2 12h12c1-4 1-10-2-12M10 17 5 20M22 17l5 3M13 20h6M5 20v6M27 20v6"/><circle cx="5" cy="28" r="1.500"/><circle cx="27" cy="28" r="1.500"/>`),
+    maw: svg(`<path d="M3 20c0-9 5-15 13-15s13 6 13 15z" ${F}/><ellipse cx="16" cy="19" rx="6" ry="7" style="fill:var(--card)"/><path d="M11 17l2 2 2-3 2 3 2-2M11 22l2-2 3 3 3-3 2 2"/><path d="M7 7 4 2M25 7l3-5M4 22l-2 6M28 22l2 6"/>`),
+    cultist: svg(`<path d="M16 3c-5 1-8 6-8 11v14h16V14c0-5-3-10-8-11z" ${F}/><path d="M11 12c1-2 3-3 5-3s4 1 5 3v5c-1 2-3 3-5 3s-4-1-5-3z" style="fill:var(--card)"/><circle cx="14" cy="14" r="1.100" ${S}/><circle cx="18" cy="14" r="1.100" ${S}/><path d="M8 20h16M26 4v10M24 4c0 2 4 2 4 0"/>`),
+    goat: svg(`<path d="M9 12 5 3l7 4M23 12l4-9-7 4"/><path d="M8 13h16l-2 10-6 6-6-6z" ${F}/><path d="M11 16l4 1.500M21 16l-4 1.500"/><circle cx="12.500" cy="19" r="1" ${S}/><circle cx="19.500" cy="19" r="1" ${S}/><path d="M13 24l3 2 3-2M16 29c-3-3-1-6 0-8 1 2 3 5 0 8z" ${F}/>`),
+    butcher: svg(`<path d="M7 11 4 3l6 3M25 11l3-8-6 3"/><path d="M8 12c0-5 3-8 8-8s8 3 8 8v6c0 5-3 9-8 9s-8-4-8-9z" ${F}/><circle cx="13" cy="14" r="2" ${S}/><circle cx="19" cy="14" r="2" ${S}/><path d="M12 22h8M14 20v4M18 20v4M4 14l-1 14M3 17h4"/>`),
+    lord: svg(`<path d="M6 12 3 2l8 6M26 12l3-10-8 6"/><path d="M16 4l-3 6M16 4l3 6" /><path d="M7 11h18v8c0 5-4 9-9 11-5-2-9-6-9-11z" ${F}/><path d="M10 15l4 2M22 15l-4 2"/><circle cx="12.500" cy="18" r="1.300" ${S}/><circle cx="19.500" cy="18" r="1.300" ${S}/><path d="M12 24l2 2 2-2 2 2 2-2M28 8v22M26 8c0 3 4 3 4 0"/>`)
+  });
+  const ICON_CURSE = svg(`<path d="M16 6c5-1 10 3 9 8-1 6-8 8-11 4-3-3-1-8 3-8 3 0 5 3 3 5"/><circle cx="16" cy="16" r="2" ${S}/><path d="M7 25c4 3 12 3 16 0"/>`);
+  const ICON_STONE = svg(`<path d="M16 5l8 5v12l-8 5-8-5V10z" ${F}/><path d="M16 5v22M8 10l16 12M24 10 8 22"/>`);
   const ICON_CHEST = svg(`<path d="M4 14c0-5 5-8 12-8s12 3 12 8z" ${F}/><rect x="4" y="14" width="24" height="12" rx="1.500" ${F}/><path d="M4 14h24M14 14v5h4v-5"/><circle cx="16" cy="20" r="1" ${S}/>`);
   const ICON_WAVE = svg(`<path d="M3 11q3.500-4 7 0t7 0 7 0 5 0M3 18q3.500-4 7 0t7 0 7 0 5 0M3 25q3.500-4 7 0t7 0 7 0 5 0"/>`);
   const ICON_ADV = svg(`<path d="M16 3 6 6v9c0 7 4 11 10 14 6-3 10-7 10-14V6z" ${F}/><path d="M16 9v13M11 13h10"/>`);
@@ -82,6 +95,11 @@
     eye: svg(`<path d="M16 3 28 11 24 27H8L4 11z" ${F}/><path d="M7 16c4-5 14-5 18 0-4 5-14 5-18 0z"/><circle cx="16" cy="16" r="2.500" ${S}/>`),
     powder: svg(`<path d="M8 12c0-3 4-4 8-4s8 1 8 4v12c0 3-4 4-8 4s-8-1-8-4z" ${F}/><path d="M8 12c0 3 4 4 8 4s8-1 8-4M8 19c0 3 4 4 8 4s8-1 8-4M24 8l3-4M27 4l1 3 3-1"/>`),
     sands: svg(`<path d="M6 4h20v24H6z" ${F}/><path d="M6 12q5-3 10 0t10 0M6 19q5-3 10 0t10 0"/><path d="M10 23l5 2 6-2"/>`),
+    pendant: svg(`<path d="M7 5c0 9 4 12 9 12s9-3 9-12" /><path d="M16 17c-4-3-7 1-4 4l4 5 4-5c3-3 0-7-4-4z" ${F}/>`),
+    holy: svg(`<path d="M13 3h6v5h-6z" ${F}/><path d="M16 1v8M13 4h6"/><path d="M13 8v4c-5 2-7 6-7 10a10 10 0 0 0 20 0c0-4-2-8-7-10V8" ${F}/><path d="M10 21h12"/>`),
+    laurel: svg(`<path d="M16 28c-7-1-11-8-9-17M16 28c7-1 11-8 9-17"/><path d="M7 11c3 0 4 3 3 5-3 0-4-3-3-5zM9 17c3 0 5 3 4 6-3 0-5-3-4-6zM25 11c-3 0-4 3-3 5 3 0 4-3 3-5zM23 17c-3 0-5 3-4 6 3 0 5-3 4-6z" ${F}/>`),
+    fist: svg(`<path d="M9 14V8c0-2 3-2 3 0 0-2 3-2 3 0 0-2 3-2 3 0 0-2 3-1 3 1v8c0 5-2 8-5 9v3H11v-4c-3-1-5-4-5-8 0-3 3-3 3-1z" ${F}/><path d="M9 14v3M12 8v6M15 8v6M18 8v6"/>`),
+    mail: svg(`<path d="M10 4 5 8l-3 6 5 2v12h18V16l5-2-3-6-5-4c-1 3-3 4-6 4s-5-1-6-4z" ${F}/><path d="M9 20h14M9 24h14"/>`),
     gorgon: svg(`<circle cx="16" cy="17" r="7" ${F}/><circle cx="13.500" cy="16" r="1.300" ${S}/><circle cx="18.500" cy="16" r="1.300" ${S}/><path d="M13 21c2 1.500 4 1.500 6 0M16 10C14 5 8 5 6 9s2 6 5 5M16 10c2-5 8-5 10-1s-2 6-5 5M9 20c-4 1-5 5-3 8M23 20c4 1 5 5 3 8M14 24c-1 3-3 4-3 5M18 24c1 3 3 4 3 5"/>`)
   };
   const ITEMS = {
@@ -94,10 +112,16 @@
     eye: { name: 'Ojo de dragón', short: 'Ojo', txt: 'En la fase de Energía, tira un D12 en lugar de un D6 y asígnalo a una habilidad como un dado normal.' },
     powder: { name: 'Pólvora negra', short: 'Pólvora', txt: 'Durante tu ataque, el daño a un monstruo se extiende a todos los demás monstruos, aunque estén fuera de Alcance o de visión.' },
     sands: { name: 'Arenas ocultas', short: 'Arenas', txt: 'Durante todo un nivel, ignora las casillas de agua para las mejoras de los monstruos.' },
-    gorgon: { name: 'Cabeza de Gorgona', short: 'Gorgona', txt: 'Durante un turno, todos los monstruos se saltan su fase de Movimiento.' }
+    gorgon: { name: 'Cabeza de Gorgona', short: 'Gorgona', txt: 'Durante un turno, todos los monstruos se saltan su fase de Movimiento.' },
+    pendant: { name: 'Colgante de alma', short: 'Colgante', txt: 'Vuelves a la vida con 1 de Vida.' },
+    holy: { name: 'Agua bendita', short: 'Agua', txt: 'Durante todo un nivel, ignora las casillas malditas para las mejoras de los monstruos.' },
+    laurel: { name: 'Corona de laurel', short: 'Corona', txt: 'Tras tu fase de aventurero, ordena a un monstruo que se mueva y ataque a otros monstruos con sus propias cifras. Luego siguen las fases normales de los monstruos.' },
+    fist: { name: 'Puño de hierro', short: 'Puño', txt: 'Cuando rompas la Piedra de la Perdición, haces 2 de daño a todos los monstruos y 1 a tu aventurero.' },
+    mail: { name: 'Cota de malla', short: 'Cota', txt: 'Cuando te atacan los monstruos, suma 3 a tu Defensa.' }
   };
   const ITEM_PACK = { cloak: 'Montaña Eterna', axe: 'Montaña Eterna', herbs: 'Montaña Eterna', wyrm: 'Montaña Eterna', flame: 'Montaña Eterna',
-    hourglass: 'Harbour Clash', eye: 'Harbour Clash', powder: 'Harbour Clash', sands: 'Harbour Clash', gorgon: 'Harbour Clash' };
+    hourglass: 'Harbour Clash', eye: 'Harbour Clash', powder: 'Harbour Clash', sands: 'Harbour Clash', gorgon: 'Harbour Clash',
+    pendant: 'Puerta del Infierno', holy: 'Puerta del Infierno', laurel: 'Puerta del Infierno', fist: 'Puerta del Infierno', mail: 'Puerta del Infierno' };
   const ICON_STAIR = svg(`<path d="M4 26h7v-6h6v-6h6v-6h5"/>`);
 
   const NAMES = { spd: 'Mov', atk: 'Atq', def: 'Def', rng: 'Alc' };
@@ -113,7 +137,7 @@
   /* ---------- persistencia ligera ---------- */
   function save() {
     try {
-      if (!G) return;
+      if (!G || G.laurel) return;
       if (G.phase === 'won') { localStorage.removeItem(SAVE_KEY); return; }
       let sv = G;
       if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; }
@@ -143,7 +167,10 @@
     if (g.chest === undefined) g.chest = null;
     if (g.loot == null) g.loot = 0;
     if (g.cp && g.cp.loot == null) g.cp.loot = 0;
-    if (!['cloak', 'sherpaOn', 'corsairOn', 'powder', 'gorgon', 'sands', 'abil'].every(k => bool(g, k))) return false;
+    if (!['cloak', 'sherpaOn', 'corsairOn', 'powder', 'gorgon', 'sands', 'abil', 'fist', 'revived'].every(k => bool(g, k))) return false;
+    g.laurel = null; g.pendingAtk = null;
+    if (g.stone === undefined) g.stone = null;
+    if (lv.stoneAt >= 0 ? !(g.stone && g.stone.at === lv.stoneAt && Number.isInteger(g.stone.val) && g.stone.val >= 1 && g.stone.val <= 4 && typeof g.stone.broken === 'boolean') : g.stone) return false;
     if (g.cp && !['cloak', 'sands', 'abil'].every(k => bool(g.cp, k))) return false;
     if (g.pendingDmg == null) g.pendingDmg = 0;
     if (!g.turn.assign2) g.turn.assign2 = NO_SKILLS();
@@ -179,13 +206,15 @@
       const [x, y] = XY(i);
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tile' + (lv.walls[i] ? ' wall' : '') + (lv.voids[i] ? ' void' : '') + (lv.blizz[i] ? ' blizz' : '') + (lv.water[i] ? ' water' : '');
+      b.className = 'tile' + (lv.walls[i] ? ' wall' : '') + (lv.voids[i] ? ' void' : '') + (lv.blizz[i] ? ' blizz' : '') + (lv.water[i] ? ' water' : '') + (lv.damned && lv.damned[i] ? ' damned' : '') + (lv.stoneAt === i ? ' stone' : '');
       b.dataset.i = i;
-      b.setAttribute('aria-label', lv.voids[i] ? 'Hueco' : lv.walls[i] ? 'Muro' : lv.blizz[i] ? `Ventisca, columna ${x + 1}, fila ${y + 1}` : lv.water[i] ? `Agua, columna ${x + 1}, fila ${y + 1}` : `Casilla columna ${x + 1}, fila ${y + 1}`);
-      if (lv.walls[i]) b.tabIndex = -1;
+      b.setAttribute('aria-label', lv.voids[i] ? 'Hueco' : lv.walls[i] ? 'Muro' : lv.blizz[i] ? `Ventisca, columna ${x + 1}, fila ${y + 1}` : lv.water[i] ? `Agua, columna ${x + 1}, fila ${y + 1}` : lv.stoneAt === i ? 'Piedra de la Perdición' : lv.damned && lv.damned[i] ? `Casilla maldita, columna ${x + 1}, fila ${y + 1}` : `Casilla columna ${x + 1}, fila ${y + 1}`);
+      if (lv.walls[i] && lv.stoneAt !== i) b.tabIndex = -1;
       if (lv.stairs.includes(i)) b.innerHTML = `<span class="stair">${ICON_STAIR}</span>`;
       else if (lv.blizz[i]) b.innerHTML = `<span class="wind">${ICON_WIND}</span>`;
       else if (lv.water[i]) b.innerHTML = `<span class="wave">${ICON_WAVE}</span>`;
+      else if (lv.damned && lv.damned[i]) b.innerHTML = `<span class="curse">${ICON_CURSE}</span>`;
+      else if (lv.stoneAt === i) b.innerHTML = `<span class="gem" aria-hidden="true">${ICON_STONE}<em></em></span>`;
       if (G.chest && G.chest.at === i) b.innerHTML += `<span class="chest" aria-hidden="true">${ICON_CHEST}<em></em></span>`;
       grid.appendChild(b);
     }
@@ -222,7 +251,10 @@
       }
       if (!el.dataset.anim) setPos(el, m.x, m.y);
       el.querySelector('.badge').textContent = m.hp;
-      el.classList.toggle('wet', E.mStat(G, m, 'atk') !== m.atk || E.mStat(G, m, 'def') !== m.def || E.mStat(G, m, 'rng') !== m.rng);
+      const boosted = E.mStat(G, m, 'atk') !== m.atk || E.mStat(G, m, 'def') !== m.def || E.mStat(G, m, 'rng') !== m.rng;
+      const hellMon = LEVELS[G.levelIdx].mon.bonusOn === 'hero';
+      el.classList.toggle('wet', boosted && !hellMon);
+      el.classList.toggle('cursed', boosted && hellMon);
     }
   }
 
@@ -230,27 +262,41 @@
     const tiles = $('#grid').children;
     let reach = null, demon = null;
     const targets = new Set();
+    let lau = null;
     if (G.phase === 'move' && !busy) {
-      if (mode && mode.demon) demon = E.demonReach(G, mode.demon);
+      if (G.laurel) {
+        const R = E.laurelReach(G), me = E.laurelMon(G);
+        lau = { R, me };
+        for (const m of G.mons) if (m !== me && E.laurelAttackInfo(G, m).ok) targets.add(idx(m.x, m.y));
+      }
+      else if (mode === 'laurelPick') { for (const m of G.mons) targets.add(idx(m.x, m.y)); }
+      else if (mode && mode.demon) demon = E.demonReach(G, mode.demon);
       else if (mode === 'necro') { for (const m of G.mons) if (E.necroInfo(G, m).ok) targets.add(idx(m.x, m.y)); }
       else if (mode === 'demonPick') { for (const m of G.mons) targets.add(idx(m.x, m.y)); }
       else {
         reach = E.reachFromAdv(G);
         for (const m of G.mons) if (E.attackInfo(G, m).ok) targets.add(idx(m.x, m.y));
         if (G.chest && E.chestInfo(G).ok) targets.add(G.chest.at);
+        if (G.stone && E.stoneInfo(G).ok) targets.add(G.stone.at);
       }
     }
     for (let i = 0; i < N; i++) {
       const t = tiles[i];
-      const isReach = (reach && reach.dist[i] > 0 && (reach.free ? reach.dist[i] < Infinity : reach.dist[i] <= G.turn.spdLeft)) || (demon && demon.ok[i]);
+      const isLau = lau && lau.R.dist[i] > 0 && lau.R.dist[i] <= G.laurel.spdLeft;
+      const isReach = (reach && reach.dist[i] > 0 && (reach.free ? reach.dist[i] < Infinity : reach.dist[i] <= G.turn.spdLeft)) || (demon && demon.ok[i]) || isLau;
       t.classList.toggle('reach', !!isReach);
-      if (reach && isReach) t.dataset.cost = reach.free ? '·' : reach.dist[i]; else if (demon && isReach) t.dataset.cost = demon.dist[i]; else delete t.dataset.cost;
+      if (reach && isReach) t.dataset.cost = reach.free ? '·' : reach.dist[i]; else if (demon && isReach) t.dataset.cost = demon.dist[i]; else if (isLau) t.dataset.cost = lau.R.dist[i]; else delete t.dataset.cost;
       t.classList.toggle('target', targets.has(i));
     }
     if (G.chest) {
       const c = $('#grid').children[G.chest.at].querySelector('.chest');
       if (c) { c.classList.toggle('open', G.chest.open); c.querySelector('em').textContent = G.chest.open ? '' : G.chest.val; }
     }
+    if (G.stone) {
+      const c = $('#grid').children[G.stone.at].querySelector('.gem');
+      if (c) { c.classList.toggle('broken', G.stone.broken); c.querySelector('em').textContent = G.stone.broken ? '' : G.stone.val; }
+    }
+    for (const [id, el] of tok.mons) el.classList.toggle('ordered', !!(lau && lau.me && lau.me.id === id));
   }
 
   // Desliza una ficha por un camino. Cada casilla en recto dura 4 s / velocidad total y cada casilla
@@ -305,7 +351,7 @@
       <div>
         <div class="nm">${m.plural}<small>${lv.boss ? 'jefe' : `quedan ${G.mons.length} de ${lv.spawns.length}`}</small></div>
         <div class="stats">${['hp', 'spd', 'atk', 'def', 'rng'].map(k => st(k, m[k])).join('')}</div>
-        ${bo ? '<div class="wnote">En casillas de agua suman el bono en azul.</div>' : ''}
+        ${bo ? (m.bonusOn === 'hero' ? `<div class="wnote hell ${G.sands ? 'off' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'on' : ''}">${G.sands ? 'Agua bendita: los bonos no cuentan este nivel.' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'Estás en casilla maldita: suman el bono.' : 'Si estás en casilla maldita, suman el bono en rojo.'}</div>` : '<div class="wnote">En casillas de agua suman el bono en azul.</div>') : ''}
       </div>`;
   }
 
@@ -391,7 +437,9 @@
       txt = mode === 'necro' ? 'Nigromante: toca el monstruo al que quieres hacer <em>1 de daño</em> (cuesta 1 de tu Vida).'
         : mode === 'demonPick' ? 'Cazador: toca el monstruo que quieres <em>mover</em>.'
         : mode && mode.demon ? 'Cazador: toca la casilla marcada a la que lo mueves (hasta 3 de Mov).'
-        : 'Toca una casilla marcada para <em>moverte</em>, o un monstruo o el cofre resaltado para <em>atacar</em>.';
+        : mode === 'laurelPick' ? 'Corona de laurel: toca el monstruo al que das la orden.'
+        : G.laurel ? 'Corona de laurel: mueve al monstruo o toca a otro monstruo para que lo ataque. Termina la orden cuando quieras.'
+        : 'Toca una casilla marcada para <em>moverte</em>, o un monstruo, el cofre o la piedra resaltados para <em>atacar</em>.';
     }
     else if (ph === 'monsters') { step = '3'; txt = 'Turno de los monstruos.'; }
     else if (ph === 'clear') { step = '2'; txt = 'Nivel superado.'; }
@@ -404,6 +452,7 @@
     const R = E.reachFromAdv(G);
     for (let i = 0; i < N; i++) if (R.dist[i] > 0 && R.dist[i] <= G.turn.spdLeft) return false;
     if (G.chest && E.chestInfo(G).ok) return false;
+    if (G.stone && E.stoneInfo(G).ok) return false;
     return !G.mons.some(m => E.attackInfo(G, m).ok);
   }
 
@@ -415,6 +464,8 @@
       if (!t.dice) box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnRoll" ${rolling ? 'disabled' : ''}>Tirar dados</button>`;
       else box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnConfirm" ${E.assignComplete(t) && !rolling ? '' : 'disabled'}>Confirmar</button>`;
     } else if (ph === 'move') {
+      if (G.laurel) { box.innerHTML = `<button type="button" class="btn primary" id="btnLaurelEnd" ${busy ? 'disabled' : ''}>Terminar orden</button>`; return; }
+      if (mode === 'laurelPick') { box.innerHTML = `<button type="button" class="btn" id="btnLaurelNo">Cancelar</button>`; return; }
       const ab = E.abilityInfo(G);
       const cancel = (ab && ((ab.id === 'necro' && mode === 'necro') || (ab.id === 'demon' && mode))) ? 'Cancelar' : null;
       const abBtn = ab ? `<button type="button" class="btn abil tight ${G.sherpaOn || G.corsairOn || cancel ? 'on' : ''}" id="btnAbil" ${busy ? 'disabled' : ''}>${cancel || ab.label}</button>` : '';
@@ -430,7 +481,8 @@
     const list = G.items || [];
     const act = [];
     if (G.cloak) act.push(['cloak', 'Capa activa']);
-    if (G.sands) act.push(['sands', 'Arenas activas']);
+    if (G.sands) act.push(LEVELS[G.levelIdx].damned && LEVELS[G.levelIdx].damned.some(Boolean) ? ['holy', 'Agua bendita activa'] : ['sands', 'Arenas activas']);
+    if (G.fist) act.push(['fist', 'Puño listo']);
     if (G.powder) act.push(['powder', 'Pólvora lista']);
     if (G.gorgon) act.push(['gorgon', 'Gorgona activa']);
     if (!list.length && !act.length) { box.innerHTML = ''; box.hidden = true; return; }
@@ -490,14 +542,15 @@
     base: 'Atraviesa 12 niveles. En el último hay que derrotar a los tres demonios.',
     mguf: "Atraviesa 12 niveles. Tras el 3, el 6 y el 9 te espera un comandante, y tras el 12, el mismísimo M'Guf-yn.",
     peak: 'Sube los 10 niveles de la Montaña Eterna. En el último te espera el Hechicero Blanco.',
-    harbour: 'Defiende el puerto a lo largo de 8 niveles. Al final despierta el Kraken.'
+    harbour: 'Defiende el puerto a lo largo de 8 niveles. Al final despierta el Kraken.',
+    hell: 'Desciende 12 niveles por la Puerta del Infierno. Tras el 3, el 6 y el 9 te espera un jefe, y tras el 12, el Señor del Infierno.'
   };
   function rulesSheet() {
     const g = G ? G.game : null;
     const has = k => !g || g === k;
     openSheet(`
       <h3>Cómo se juega</h3>
-      <p class="lead">${g ? GAME_LEAD[g] : 'Elige una aventura al empezar: la original, M\'Guf-yn Returns, Montaña Eterna o Harbour Clash.'} Si tu Vida llega a 0, caes.</p>
+      <p class="lead">${g ? GAME_LEAD[g] : 'Elige una aventura al empezar: la original, M\'Guf-yn Returns, Montaña Eterna, Harbour Clash o La Puerta del Infierno.'} Si tu Vida llega a 0, caes.</p>
       <h4>1 · Energía</h4>
       <p>Tira tres dados. Asigna uno a <b>Mov</b>, otro a <b>Atq</b> y otro a <b>Def</b>: su valor se suma a la habilidad base. <b>Alc</b> no recibe dado, salvo con la habilidad del Ranger.</p>
       <h4>2 · Tu turno</h4>
@@ -512,22 +565,24 @@
       <p>Se mueven, del más cercano al más lejano, buscando la casilla desde la que te ven a su Alcance máximo. Luego atacan todos los que te vean a su alcance: el daño es <b>Ataque total ÷ tu Defensa</b>, redondeado hacia abajo.</p>
       <h4>Entre niveles</h4>
       <p>Mejora una habilidad en 1 <b>o</b> recupera tu Vida hasta 6. Nunca las dos.</p>
-      ${has('mguf') || has('peak') || has('harbour') ? `<h4>Cofre del tesoro</h4>
+      ${has('mguf') || has('peak') || has('harbour') || has('hell') ? `<h4>Cofre del tesoro</h4>
       <p>${g === 'base' ? 'Solo en las aventuras con cofre. ' : ''}Cada nivel tiene un cofre en la escalera opuesta a la de entrada (o en la casilla marcada con una X). Su número es su <b>Defensa</b> y su <b>botín</b>. Hasta que lo abras cuenta como un muro: no se cruza y tapa la visión. Ábrelo atacándolo, a tu Alcance y a la vista, con al menos esos puntos de Atq. Los puntos del botín se suman, en una fase de Energía, a <b>una</b> habilidad por turno (Mov, Atq, Def o Alc), en ese nivel y en su jefe. Lo que no gastes se pierde al terminar el nivel.</p>` : ''}
-      ${has('mguf') ? `<h4>Jefes</h4>
-      <p>Al terminar los niveles 3, 6, 9 y 12 se juega un mapa de jefe como <b>prolongación</b> del nivel: antes no puedes mejorar ni curarte, y el cofre abierto sigue contigo. Los jefes se representan con un dado de 12 caras. Con el comandante final termina la aventura.</p>` : ''}
+      ${has('mguf') || has('hell') ? `<h4>Jefes</h4>
+      <p>Al terminar los niveles 3, 6, 9 y 12 se juega un mapa de jefe como <b>prolongación</b> del nivel: antes no puedes mejorar ni curarte, y el cofre abierto sigue contigo. Los jefes se representan con un dado de 12 caras. Con el jefe final termina la aventura.</p>` : ''}
       ${has('harbour') ? `<h4>Agua (Harbour Clash)</h4>
       <p>Los monstruos que estén sobre una casilla de agua suman los bonos en azul a su Ataque, Defensa o Alcance. Tú no los recibes.</p>` : ''}
+      ${has('hell') ? `<h4>Casillas malditas y Piedra (La Puerta del Infierno)</h4>
+      <p>Los monstruos ganan los bonos en rojo de su carta <b>mientras tú estés sobre una casilla maldita</b> (el bono es para todos a la vez). La <b>Piedra de la Perdición</b> es un muro especial con un número (D4): atácala a tu Alcance y a la vista, gastando tantos puntos de Atq como su número. Al romperla, <b>todos los monstruos reciben 1 de daño</b> y <b>tú también</b>. Sigue siendo un muro. El Cazador de demonios puede mover a un monstruo hasta 3 casillas.</p>` : ''}
       ${has('peak') ? `<h4>Ventisca (Montaña Eterna)</h4>
       <p>Mientras estés sobre una casilla de ventisca, tu Ataque y tu Defensa bases valen 1 menos.</p>` : ''}
       <h4>Objetos (opcional)</h4>
-      <p>Puedes jugar con tres objetos, al azar o a tu elección: la Montaña Eterna y Harbour Clash los usan siempre; en las demás aventuras es opcional. Cada uno se usa una sola vez y se descarta.</p>
-      <ul>${ITEM_KEYS.filter(k => ITEMS[k]).map(k => `<li><b>${ITEMS[k].name}.</b> ${ITEMS[k].txt}${k === 'cloak' ? ' (Solo Montaña Eterna.)' : k === 'sands' ? ' (Solo Harbour Clash.)' : ''}</li>`).join('')}</ul>
+      <p>Puedes jugar con tres objetos, al azar o a tu elección: la Montaña Eterna, Harbour Clash y La Puerta del Infierno los usan siempre; en las demás aventuras es opcional. Cada uno se usa una sola vez y se descarta.</p>
+      <ul>${ITEM_KEYS.filter(k => ITEMS[k]).map(k => `<li><b>${ITEMS[k].name}.</b> ${ITEMS[k].txt}${k === 'cloak' ? ' (Solo Montaña Eterna.)' : k === 'sands' ? ' (Solo Harbour Clash.)' : k === 'holy' || k === 'fist' ? ' (Solo La Puerta del Infierno.)' : ''}</li>`).join('')}</ul>
       <h4>Héroes</h4>
       <p>Con cualquier aventura juegas con los héroes de la original y de esa expansión; el botón <b>Héroes de otras expansiones</b> añade los demás.</p>
       <ul>${HERO_KEYS.map(k => `<li><b>${HEROES[k].name}.</b> ${HEROES[k].txt}</li>`).join('')}</ul>
       <h4>Contraseña</h4>
-      <p>Cada nivel empieza con una contraseña (botón <b>Contraseña</b>). Anótala: desde el menú, «Continuar con contraseña» te devuelve al inicio de ese nivel con tu héroe, tu Vida, tus mejoras, tus objetos y el botín de ese momento. No guarda el turno en curso. Las de 4 y 5 letras de versiones anteriores siguen valiendo.</p>
+      <p>Cada nivel empieza con una contraseña (botón <b>Contraseña</b>). Anótala: desde el menú, «Continuar con contraseña» te devuelve al inicio de ese nivel con tu héroe, tu Vida, tus mejoras, tus objetos y el botín de ese momento. No guarda el turno en curso. Las de 4 y 5 letras de versiones anteriores siguen valiendo; La Puerta del Infierno usa 8.</p>
       <p class="fine">Versión web no oficial del juego solitario One Card Dungeon y de sus expansiones, de Barny Skinner (Little Rocket Games). Los mapas, las cifras de los monstruos y su aparición por nivel siguen las cartas originales; las ilustraciones del juego y los textos son propios. Las portadas del menú son de Little Rocket Games. Si te gusta, apoya al autor y consigue el juego.</p>
       <button type="button" class="btn primary" id="x">Entendido</button>`, [['#x', closeSheet]], true);
   }
@@ -560,7 +615,8 @@
     base: ['Cáliz de Brasas', 'Los tres demonios han caído y el cáliz es tuyo.'],
     mguf: ["M'Guf-yn derrotado", "El señor del inframundo cae y su ejército se desbanda."],
     peak: ['Cima despejada', 'El Hechicero Blanco ha caído y la tormenta se calma.'],
-    harbour: ['Puerto a salvo', 'El Kraken vuelve a las profundidades y la marea se retira.']
+    harbour: ['Puerto a salvo', 'El Kraken vuelve a las profundidades y la marea se retira.'],
+    hell: ['Puerta cerrada', 'El Señor del Infierno cae y las llamas se apagan.']
   };
   function winSheet() {
     noteBest();
@@ -592,7 +648,7 @@
       <div class="menu-btns">
         ${sv ? `<button type="button" class="btn primary menu-main" id="mContinue"><span>Seguir en este dispositivo</span><small>${HEROES[sv.hero].name} · ${GAMES[sv.game].name} · ${stageLabel(GAMES[sv.game].levels[sv.levelIdx]).toLowerCase()} · Vida ${sv.adv.hp}</small></button>` : ''}
         <button type="button" class="btn ${sv ? '' : 'primary'} menu-main" id="mNew"><span>Nueva partida</span></button>
-        <button type="button" class="btn menu-main" id="mPass"><span>Continuar con contraseña</span><small>4, 5 o 7 letras o números</small></button>
+        <button type="button" class="btn menu-main" id="mPass"><span>Continuar con contraseña</span><small>4, 5, 7 u 8 letras o números</small></button>
         <button type="button" class="ghost" id="mRules">Cómo se juega</button>
       </div>
       <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner.</p></div>`,
@@ -603,9 +659,10 @@
     base: { img: 'img/core.jpg', alt: 'Portada de One Card Dungeon', tag: 'Original', txt: '12 niveles y tres demonios.' },
     mguf: { img: 'img/mguf.jpg', alt: "Portada de One Card Dungeon: M'Guf-yn Returns", tag: 'Expansión', txt: '12 niveles, 4 jefes, cofres y 4 héroes.' },
     peak: { img: 'img/peak.jpg', alt: 'Portada de One Card Dungeon: Eternal Peak', tag: 'Expansión', txt: '10 niveles, ventiscas, Sherpa y objetos.' },
-    harbour: { img: 'img/harbour.jpg', alt: 'Portada de One Card Dungeon: Harbour Clash', tag: 'Expansión', txt: '8 niveles, agua, Corsario y objetos.' }
+    harbour: { img: 'img/harbour.jpg', alt: 'Portada de One Card Dungeon: Harbour Clash', tag: 'Expansión', txt: '8 niveles, agua, Corsario y objetos.' },
+    hell: { img: 'img/hell.jpg', alt: "Portada de One Card Dungeon: Hell's Door", tag: 'Expansión', txt: '12 niveles, 4 jefes, casillas malditas, la Piedra de la Perdición y objetos.' }
   };
-  const ADV_ORDER = ['base', 'mguf', 'peak', 'harbour'];
+  const ADV_ORDER = ['base', 'mguf', 'peak', 'harbour', 'hell'];
 
   function adventureScreen() {
     const sc = showScreen(`<div class="splash">
@@ -646,7 +703,7 @@
 
   // Peak y Harbour Clash siempre usan tres objetos; en las demás aventuras es opcional (se puede empezar sin ellos)
   function itemsScreen(game, hero, pick, more) {
-    const must = game === 'peak' || game === 'harbour';
+    const must = game === 'peak' || game === 'harbour' || game === 'hell';
     pick = pick || (must ? drawItems(game) : []);
     const pool = E.itemPool(game);
     const list = () => pool.map(k => `<button type="button" class="hero-card item-card ${pick.includes(k) ? 'chosen' : ''}" data-it="${k}" aria-pressed="${pick.includes(k)}">
@@ -680,16 +737,16 @@
     const sc = showScreen(`<div class="splash">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">Contraseña</h2>
-      <p class="lead">Escribe la contraseña que te dio el juego al empezar un nivel: 7 letras o números ahora, o las de 4 o 5 de versiones anteriores.</p>
-      <input id="pwIn" class="pw" type="text" maxlength="7" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="•••••••" aria-label="Contraseña de 4, 5 o 7 caracteres">
+      <p class="lead">Escribe la contraseña que te dio el juego al empezar un nivel: 7 u 8 letras o números ahora (8 en La Puerta del Infierno), o las de 4 o 5 de versiones anteriores.</p>
+      <input id="pwIn" class="pw" type="text" maxlength="8" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="••••••••" aria-label="Contraseña de 4, 5, 7 u 8 caracteres">
       <p class="err" id="pwErr" role="alert">${err || ''}</p>
       <button type="button" class="btn primary" id="pwGo" disabled>Continuar</button>
       <p class="fine">Las contraseñas no usan 0, 1, I ni O, para que no se confundan.</p></div>`,
       [['#back', menuScreen], ['#pwGo', submitPass]]);
     const inp = sc.querySelector('#pwIn'), go = sc.querySelector('#pwGo');
     inp.addEventListener('input', () => {
-      inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
-      go.disabled = ![4, 5, 7].includes(inp.value.length);
+      inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+      go.disabled = ![4, 5, 7, 8].includes(inp.value.length);
       $('#pwErr').textContent = '';
     });
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitPass(); });
@@ -698,7 +755,7 @@
   }
 
   function submitPass() {
-    const inp = $('#pwIn'); if (!inp || ![4, 5, 7].includes(inp.value.length)) return;
+    const inp = $('#pwIn'); if (!inp || ![4, 5, 7, 8].includes(inp.value.length)) return;
     const g = E.decodePassword(inp.value);
     if (!g) { $('#pwErr').textContent = 'Esa contraseña no es válida. Revisa las letras y números.'; return; }
     G = g; G.totalTurns = 0; lastHp = G.adv.hp; builtLevel = -1;
@@ -710,7 +767,8 @@
     base: 'Una carta, doce niveles.',
     mguf: "M'Guf-yn Returns: abre cofres para ganar puntos extra y derrota a los comandantes.",
     peak: 'Montaña Eterna: las casillas de ventisca restan 1 a tu Atq y Def.',
-    harbour: 'Harbour Clash: los monstruos en agua se vuelven más fuertes.'
+    harbour: 'Harbour Clash: los monstruos en agua se vuelven más fuertes.',
+    hell: 'La Puerta del Infierno: si pisas una casilla maldita, los monstruos se fortalecen. La Piedra de la Perdición se rompe a costa de tu Vida.'
   };
   function startGame(hero, game, items) {
     G = E.newRun(hero, game, items); G.totalTurns = 0; lastHp = START_HP; builtLevel = -1;
@@ -891,6 +949,44 @@
     if (G.phase !== 'move' || busy) return;
     const lv = LEVELS[G.levelIdx];
     const m = G.mons.find(o => idx(o.x, o.y) === i);
+    // Corona de laurel: elegir al monstruo
+    if (mode === 'laurelPick') {
+      if (!m) { say('Toca a un monstruo.'); return; }
+      if (!E.useItem(G, 'laurel')) { mode = null; render(); return; }
+      E.laurelStart(G, m); mode = null; render();
+      say(`<b>Corona de laurel.</b> El monstruo tiene <b>${G.laurel.spdLeft}</b> de Mov y <b>${G.laurel.atkLeft}</b> de Atq. Toca una casilla marcada para moverlo o a otro monstruo para atacarlo.`);
+      return;
+    }
+    // Corona de laurel: orden en curso
+    if (G.laurel) {
+      const me = E.laurelMon(G);
+      if (m && m !== me) {
+        const info = E.laurelAttackInfo(G, m);
+        if (!info.ok) {
+          say(info.why === 'range' ? `Ese monstruo está a distancia <b>${info.rd}</b> y el que obedece alcanza <b>${E.mStat(G, me, 'rng')}</b>.`
+            : info.why === 'los' ? 'Sin línea de visión: algo lo tapa.'
+            : `Le faltan puntos: golpear cuesta <b>${E.mStat(G, m, 'def')}</b> de Atq y le quedan <b>${G.laurel.atkLeft}</b>.`);
+          return;
+        }
+        const dead = E.laurelAttack(G, m);
+        floatText(m.x, m.y, dead ? '✕' : '−1', 'good');
+        hitFx(m); render();
+        if (E.levelCleared(G)) { E.laurelEnd(G); levelClear(); return; }
+        say(dead ? '<b>¡Abatido por su propio compañero!</b>' : `Golpe. Le quedan <b>${m.hp}</b> de Vida.`);
+        return;
+      }
+      if (m === me || lv.walls[i]) return;
+      const path = E.laurelMove(G, i);
+      if (!path) { say('Esa casilla no vale: está fuera de su Movimiento o no hay camino.'); return; }
+      busy = true;
+      const el = tok.mons.get(me.id); if (el) el.dataset.anim = '1';
+      render();
+      say('El monstruo obedece…');
+      if (el) await glide(el, path, G.laurel ? Math.max(1, E.mStat(G, me, 'spd')) : 1);
+      busy = false; render();
+      say(`Le quedan <b>${G.laurel.spdLeft}</b> de Mov y <b>${G.laurel.atkLeft}</b> de Atq.`);
+      return;
+    }
     // Habilidad del Nigromante
     if (mode === 'necro') {
       if (!m) { say('Toca a un monstruo.'); return; }
@@ -937,6 +1033,22 @@
       say(`<b>Cofre abierto.</b> Ganas <b>${val}</b> punto${val > 1 ? 's' : ''} de botín para sumar a una habilidad en tus próximas fases de Energía.`);
       return;
     }
+    if (G.stone && !G.stone.broken && i === G.stone.at) {
+      const info = E.stoneInfo(G);
+      if (!info.ok) { say(whyMsg(info, G.stone.val, E.atkAvail(G), 'La piedra')); return; }
+      const val = G.stone.val, dmgM = G.fist ? 2 : 1;
+      const before = G.mons.map(o => [o.x, o.y]);
+      const alive = E.breakStone(G);
+      for (const [x, y] of before) floatText(x, y, '−' + dmgM, 'good');
+      floatText(G.adv.x, G.adv.y, '−1', 'dmg');
+      tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
+      const rev = G.revived; G.revived = false;
+      if (!alive) { G.phase = 'dead'; render(); deathSheet(); return; }
+      render();
+      if (E.levelCleared(G)) { levelClear(); return; }
+      say(`<b>La Piedra de la Perdición se rompe</b> (−${val} Atq). Todos los monstruos reciben ${dmgM} de daño y tú 1.${rev ? ' <b>Colgante de alma:</b> vuelves con 1 de Vida.' : ''}`);
+      return;
+    }
     if (lv.walls[i]) return;
     if (m) {
       const info = E.attackInfo(G, m);
@@ -976,6 +1088,11 @@
     const why = id === 'herbs' ? 'Se te ofrecerá sola cuando un ataque te haga daño.'
       : id === 'cloak' ? 'Úsala en la fase de Energía o de movimiento, en un nivel con ventiscas.'
       : id === 'sands' ? 'Úsala en la fase de Energía o de movimiento, en un nivel con agua.'
+      : id === 'holy' ? 'Úsala en la fase de Energía o de movimiento, en un nivel con casillas malditas.'
+      : id === 'fist' ? 'Úsala en tu fase de movimiento, antes de romper la Piedra de la Perdición.'
+      : id === 'laurel' ? 'Solo en tu fase de movimiento y ataque, con monstruos en el mapa. Al terminar la orden acaba tu turno.'
+      : id === 'pendant' ? 'Se usa sola cuando tu Vida llegaría a 0.'
+      : id === 'mail' ? 'Se te ofrecerá sola cuando un ataque te haga daño.'
       : id === 'gorgon' ? 'Úsala en la fase de Energía o de movimiento; ese turno los monstruos no se mueven.'
       : id === 'flame' || id === 'eye' ? 'Solo en la fase de Energía, con los dados ya tirados.'
       : id === 'hourglass' ? 'Solo en tu fase de movimiento y ataque, antes de que actúen los monstruos.'
@@ -992,6 +1109,12 @@
     closeSheet();
     if (id === 'flame') { flameSheet(); return; }
     if (id === 'eye') { eyeSheet(); return; }
+    if (id === 'laurel') {
+      if (!E.itemUsable(G, 'laurel')) return;
+      mode = 'laurelPick'; render();
+      say('<b>Corona de laurel.</b> Toca el monstruo al que das la orden. Se moverá y atacará a otros monstruos con sus propias cifras.');
+      return;
+    }
     if (!E.useItem(G, id)) return;
     render();
     const t = G.turn;
@@ -1001,6 +1124,8 @@
     else if (id === 'powder') say('<b>Pólvora negra.</b> Tu próximo golpe daña también a todos los demás monstruos.');
     else if (id === 'sands') say('<b>Arenas ocultas.</b> Los monstruos ignoran el agua hasta el final del nivel.');
     else if (id === 'gorgon') say('<b>Cabeza de Gorgona.</b> Este turno los monstruos no se moverán.');
+    else if (id === 'holy') say('<b>Agua bendita.</b> Los monstruos ignoran las casillas malditas hasta el final del nivel.');
+    else if (id === 'fist') say('<b>Puño de hierro.</b> Al romper la Piedra, los monstruos recibirán 2 de daño.');
     else if (id === 'hourglass') say('<b>Reloj de arena.</b> Los monstruos no actúan: nueva fase de Energía. Tira los dados.');
   }
 
@@ -1074,6 +1199,17 @@
     });
   }
 
+  function askMail(e) {
+    return new Promise(res => {
+      const w = Math.floor(e.total / (e.def + 3));
+      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.mail}</span><h3>Cota de malla</h3></div>
+        <p class="lead">Te van a hacer <b>${e.dmg}</b> de daño. Con la cota tu Defensa sube de <b>${e.def}</b> a <b>${e.def + 3}</b> y recibirías <b>${w}</b>. Se gasta al usarla.</p>
+        <button type="button" class="btn primary" id="mUse">Usar la cota (${w})</button>
+        <button type="button" class="btn" id="mNo">Recibir ${e.dmg}</button>`,
+        [['#mUse', () => { closeSheet(); res(true); }], ['#mNo', () => { closeSheet(); res(false); }]], false);
+    });
+  }
+
   async function levelClear() {
     busy = true; mode = null;
     G.phase = 'clear';
@@ -1095,7 +1231,7 @@
   function bossSheet() {
     const nxt = LEVELS[G.levelIdx + 1], m = nxt.mon;
     openSheet(`<div class="item-head"><span class="ico boss">${ICONS[m.key]}</span><h3>${m.name}</h3></div>
-      <p class="lead">Antes de seguir, te espera un comandante de M'Guf-yn. Este mapa es una prolongación del nivel: <b>no puedes mejorar ni curarte</b> antes del combate.${G.loot > 0 ? ` Conservas <b>${G.loot}</b> punto${G.loot > 1 ? 's' : ''} del cofre.` : ''}</p>
+      <p class="lead">Antes de seguir, te espera ${G.game === 'hell' ? 'un jefe del Infierno' : "un comandante de M'Guf-yn"}. Este mapa es una prolongación del nivel: <b>no puedes mejorar ni curarte</b> antes del combate.${G.loot > 0 ? ` Conservas <b>${G.loot}</b> punto${G.loot > 1 ? 's' : ''} del cofre.` : ''}</p>
       <div class="stats boss-stats"><div><b>${m.hp}</b><span>Vida</span></div><div><b>${m.spd}</b><span>Vel</span></div><div><b>${m.atk}</b><span>Atq</span></div><div><b>${m.def}</b><span>Def</span></div><div><b>${m.rng}</b><span>Alc</span></div></div>
       <button type="button" class="btn primary" id="bGo">Enfrentarlo</button>`, [['#bGo', goBoss]], false);
   }
@@ -1130,8 +1266,13 @@
         if (e.ids.length) {
           for (const id of e.ids) { const el = tok.mons.get(id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } }
           await sleep(350);
-          let dmg = e.dmg;
-          if (e.pending) dmg = E.resolveDamage(G, await askHerbs(e.dmg));
+          let dmg = e.dmg, usedMail = false, usedHerbs = false;
+          if (e.pending) {
+            if (e.offers.mail) usedMail = await askMail(e);
+            const d1 = Math.floor(e.total / (e.def + (usedMail ? 3 : 0)));
+            if (d1 > 1 && G.items.includes('herbs')) usedHerbs = await askHerbs(d1);
+            dmg = E.resolveAttack(G, usedMail, usedHerbs);
+          }
           if (dmg > 0) {
             floatText(G.adv.x, G.adv.y, '−' + dmg, 'dmg');
             tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
@@ -1140,7 +1281,7 @@
             tok.adv.classList.add('blocked'); setTimeout(() => tok.adv.classList.remove('blocked'), 600);
           }
           renderHP();
-          say(`Atacan <b>${e.ids.length}</b>: Ataque total <b>${e.total}</b> ÷ Defensa <b>${e.def}</b> = <b>${e.dmg}</b> de daño.${e.dmg ? (dmg < e.dmg ? ` Con las hierbas recibes <b>${dmg}</b>.` : '') : ' <b>¡Bloqueado!</b>'}`);
+          say(`Atacan <b>${e.ids.length}</b>: Ataque total <b>${e.total}</b> ÷ Defensa <b>${e.def}</b> = <b>${e.dmg}</b> de daño.${e.dmg ? (dmg < e.dmg ? `${usedMail ? ' Con la cota' : ''}${usedHerbs ? (usedMail ? ' y las hierbas' : ' Con las hierbas') : ''} recibes <b>${dmg}</b>.` : '') : ' <b>¡Bloqueado!</b>'}`);
           await sleep(650);
         } else say('Ningún monstruo te alcanza este turno.');
       }
@@ -1150,7 +1291,8 @@
     busy = false;
     if (G.phase === 'dead') { render(); deathSheet(); return; }
     render();
-    if (!ev.some(e => e.t === 'attack' && e.ids.length)) say('Ningún monstruo te alcanza. Tira los dados.');
+    if (G.revived) { G.revived = false; say('<b>Colgante de alma.</b> Caes, pero vuelves a la vida con 1 de Vida. Tira los dados.'); }
+    else if (!ev.some(e => e.t === 'attack' && e.ids.length)) say('Ningún monstruo te alcanza. Tira los dados.');
   }
 
   /* ---------- arranque ---------- */
@@ -1163,6 +1305,8 @@
       if (b.id === 'btnRoll') doRoll(); else if (b.id === 'btnConfirm') doConfirm();
       else if (b.id === 'btnAbil') onAbility();
       else if (b.id === 'btnUndo') undo(); else if (b.id === 'btnEnd') endTurn();
+      else if (b.id === 'btnLaurelNo') { mode = null; render(); say('Orden cancelada: conservas la Corona.'); }
+      else if (b.id === 'btnLaurelEnd') { E.laurelEnd(G); render(); endTurn(); }
     });
     $('#items').addEventListener('click', e => { const b = e.target.closest('[data-item]'); if (b) itemSheet(b.dataset.item); });
     $('#loot').addEventListener('click', e => { if (e.target.closest('#btnLoot') && G && G.phase === 'energy' && G.turn.dice && !rolling) lootSheet(); });

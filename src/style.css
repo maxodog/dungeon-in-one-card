@@ -386,3 +386,22 @@ body.menu .screen {
 .stepper b { font-size: 30px; min-width: 30px; text-align: center; }
 .pack-h { margin: 8px 0 -2px; font-family: var(--body); font-weight: 600; font-size: 14px; letter-spacing: .22em; text-transform: uppercase; color: var(--torch); }
 .hero-card .pk { display: inline-block; margin-top: 3px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--line); }
+
+/* ===== La Puerta del Infierno ===== */
+.tile.damned { background: radial-gradient(circle at 50% 55%, rgba(255,70,50,.28), rgba(150,20,40,.10) 70%); }
+.tile.damned .curse { position: absolute; inset: 16%; color: #ff6b57; opacity: .6; pointer-events: none; }
+.tile.damned .curse svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tile.damned.reach { background: rgba(255,139,61,.14); }
+.tile .gem { position: absolute; inset: 8%; color: #e0a0ff; pointer-events: none; display: grid; place-items: center; }
+.tile .gem svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(200,110,255,.55)); }
+.tile .gem em { position: absolute; font-style: normal; font-size: 20px; font-weight: 700; color: var(--chalk); text-shadow: 0 0 4px #000; }
+.tile .gem.broken { opacity: .35; filter: grayscale(.7); }
+.tile.target .gem { color: var(--foe); }
+.token.cursed .badge { border-color: #ff6b57; box-shadow: 0 0 0 1px #ff6b57; }
+.token.cursed svg { filter: drop-shadow(0 0 6px rgba(255,80,60,.75)); }
+.token.ordered { z-index: 4; }
+.token.ordered svg { filter: drop-shadow(0 0 7px rgba(255,211,107,.9)); }
+.wnote.hell { color: #ff9a8a; }
+.wnote.hell.on { color: #ff5a46; font-weight: 700; }
+.wnote.hell.off { color: #9fd8ff; }
+.item.on .ico { color: inherit; }
