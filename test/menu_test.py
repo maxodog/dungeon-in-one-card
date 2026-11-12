@@ -1,7 +1,7 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
-def node(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/engine.js');"+js]).decode().strip()
+def node(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+js]).decode().strip()
 
 async def main():
     async with async_playwright() as p:
@@ -19,7 +19,7 @@ async def main():
         await page.click('[data-game="base"]'); await page.wait_for_timeout(200)
         print('héroes:', await page.locator('.hero-card').count())
         await page.screenshot(path='/tmp/m2_heroes.png', full_page=True)
-        await page.click('[data-hero="mage"]'); await page.wait_for_timeout(400)
+        await page.click('[data-hero="mage"]'); await page.wait_for_timeout(200); await page.click('#itGo'); await page.wait_for_timeout(400)
         print('juego:', await vis('.app'), await page.inner_text('#heroTag'), await page.inner_text('#hpnum'), await page.inner_text('#lvlNum'))
         # contraseña del nivel 1
         await page.click('#btnPass'); await page.wait_for_timeout(300)

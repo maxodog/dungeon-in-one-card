@@ -2,7 +2,7 @@ import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
 def make_state(js):
-    code = "const E=require('/home/claude/dungeon-in-one-card/engine.js');" + js + ";console.log(JSON.stringify(st));"
+    code = "const E=require('/home/claude/dungeon-in-one-card/src/engine.js');" + js + ";console.log(JSON.stringify(st));"
     return subprocess.check_output(['node','-e',code]).decode()
 
 STATES = {
@@ -44,8 +44,7 @@ async def death(page):
     print('retry level:', await page.inner_text('#lvlNum'), await page.inner_text('#hpnum'), '|', await page.inner_text('#log'))
 
 async def win(page):
-    await page.locator('.tile.target').click(); await page.wait_for_timeout(1200)
-    await page.locator('#veil .choice[data-c="def"]').click(); await page.wait_for_timeout(800)
+    await page.locator('.tile.target').click(); await page.wait_for_timeout(1500)
     await page.screenshot(path='/tmp/f4_win.png')
     print('win sheet:', (await page.inner_text('#veil')).replace('\n',' | '))
 

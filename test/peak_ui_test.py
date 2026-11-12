@@ -2,7 +2,7 @@ import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
 def make_state(js):
-    code = "const E=require('/home/claude/dungeon-in-one-card/engine.js');" + js + ";console.log(JSON.stringify(st));"
+    code = "const E=require('/home/claude/dungeon-in-one-card/src/engine.js');" + js + ";console.log(JSON.stringify(st));"
     return subprocess.check_output(['node','-e',code]).decode()
 
 async def new_page(p, state=None):

@@ -1,7 +1,4 @@
-# Une style.css, engine.js y ui.js en template.html y escribe ../index.html
-import os
-d = os.path.dirname(os.path.abspath(__file__))
-rd = lambda n: open(os.path.join(d, n), encoding='utf-8').read()
-t = rd('template.html').replace('/*STYLE*/', rd('style.css')).replace('/*ENGINE*/', rd('engine.js')).replace('/*UI*/', rd('ui.js'))
-open(os.path.join(d, '..', 'index.html'), 'w', encoding='utf-8').write(t)
-print(len(t), 'bytes')
+t=open('template.html').read()
+t=t.replace('/*STYLE*/',open('style.css').read()).replace('/*ENGINE*/',open('engine.js').read()).replace('/*UI*/',open('ui.js').read())
+open('index.html','w').write(t)
+print(len(t),'bytes')
