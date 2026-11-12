@@ -194,8 +194,10 @@
   /* ---------- tablero ---------- */
   // El tamaño de casilla se ajusta al ancho y también al alto de la pantalla, para que el mapa y los mandos
   // quepan juntos sin tener que desplazarse (con un mínimo de 40 px: si aun así no cabe, queda un poco de scroll).
+  const DESK = window.matchMedia('(min-width: 1000px) and (min-aspect-ratio: 3/2)');
   function fit() {
     if (document.body.classList.contains('menu')) return;
+    if (DESK.matches) { document.body.classList.remove('tight'); return; }
     const root = document.documentElement, box = $('#boxBoard');
     const w = box.clientWidth || 340;
     let t = Math.max(40, Math.min(68, Math.floor((w - 4) / COLS)));
@@ -378,6 +380,12 @@
     $('#pips').innerHTML = Array.from({ length: START_HP }, (_, i) =>
       `<i class="${i < hp ? 'on' : ''}${i >= hp && i < lastHp ? ' lost' : ''}"></i>`).join('');
     $('#hpnum').textContent = `Vida ${hp} / ${START_HP}`;
+    const hb = $('#heroBox');
+    if (hb) {
+      if (hb.dataset.hero !== G.hero) { hb.dataset.hero = G.hero; hb.innerHTML = `<span class="ico">${HERO_ICONS[G.hero] || ICON_ADV}</span><b>${HEROES[G.hero].name}</b><p>${HEROES[G.hero].txt}</p><div class="hpbar"><div class="pips"></div><span class="hpnum"></span></div>`; }
+      hb.querySelector('.pips').innerHTML = $('#pips').innerHTML;
+      hb.querySelector('.hpnum').textContent = `Vida ${hp} / ${START_HP}`;
+    }
     $('#heroTag').textContent = HEROES[G.hero].name;
     if (tok.adv) tok.adv.querySelector('.badge').textContent = hp;
     lastHp = hp;
@@ -685,7 +693,7 @@
   const ADV_ORDER = ['base', 'mguf', 'peak', 'harbour', 'hell'];
 
   function adventureScreen() {
-    const sc = showScreen(`<div class="splash">
+    const sc = showScreen(`<div class="splash wide">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">Elige la aventura</h2>
       <div class="adv-list">${ADV_ORDER.map(k => `<button type="button" class="adv-card" data-game="${k}">
@@ -703,7 +711,7 @@
         <span class="ico">${HERO_ICONS[k]}</span><span><b>${HEROES[k].name}</b><p>${HEROES[k].txt}</p></span></button>`;
     const section = pk => { const hs = heroesOf(pk.key); return hs.length ? `<h3 class="pack-h">${pk.name}</h3><div class="hero-list">${hs.map(card).join('')}</div>` : ''; };
     const mine = PACKS.filter(pk => own.includes(pk.key)), others = PACKS.filter(pk => !own.includes(pk.key));
-    const sc = showScreen(`<div class="splash">
+    const sc = showScreen(`<div class="splash wide">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">Elige a tu héroe</h2>
       <p class="lead">${GAMES[game].name}: héroes de la caja original${game === 'base' ? '' : ' y de esta expansión'}.</p>
@@ -728,7 +736,7 @@
     const pool = E.itemPool(game);
     const list = () => pool.map(k => `<button type="button" class="hero-card item-card ${pick.includes(k) ? 'chosen' : ''}" data-it="${k}" aria-pressed="${pick.includes(k)}">
         <span class="ico">${ITEM_ICONS[k]}</span><span><b>${ITEMS[k].name}</b><p>${ITEMS[k].txt}</p><small class="pk">${ITEM_PACK[k]}</small></span><i class="tick" aria-hidden="true"></i></button>`).join('');
-    const sc = showScreen(`<div class="splash">
+    const sc = showScreen(`<div class="splash wide">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">${must ? 'Tus tres objetos' : 'Objetos (opcional)'}</h2>
       <p class="lead">${must ? `Se han sorteado tres. Puedes quedártelos o elegir los que prefieras para ${HEROES[hero].name}.` : `Puedes jugar sin objetos o con tres, al azar o a tu elección.`} Cada objeto se usa una sola vez.</p>
@@ -1336,6 +1344,11 @@
     window.addEventListener('resize', fitSoon);
     window.addEventListener('orientationchange', fitSoon);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSoon);
+    if (DESK.addEventListener) DESK.addEventListener('change', fitSoon);
+    $('#sysBox').addEventListener('click', e => {
+      const b = e.target.closest('[data-act]'); if (!b || !G) return;
+      if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu();
+    });
     fit();
   }
 
