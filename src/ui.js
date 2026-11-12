@@ -208,7 +208,7 @@
     const cs = getComputedStyle(app), gap = parseFloat(cs.rowGap) || 0;
     const others = $('.top').offsetHeight + ($('#card').offsetHeight - board.offsetHeight) + panelH + gap * 2
       + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const byH = Math.floor((vh - others - 22) / ROWS);
+    const byH = Math.floor((vh - others - 14) / ROWS);
     if (byH < t) t = Math.max(38, byH);
     root.style.setProperty('--t', t + 'px');
   }
@@ -957,7 +957,7 @@
     if (!E.assignComplete(G.turn)) return;
     E.confirmEnergy(G);
     render();
-    say(`Mov <b>${G.turn.spd}</b> · Atq <b>${G.turn.atk}</b> · Def <b>${G.turn.def}</b>${G.turn.rng !== G.adv.rng ? ` · Alc <b>${G.turn.rng}</b>` : ''}. ${nothingLeft() ? 'No puedes hacer nada útil: termina el turno.' : ''}`);
+    say(nothingLeft() ? 'No puedes hacer nada útil: termina el turno.' : 'Muévete o ataca. Cuando termines, Fin de turno.');
   }
 
   const hitFx = m => { const el = tok.mons.get(m.id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } };
@@ -1096,7 +1096,7 @@
       await glide(tok.adv, path, boarding ? 14 : G.turn.spd);
       busy = false;
       render();
-      say(`${boarding ? 'Abordaje.' : 'Te mueves.'} Te quedan <b>${G.turn.spdLeft}</b> de Mov y <b>${E.atkAvail(G)}</b> de Atq.${E.blizzPen(G) ? ' <b>Ventisca:</b> −1 a tu Atq y Def mientras estés aquí.' : ''}`);
+      say(`${boarding ? 'Abordaje.' : 'Te mueves.'}${E.blizzPen(G) ? ' <b>Ventisca:</b> −1 a tu Atq y Def mientras estés aquí.' : ''}`);
     } else if (R.dist[i] < Infinity) say(`Llegar ahí cuesta <b>${R.dist[i]}</b> de Mov y te quedan <b>${G.turn.spdLeft}</b>.`);
     else say('No hay camino hasta esa casilla.');
   }

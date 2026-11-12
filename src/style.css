@@ -453,3 +453,20 @@ body.tight .banner { display: none; }
 body.tight .dice-row.moving { display: none; }
 .dots { flex-wrap: nowrap; gap: 3px; }
 .dots i { width: 5px; height: 5px; }
+
+/* ===== Cabecera con la Vida y botones pequeños ===== */
+.top { align-items: center; gap: 8px; }
+.top .brand .sub { display: none; }
+.top .hp-row { margin: 0 auto; gap: 6px; }
+.top .hp-row .lab { display: none; }
+.top .hpnum { margin-left: 0; font-size: 14px; white-space: nowrap; }
+.top .pips { gap: 5px; }
+.ghost.icon { min-width: 36px; min-height: 36px; padding: 0; display: grid; place-items: center; font-size: 18px; letter-spacing: 0; }
+.ghost.icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.log { min-height: 20px; max-height: 40px; }
+.chip { min-height: 56px; padding: 3px 3px; gap: 0; }
+.chip .val { font-size: 24px; }
+.chip .sub { min-height: 18px; }
+.die.mini { width: 16px; height: 16px; padding: 2px; }
+.item { min-height: 32px; }
+.panel { gap: 5px; }

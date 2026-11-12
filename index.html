@@ -465,6 +465,23 @@ body.tight .dice-row.moving { display: none; }
 .dots { flex-wrap: nowrap; gap: 3px; }
 .dots i { width: 5px; height: 5px; }
 
+/* ===== Cabecera con la Vida y botones pequeños ===== */
+.top { align-items: center; gap: 8px; }
+.top .brand .sub { display: none; }
+.top .hp-row { margin: 0 auto; gap: 6px; }
+.top .hp-row .lab { display: none; }
+.top .hpnum { margin-left: 0; font-size: 14px; white-space: nowrap; }
+.top .pips { gap: 5px; }
+.ghost.icon { min-width: 36px; min-height: 36px; padding: 0; display: grid; place-items: center; font-size: 18px; letter-spacing: 0; }
+.ghost.icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.log { min-height: 20px; max-height: 40px; }
+.chip { min-height: 56px; padding: 3px 3px; gap: 0; }
+.chip .val { font-size: 24px; }
+.chip .sub { min-height: 18px; }
+.die.mini { width: 16px; height: 16px; padding: 2px; }
+.item { min-height: 32px; }
+.panel { gap: 5px; }
+
 </style>
 </head>
 <body>
@@ -472,9 +489,10 @@ body.tight .dice-row.moving { display: none; }
 <main class="app">
   <header class="top">
     <div class="brand"><span class="mark">Dungeon</span><span class="sub">in one card</span></div>
+    <div class="hp-row"><span class="lab" id="heroTag"></span><div class="pips" id="pips"></div><span class="hpnum" id="hpnum"></span></div>
     <div class="top-actions">
-      <button type="button" class="ghost" id="btnRules">Reglas</button>
-      <button type="button" class="ghost" id="btnPass">Contraseña</button>
+      <button type="button" class="ghost icon" id="btnRules" aria-label="Reglas" title="Reglas">?</button>
+      <button type="button" class="ghost icon" id="btnPass" aria-label="Contraseña" title="Contraseña"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M17 12v4M20 12v3"/></svg></button>
     </div>
   </header>
 
@@ -499,7 +517,6 @@ body.tight .dice-row.moving { display: none; }
 
   <section class="panel" aria-label="Mandos">
     <div class="banner"><span class="step" id="step">1</span><p id="bannerText"></p></div>
-    <div class="hp-row"><span class="lab" id="heroTag"></span><div class="pips" id="pips"></div><span class="hpnum" id="hpnum"></span></div>
     <div class="chips" id="chips"></div>
     <div class="items" id="items" hidden></div>
     <div class="loot" id="loot" hidden></div>
@@ -1783,7 +1800,7 @@ if (typeof module !== 'undefined') {
     const cs = getComputedStyle(app), gap = parseFloat(cs.rowGap) || 0;
     const others = $('.top').offsetHeight + ($('#card').offsetHeight - board.offsetHeight) + panelH + gap * 2
       + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const byH = Math.floor((vh - others - 22) / ROWS);
+    const byH = Math.floor((vh - others - 14) / ROWS);
     if (byH < t) t = Math.max(38, byH);
     root.style.setProperty('--t', t + 'px');
   }
@@ -2532,7 +2549,7 @@ if (typeof module !== 'undefined') {
     if (!E.assignComplete(G.turn)) return;
     E.confirmEnergy(G);
     render();
-    say(`Mov <b>${G.turn.spd}</b> · Atq <b>${G.turn.atk}</b> · Def <b>${G.turn.def}</b>${G.turn.rng !== G.adv.rng ? ` · Alc <b>${G.turn.rng}</b>` : ''}. ${nothingLeft() ? 'No puedes hacer nada útil: termina el turno.' : ''}`);
+    say(nothingLeft() ? 'No puedes hacer nada útil: termina el turno.' : 'Muévete o ataca. Cuando termines, Fin de turno.');
   }
 
   const hitFx = m => { const el = tok.mons.get(m.id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } };
@@ -2671,7 +2688,7 @@ if (typeof module !== 'undefined') {
       await glide(tok.adv, path, boarding ? 14 : G.turn.spd);
       busy = false;
       render();
-      say(`${boarding ? 'Abordaje.' : 'Te mueves.'} Te quedan <b>${G.turn.spdLeft}</b> de Mov y <b>${E.atkAvail(G)}</b> de Atq.${E.blizzPen(G) ? ' <b>Ventisca:</b> −1 a tu Atq y Def mientras estés aquí.' : ''}`);
+      say(`${boarding ? 'Abordaje.' : 'Te mueves.'}${E.blizzPen(G) ? ' <b>Ventisca:</b> −1 a tu Atq y Def mientras estés aquí.' : ''}`);
     } else if (R.dist[i] < Infinity) say(`Llegar ahí cuesta <b>${R.dist[i]}</b> de Mov y te quedan <b>${G.turn.spdLeft}</b>.`);
     else say('No hay camino hasta esa casilla.');
   }
