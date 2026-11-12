@@ -151,18 +151,16 @@
     }
   }
 
-  // Desliza una ficha por un camino. Todo el traslado dura `ms` en total, sin importar cuántas
-  // casillas recorra; cada tramo dura en proporción a su coste de movimiento (2 recto, 3 diagonal).
-  async function glide(el, path, ms) {
+  // Desliza una ficha por un camino. Cada casilla en recto dura 4 s / velocidad total y cada casilla
+  // en diagonal 6 s / velocidad total (la diagonal cuesta 3 de Mov y la recta 2: misma proporción).
+  const STEP_S = { straight: 4, diagonal: 6 };
+  async function glide(el, path, speed) {
     el.dataset.anim = '1';
-    const cost = (a, b) => { const [ax, ay] = XY(a), [bx, by] = XY(b); return ax !== bx && ay !== by ? 3 : 2; };
-    let total = 0;
-    for (let k = 1; k < path.length; k++) total += cost(path[k - 1], path[k]);
     el.classList.add('walking');
     el.style.transitionTimingFunction = 'linear';
     for (let k = 1; k < path.length; k++) {
-      const [px] = XY(path[k - 1]), [x, y] = XY(path[k]);
-      const dur = ms * cost(path[k - 1], path[k]) / total;
+      const [px, py] = XY(path[k - 1]), [x, y] = XY(path[k]);
+      const dur = 1000 * (px !== x && py !== y ? STEP_S.diagonal : STEP_S.straight) / Math.max(1, speed);
       el.style.transitionDuration = dur + 'ms';
       if (x !== px) el.style.setProperty('--flip', x < px ? -1 : 1);
       setPos(el, x, y);
@@ -172,7 +170,6 @@
     el.style.transitionDuration = ''; el.style.transitionTimingFunction = '';
     delete el.dataset.anim;
   }
-  const MOVE_MS = 3000;
 
   function floatText(x, y, text, cls) {
     const f = document.createElement('div');
@@ -630,7 +627,7 @@
       tok.adv.dataset.anim = '1';
       render();
       say('Te mueves…');
-      await glide(tok.adv, path, MOVE_MS);
+      await glide(tok.adv, path, G.turn.spd);
       busy = false;
       render();
       say(`Te mueves. Te quedan <b>${G.turn.spdLeft}</b> de Mov y <b>${G.turn.atkLeft}</b> de Atq.`);
@@ -668,8 +665,7 @@
     for (const e of ev) {
       if (e.t === 'move') {
         const el = tok.mons.get(e.id);
-        if (el) await glide(el, e.path, MOVE_MS);
-        else await sleep(MOVE_MS);
+        if (el) await glide(el, e.path, LEVELS[G.levelIdx].mon.spd);
       } else if (e.t === 'attack') {
         if (e.ids.length) {
           for (const id of e.ids) { const el = tok.mons.get(id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } }
