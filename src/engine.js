@@ -35,23 +35,58 @@ const LEVEL_DEFS = [
   { title: 'Puerta del demonio III', o: 'demon',  at: [[0,1],[2,1],[0,3]] }
 ];
 
-function buildLevel(def) {
-  const O = ORIENTS[def.o];
-  const walls = new Array(N).fill(false);
+function buildLevel(def, O) {
+  const walls = new Array(N).fill(false), blizz = new Array(N).fill(false), voids = new Array(N).fill(false);
   const stairs = [];
   let start = -1;
   O.map.forEach((row, y) => {
     for (let x = 0; x < COLS; x++) {
       const c = row[x], i = idx(x, y);
       if (c === '#') walls[i] = true;
+      else if (c === 'V') { walls[i] = true; voids[i] = true; }   // hueco de la carta (cubierto por la ilustración)
+      else if (c === '~') blizz[i] = true;
       else if (c === 'S') { start = i; stairs.push(i); }
       else if (c === 'U') stairs.push(i);
     }
   });
   const spawns = def.at.map(([x, y]) => idx(x, y));
-  return { title: def.title, mon: O.mon, map: O.map, walls, start, stairs, spawns, rd: {}, lm: {} };
+  return { title: def.title, mon: O.mon, map: O.map, walls, blizz, voids, start, stairs, spawns, rd: {}, lm: {} };
 }
-const LEVELS = LEVEL_DEFS.map(buildLevel);
+
+/* Montaña Eterna (pack de aventura): '~' casilla de ventisca, 'V' hueco de la carta.
+   Cada cara de la carta sirve para dos orientaciones (giradas 180°). */
+const ORIENTS_PEAK = {
+  goblin:   { mon: { key: 'goblin',   name: 'Goblin',   plural: 'Goblins',   hp: 2,  spd: 4, atk: 4, def: 4, rng: 4 },
+              map: ['U.~~.', '...~~', '.#.#~', '#..#.', '....S'] },
+  wolf:     { mon: { key: 'wolf',     name: 'Lobo',     plural: 'Lobos',     hp: 3,  spd: 5, atk: 5, def: 4, rng: 3 },
+              map: ['U...V', '..#..', '~~~#.', '.#~~~', '....S'] },
+  yeti:     { mon: { key: 'yeti',     name: 'Yeti',     plural: 'Yetis',     hp: 4,  spd: 4, atk: 6, def: 6, rng: 3 },
+              map: ['U....', '.#..#', '~#.#.', '~~...', '.~~.S'] },
+  sorcerer: { mon: { key: 'sorcerer', name: 'Hechicero Blanco', plural: 'Hechicero Blanco', hp: 10, spd: 5, atk: 7, def: 7, rng: 7 },
+              map: ['U....', '~~~#.', '.#~~~', '..#..', 'V...S'] }
+};
+const LEVEL_DEFS_PEAK = [
+  { title: 'Sendero helado',        o: 'goblin',   at: [[4,0],[3,1]] },
+  { title: 'Aullidos en la nieve',  o: 'wolf',     at: [[3,1],[1,2]] },
+  { title: 'Guarida del yeti',      o: 'yeti',     at: [[2,1]] },
+  { title: 'Campamento goblin',     o: 'goblin',   at: [[2,1],[4,1],[1,3]] },
+  { title: 'Colmillos de escarcha', o: 'wolf',     at: [[0,1],[4,1],[0,3]] },
+  { title: 'Ventisquero del yeti',  o: 'yeti',     at: [[1,0],[0,4]] },
+  { title: 'Horda goblin',          o: 'goblin',   at: [[3,0],[1,1],[4,2],[2,3]] },
+  { title: 'Manada del huargo',     o: 'wolf',     at: [[3,0],[1,1],[4,2],[2,3]] },
+  { title: 'Cumbre del yeti',       o: 'yeti',     at: [[3,0],[0,1],[4,2]] },
+  { title: 'El Hechicero Blanco',   o: 'sorcerer', at: [[2,0]] }
+];
+
+const GAMES = {
+  base: { key: 'base', name: 'One Card Dungeon', pwLen: 4,
+          levels: LEVEL_DEFS.map(d => buildLevel(d, ORIENTS[d.o])) },
+  peak: { key: 'peak', name: 'Montaña Eterna', pwLen: 5,
+          levels: LEVEL_DEFS_PEAK.map(d => buildLevel(d, ORIENTS_PEAK[d.o])) }
+};
+let GAME = 'base';
+let LEVELS = GAMES.base.levels;
+function useGame(key) { GAME = GAMES[key] ? key : 'base'; LEVELS = GAMES[GAME].levels; return LEVELS; }
 
 /* ---------- Caminos y distancias ---------- */
 function neighbors(lv, i, cut) {
@@ -152,7 +187,8 @@ function hasLOS(lv, a, b, blockers) {
 }
 
 /* ---------- Estado ---------- */
-const HERO_KEYS = ['paladin', 'barbarian', 'ranger', 'mage'];
+const HERO_KEYS = ['paladin', 'barbarian', 'ranger', 'mage', 'sherpa'];
+const ITEM_KEYS = ['cloak', 'axe', 'herbs', 'wyrm', 'flame'];
 
 function freshTurn() {
   return { dice: null, assign: { spd: -1, atk: -1, def: -1, rng: -1 }, sel: -1, lock: -1, ranger: false, rerolled: false,
@@ -160,6 +196,7 @@ function freshTurn() {
 }
 
 function setupLevel(st, i) {
+  useGame(st.game || 'base');
   const lv = LEVELS[i];
   st.levelIdx = i;
   const [x, y] = XY(lv.start);
@@ -173,13 +210,19 @@ function setupLevel(st, i) {
   st.turn = freshTurn();
   st.undo = [];
   st.turnNo = 1;
-  st.cp = { hp: st.adv.hp };   // Vida al empezar el nivel (para la contraseña)
+  st.cp = { hp: st.adv.hp, items: (st.items || []).slice() };   // Vida y objetos al empezar el nivel (contraseña)
   st.abil = false;             // habilidad de héroe usada en este nivel
+  st.cloak = false;            // Capa de cuero activa en este nivel
+  st.sherpaOn = false;         // Sherpa: el próximo traslado ignora los muros
+  st.pendingDmg = 0;
   return st;
 }
 
-function newRun(hero) {
-  const st = { hero: HERO_KEYS.includes(hero) ? hero : 'paladin', levelIdx: 0,
+function newRun(hero, game, items) {
+  game = GAMES[game] ? game : 'base';
+  useGame(game);
+  const st = { game, items: game === 'peak' ? (items || []).filter(i => ITEM_KEYS.includes(i)).slice(0, 3) : [],
+               hero: HERO_KEYS.includes(hero) ? hero : 'paladin', levelIdx: 0,
                adv: { x: 0, y: 0, hp: START_HP, spd: 1, atk: 1, def: 1, rng: 2 },
                mons: [], phase: 'energy', turn: null, undo: [], turnNo: 1, prev: null };
   return setupLevel(st, 0);
@@ -222,8 +265,15 @@ function toggleRanger(st) {
   if (!t.ranger) { t.ranger = true; st.abil = true; t.assign.spd = -1; }
   else { t.ranger = false; st.abil = false; t.assign.rng = -1; }
 }
+function toggleSherpa(st) {
+  if (st.sherpaOn) { st.sherpaOn = false; st.abil = false; } else { st.sherpaOn = true; st.abil = true; }
+}
 function abilityInfo(st) {
   const t = st.turn;
+  if (st.hero === 'sherpa') {
+    if (st.phase !== 'move') return null;
+    return (!st.abil || st.sherpaOn) ? { id: 'sherpa', label: st.sherpaOn ? 'Cancelar muros' : 'Atravesar muros' } : null;
+  }
   if (st.phase !== 'energy') return null;
   if (st.hero === 'paladin') return !t.dice && !st.abil && st.prev && Object.keys(st.prev).length ? { id: 'keep', label: 'Conservar dado' } : null;
   if (st.hero === 'barbarian') return t.dice && !t.rerolled && st.adv.hp === 1 ? { id: 'reroll', label: 'Volver a tirar' } : null;
@@ -237,8 +287,21 @@ function reachFromAdv(st) {
   const lv = LEVELS[st.levelIdx];
   const blocked = new Array(N).fill(false);
   for (const m of st.mons) blocked[idx(m.x, m.y)] = true;
+  if (st.sherpaOn) {
+    // Sherpa: los muros cuentan como casillas normales al moverse, pero no se puede terminar en uno
+    const R = dijkstra({ walls: lv.voids }, idx(st.adv.x, st.adv.y), blocked);
+    for (let i = 0; i < N; i++) if (lv.walls[i]) R.dist[i] = Infinity;
+    return R;
+  }
   return dijkstra(lv, idx(st.adv.x, st.adv.y), blocked);
 }
+
+// Ventisca: con el aventurero sobre una casilla de ventisca, -1 al Ataque y a la Defensa base
+function blizzPen(st) {
+  const lv = LEVELS[st.levelIdx];
+  return lv.blizz[idx(st.adv.x, st.adv.y)] && !st.cloak ? 1 : 0;
+}
+const atkAvail = st => Math.max(0, st.turn.atkLeft - blizzPen(st));
 
 function attackInfo(st, m) {
   const lv = LEVELS[st.levelIdx], a = idx(st.adv.x, st.adv.y), t = idx(m.x, m.y);
@@ -246,18 +309,19 @@ function attackInfo(st, m) {
   if (rd > (st.turn.rng || st.adv.rng)) return { ok: false, why: 'range', rd };
   const others = st.mons.filter(o => o !== m).map(o => idx(o.x, o.y));
   if (!hasLOS(lv, a, t, others)) return { ok: false, why: 'los', rd };
-  if (st.turn.atkLeft < m.def) return { ok: false, why: 'points', rd };
+  if (atkAvail(st) < m.def) return { ok: false, why: 'points', rd };
   return { ok: true, rd };
 }
 
 function pushUndo(st) {
   st.undo.push(JSON.stringify({ x: st.adv.x, y: st.adv.y, mons: st.mons,
-                                spdLeft: st.turn.spdLeft, atkLeft: st.turn.atkLeft }));
+                                spdLeft: st.turn.spdLeft, atkLeft: st.turn.atkLeft, sherpaOn: !!st.sherpaOn, abil: !!st.abil }));
 }
 function popUndo(st) {
   const s = JSON.parse(st.undo.pop());
   st.adv.x = s.x; st.adv.y = s.y; st.mons = s.mons;
   st.turn.spdLeft = s.spdLeft; st.turn.atkLeft = s.atkLeft;
+  st.sherpaOn = s.sherpaOn; st.abil = s.abil;
 }
 
 function moveAdv(st, i, dist) {
@@ -265,6 +329,44 @@ function moveAdv(st, i, dist) {
   const [x, y] = XY(i);
   st.turn.spdLeft -= dist;
   st.adv.x = x; st.adv.y = y;
+  st.sherpaOn = false;   // el traslado con la habilidad del Sherpa se consume
+}
+
+/* ---------- Objetos (módulo de cartas de objeto) ---------- */
+function itemUsable(st, id) {
+  if (!st.items || !st.items.includes(id)) return false;
+  const t = st.turn;
+  if (id === 'cloak') return !st.cloak && (st.phase === 'energy' || st.phase === 'move');
+  if (id === 'axe' || id === 'wyrm') return st.phase === 'move';
+  if (id === 'flame') return st.phase === 'energy' && !!t.dice;
+  return false;   // las hierbas se ofrecen al recibir un ataque
+}
+function useItem(st, id) {
+  if (!itemUsable(st, id)) return false;
+  const t = st.turn;
+  st.items = st.items.filter(i => i !== id);
+  if (id === 'cloak') st.cloak = true;
+  else if (id === 'axe') { t.atk += 2; t.atkLeft += 2; t.rng = (t.rng || st.adv.rng) + 2; st.undo = []; }
+  else if (id === 'wyrm') { t.spd += 4; t.spdLeft += 4; st.undo = []; }
+  return true;
+}
+// Llama del destino: vuelve a tirar los dados elegidos y se queda con la segunda tirada
+function useFlame(st, picks) {
+  if (!itemUsable(st, 'flame')) return false;
+  const t = st.turn, list = picks.filter(i => i !== t.lock && i >= 0 && i < 3);
+  if (!list.length) return false;
+  st.items = st.items.filter(i => i !== 'flame');
+  for (const i of list) t.dice[i] = rollDie();
+  t.sel = -1;
+  return true;
+}
+// Hierbas curativas: tras el ataque de los monstruos, el daño pendiente se reduce a la mitad (hacia arriba)
+function resolveDamage(st, useHerbs) {
+  let dmg = st.pendingDmg || 0;
+  st.pendingDmg = 0;
+  if (useHerbs && st.items.includes('herbs')) { dmg = Math.ceil(dmg / 2); st.items = st.items.filter(i => i !== 'herbs'); }
+  st.adv.hp = Math.max(0, st.adv.hp - dmg);
+  return dmg;
 }
 
 // devuelve true si el monstruo muere
@@ -365,9 +467,11 @@ function playMonsters(st) {
   }
   const att = attackers(st);
   const total = att.reduce((s, m) => s + m.atk, 0);
-  const dmg = Math.floor(total / st.turn.def);
-  st.adv.hp = Math.max(0, st.adv.hp - dmg);
-  ev.push({ t: 'attack', ids: att.map(m => m.id), total, def: st.turn.def, dmg });
+  const def = Math.max(1, st.turn.def - blizzPen(st));
+  const dmg = Math.floor(total / def);
+  const pending = dmg > 1 && !!st.items && st.items.includes('herbs');   // la UI ofrece las Hierbas curativas
+  if (pending) st.pendingDmg = dmg; else st.adv.hp = Math.max(0, st.adv.hp - dmg);
+  ev.push({ t: 'attack', ids: att.map(m => m.id), total, def, dmg, pending });
   return ev;
 }
 
@@ -384,14 +488,17 @@ function applyBreak(st, choice) { // 'spd' | 'atk' | 'def' | 'rng' | 'heal'
   if (choice === 'heal') st.adv.hp = START_HP; else st.adv[choice] += 1;
 }
 function nextLevel(st) {
+  useGame(st.game || 'base');
   if (st.levelIdx >= LEVELS.length - 1) { st.phase = 'won'; return false; }
   setupLevel(st, st.levelIdx + 1);
   return true;
 }
 
-/* ---------- Contraseña de 4 caracteres (inicio de nivel) ---------- */
+/* ---------- Contraseña (inicio de nivel) ----------
+   Juego original: 4 caracteres. Montaña Eterna: 5 (incluye los objetos que conservas). */
 const PW_ALPHA = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // 32 símbolos, sin 0 1 I O
 const PW_MOD = 1 << 20, PW_A = 618033, PW_B = 0x5A3C1;
+const PW5_MOD = 1 << 25, PW5_A = 15485863, PW5_B = 0x1B3C5D;
 const PW_PAIRS = [], PW_INDEX = new Map();
 for (let L = 0; L < 12; L++)
   for (let a = 0; a <= L; a++) for (let b = 0; a + b <= L; b++)
@@ -399,58 +506,84 @@ for (let L = 0; L < 12; L++)
       PW_INDEX.set([L, a, b, c, d].join(), PW_PAIRS.length);
       PW_PAIRS.push([L, a, b, c, d]);
     }
-const PW_N = PW_PAIRS.length;                          // 4368 (nivel + mejoras posibles)
+const PW_N = PW_PAIRS.length;                          // 4368 (nivel + mejoras posibles, 12 niveles)
+const PW_N10 = PW_PAIRS.filter(p => p[0] < 10).length; // 2002 (10 niveles)
 const PW_TOTAL = HERO_KEYS.length * 6 * PW_N;          // héroe × vida × (nivel+mejoras)
+const ITEM_SETS = [];                                   // subconjuntos de 0 a 3 de los 5 objetos
+for (let m = 0; m < 32; m++) { let c = 0; for (let b = 0; b < 5; b++) c += (m >> b) & 1; if (c <= 3) ITEM_SETS.push(m); }
+const PW5_TOTAL = HERO_KEYS.length * 6 * PW_N10 * ITEM_SETS.length;
+const itemMask = items => (items || []).reduce((s, i) => s | (1 << ITEM_KEYS.indexOf(i)), 0);
+const itemsOf = m => ITEM_KEYS.filter((_, b) => (m >> b) & 1);
 function modInv(a, m) {
   let r0 = m, r1 = a % m, t0 = 0, t1 = 1;
   while (r1) { const q = Math.floor(r0 / r1); [r0, r1] = [r1, r0 - q * r1]; [t0, t1] = [t1, t0 - q * t1]; }
   return ((t0 % m) + m) % m;
 }
-const PW_AINV = modInv(PW_A, PW_MOD);
+const PW_AINV = modInv(PW_A, PW_MOD), PW5_AINV = modInv(PW5_A, PW5_MOD);
 const pwCheck = n => (n ^ (n >> 3) ^ (n >> 7) ^ (n >> 11) ^ (n >> 15)) & 7;
+const pwCheck5 = n => (n ^ (n >> 4) ^ (n >> 8) ^ (n >> 12) ^ (n >> 16) ^ (n >> 20)) & 15;
 
-function fromCheckpoint(hero, L, hp, u) {
-  const st = newRun(hero);
+function fromCheckpoint(hero, L, hp, u, game, items) {
+  const st = newRun(hero, game, items);
   st.adv.hp = hp; st.adv.spd = 1 + u[0]; st.adv.atk = 1 + u[1]; st.adv.def = 1 + u[2]; st.adv.rng = 2 + u[3];
   return setupLevel(st, L);
 }
 const upgradesOf = st => [st.adv.spd - 1, st.adv.atk - 1, st.adv.def - 1, st.adv.rng - 2];
 
+function toText(p, len) { let out = ''; for (let i = 0; i < len; i++) { out = PW_ALPHA[p & 31] + out; p = Math.floor(p / 32); } return out; }
+
 function encodePassword(st) {
+  const game = st.game || 'base';
   const pi = PW_INDEX.get([st.levelIdx].concat(upgradesOf(st)).join());
   const hp = st.cp ? st.cp.hp : st.adv.hp;
   if (pi === undefined || hp < 1 || hp > START_HP) return null;
-  const n = ((HERO_KEYS.indexOf(st.hero) * 6 + (hp - 1)) * PW_N) + pi;
-  let p = ((n * 8 + pwCheck(n)) * PW_A + PW_B) % PW_MOD;
-  let out = '';
-  for (let i = 0; i < 4; i++) { out = PW_ALPHA[p & 31] + out; p >>= 5; }
-  return out;
+  const h = HERO_KEYS.indexOf(st.hero);
+  if (game === 'peak') {
+    if (st.levelIdx >= 10) return null;
+    const si = ITEM_SETS.indexOf(itemMask(st.cp ? st.cp.items : st.items));
+    if (si < 0) return null;
+    const n = (((h * 6 + (hp - 1)) * PW_N10 + pi) * ITEM_SETS.length) + si;
+    return toText(((n * 16 + pwCheck5(n)) * PW5_A + PW5_B) % PW5_MOD, 5);
+  }
+  const n = ((h * 6 + (hp - 1)) * PW_N) + pi;
+  return toText(((n * 8 + pwCheck(n)) * PW_A + PW_B) % PW_MOD, 4);
 }
 
 function decodePassword(text) {
   const s = String(text).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (s.length !== 4) return null;
+  if (s.length !== 4 && s.length !== 5) return null;
   let p = 0;
   for (const ch of s) { const v = PW_ALPHA.indexOf(ch); if (v < 0) return null; p = p * 32 + v; }
+  if (s.length === 5) {
+    const raw = ((((p - PW5_B) % PW5_MOD) + PW5_MOD) % PW5_MOD * PW5_AINV) % PW5_MOD;
+    if (raw >= PW5_TOTAL * 16) return null;
+    const n = Math.floor(raw / 16);
+    if ((raw & 15) !== pwCheck5(n)) return null;
+    const si = n % ITEM_SETS.length, rest = Math.floor(n / ITEM_SETS.length);
+    const [L, a, b, c, d] = PW_PAIRS[rest % PW_N10], r2 = Math.floor(rest / PW_N10);
+    return fromCheckpoint(HERO_KEYS[Math.floor(r2 / 6)], L, (r2 % 6) + 1, [a, b, c, d], 'peak', itemsOf(ITEM_SETS[si]));
+  }
   const raw = ((((p - PW_B) % PW_MOD) + PW_MOD) % PW_MOD * PW_AINV) % PW_MOD;
   if (raw >= PW_TOTAL * 8) return null;
   const n = raw >> 3;
   if ((raw & 7) !== pwCheck(n)) return null;
   const [L, a, b, c, d] = PW_PAIRS[n % PW_N];
   const rest = Math.floor(n / PW_N);
-  return fromCheckpoint(HERO_KEYS[Math.floor(rest / 6)], L, (rest % 6) + 1, [a, b, c, d]);
+  return fromCheckpoint(HERO_KEYS[Math.floor(rest / 6)], L, (rest % 6) + 1, [a, b, c, d], 'base', []);
 }
 
-// Reintenta el nivel actual desde su inicio (vida y mejoras del inicio)
+// Reintenta el nivel actual desde su inicio (vida, mejoras y objetos del inicio)
 function retryLevel(st) {
-  const r = fromCheckpoint(st.hero, st.levelIdx, st.cp.hp, upgradesOf(st));
+  const r = fromCheckpoint(st.hero, st.levelIdx, st.cp.hp, upgradesOf(st), st.game || 'base', st.cp.items || []);
   r.prev = st.prev;
   return r;
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { COLS, ROWS, N, idx, XY, LEVELS, LEVEL_DEFS, START_HP, dijkstra, rangeDist, hasLOS, newRun, setupLevel,
-    rollDice, assignComplete, confirmEnergy, HERO_KEYS, rerollDice, useReroll, rollWithKeep, toggleRanger, abilityInfo,
-    encodePassword, decodePassword, retryLevel, PW_TOTAL, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
+  module.exports = { COLS, ROWS, N, idx, XY, get LEVELS() { return LEVELS; }, LEVEL_DEFS, LEVEL_DEFS_PEAK, GAMES, useGame, START_HP,
+    dijkstra, rangeDist, hasLOS, newRun, setupLevel, rollDice, assignComplete, confirmEnergy,
+    HERO_KEYS, ITEM_KEYS, rerollDice, useReroll, rollWithKeep, toggleRanger, toggleSherpa, abilityInfo,
+    itemUsable, useItem, useFlame, resolveDamage, blizzPen, atkAvail,
+    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
     playMonsters, endTurnCleanup, levelCleared, applyBreak, nextLevel, attackers, freshTurn };
 }

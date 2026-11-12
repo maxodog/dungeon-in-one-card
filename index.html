@@ -308,6 +308,58 @@ body.menu .screen {
 .token.blocked svg { animation: guard .6s ease-out; }
 @keyframes guard { 0% { filter: drop-shadow(0 0 0 rgba(127,168,220,0)); } 30% { filter: drop-shadow(0 0 9px #7fa8dc); } 100% { filter: drop-shadow(0 0 6px rgba(255,139,61,.55)); } }
 
+/* ---- Montaña Eterna: ventiscas, huecos y nuevos monstruos ---- */
+.tile.blizz { background: linear-gradient(135deg, rgba(190,225,255,.16), rgba(190,225,255,.05)); }
+.tile.blizz .wind { position: absolute; inset: 16%; color: #bfe3ff; opacity: .5; pointer-events: none; }
+.tile.blizz .wind svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tile.blizz.reach { background: rgba(255,139,61,.10); }
+.tile.wall.void { background: #03070f; background-image: none; box-shadow: inset 0 0 0 1px rgba(127,168,220,.12); }
+.chip.chilled .val { color: #9fd8ff; }
+.chip.chilled .sub { color: #9fd8ff; }
+.token.k-wolf.walking svg { animation: skitter .3s linear infinite; }
+.token.k-yeti.walking svg { animation: stomp .9s ease-in-out infinite; }
+.token.k-sorcerer.walking svg { animation: hover 1.1s ease-in-out infinite; }
+.token.k-goblin.walking svg { animation: clatter .4s ease-in-out infinite; }
+
+/* ---- objetos ---- */
+.items { display: flex; flex-wrap: wrap; gap: 8px; }
+.items[hidden] { display: none; }
+.item { flex: 1 1 0; min-width: 0; min-height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 8px;
+  border: 1.5px solid var(--torch); border-radius: 9px; background: rgba(255,139,61,.08); color: var(--chalk); font-size: 15px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.item .ico { width: 24px; height: 24px; flex: none; color: var(--torch); display: grid; place-items: center; }
+.item .ico svg, .item-head .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.item.idle { border-color: var(--line-dim); background: rgba(127,168,220,.05); color: var(--muted); }
+.item.idle .ico { color: var(--muted); }
+.item.on { border-color: #9fd8ff; background: rgba(159,216,255,.10); color: #9fd8ff; cursor: default; }
+.item.on .ico { color: #9fd8ff; }
+.item-head { display: flex; align-items: center; gap: 12px; }
+.item-head .ico { width: 46px; height: 46px; flex: none; color: var(--torch); border: 1.5px solid var(--line-dim); border-radius: 10px; padding: 8px; }
+.dice-row.pick { min-height: 64px; }
+
+/* ---- botón de habilidad en la fase de movimiento ---- */
+.btn.abil.tight { font-size: 15px; letter-spacing: .03em; padding: 6px 8px; line-height: 1.05; }
+.btn.abil.on { background: var(--torch); color: #1a0d03; }
+.actions .btn.small { padding: 8px 12px; }
+
+/* ---- selector de aventura ---- */
+.adv-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.adv-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; text-align: left; padding: 8px 8px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: rgba(127,168,220,.06); }
+.adv-card:active, .adv-card:hover { border-color: var(--torch); background: rgba(255,139,61,.08); }
+.adv-card img { width: 100%; height: auto; aspect-ratio: 440 / 614; border-radius: 6px; display: block; background: var(--card); object-fit: cover; margin-bottom: 4px; }
+.adv-tag { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--torch); font-weight: 700; }
+.adv-card b { font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1; }
+.adv-card p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.2; }
+
+/* ---- elección de objetos ---- */
+.item-card { position: relative; grid-template-columns: 58px 1fr 26px; }
+.item-card .tick { width: 22px; height: 22px; border: 1.5px solid var(--line); border-radius: 50%; align-self: center; position: relative; }
+.item-card.chosen { border-color: var(--torch); background: rgba(255,139,61,.10); }
+.item-card.chosen .tick { background: var(--torch); border-color: var(--torch); }
+.item-card.chosen .tick::after { content: ''; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px; border: solid #1a0d03; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+.item-card b { font-size: 24px; }
+.item { font-size: 13.5px; letter-spacing: .02em; padding: 4px 6px; gap: 4px; overflow: hidden; white-space: nowrap; }
+.item .ico { width: 20px; height: 20px; }
+
 </style>
 </head>
 <body>
@@ -325,7 +377,7 @@ body.menu .screen {
     <article class="card" id="card">
       <div class="card-head">
         <div class="head-row">
-          <div class="lvl-num">Nivel <b id="lvlNum">1</b> de 12</div>
+          <div class="lvl-num">Nivel <b id="lvlNum">1</b> de <span id="lvlTot">12</span></div>
           <div class="dots" id="dots" aria-hidden="true"></div>
         </div>
         <h2 class="lvl-name" id="lvlName">Sótano de telarañas</h2>
@@ -344,6 +396,7 @@ body.menu .screen {
     <div class="banner"><span class="step" id="step">1</span><p id="bannerText"></p></div>
     <div class="hp-row"><span class="lab" id="heroTag"></span><div class="pips" id="pips"></div><span class="hpnum" id="hpnum"></span></div>
     <div class="chips" id="chips"></div>
+    <div class="items" id="items" hidden></div>
     <div class="dice-row" id="diceRow"></div>
     <div class="actions" id="actions"></div>
     <p class="log" id="log" aria-live="polite"></p>
@@ -387,23 +440,58 @@ const LEVEL_DEFS = [
   { title: 'Puerta del demonio III', o: 'demon',  at: [[0,1],[2,1],[0,3]] }
 ];
 
-function buildLevel(def) {
-  const O = ORIENTS[def.o];
-  const walls = new Array(N).fill(false);
+function buildLevel(def, O) {
+  const walls = new Array(N).fill(false), blizz = new Array(N).fill(false), voids = new Array(N).fill(false);
   const stairs = [];
   let start = -1;
   O.map.forEach((row, y) => {
     for (let x = 0; x < COLS; x++) {
       const c = row[x], i = idx(x, y);
       if (c === '#') walls[i] = true;
+      else if (c === 'V') { walls[i] = true; voids[i] = true; }   // hueco de la carta (cubierto por la ilustración)
+      else if (c === '~') blizz[i] = true;
       else if (c === 'S') { start = i; stairs.push(i); }
       else if (c === 'U') stairs.push(i);
     }
   });
   const spawns = def.at.map(([x, y]) => idx(x, y));
-  return { title: def.title, mon: O.mon, map: O.map, walls, start, stairs, spawns, rd: {}, lm: {} };
+  return { title: def.title, mon: O.mon, map: O.map, walls, blizz, voids, start, stairs, spawns, rd: {}, lm: {} };
 }
-const LEVELS = LEVEL_DEFS.map(buildLevel);
+
+/* Montaña Eterna (pack de aventura): '~' casilla de ventisca, 'V' hueco de la carta.
+   Cada cara de la carta sirve para dos orientaciones (giradas 180°). */
+const ORIENTS_PEAK = {
+  goblin:   { mon: { key: 'goblin',   name: 'Goblin',   plural: 'Goblins',   hp: 2,  spd: 4, atk: 4, def: 4, rng: 4 },
+              map: ['U.~~.', '...~~', '.#.#~', '#..#.', '....S'] },
+  wolf:     { mon: { key: 'wolf',     name: 'Lobo',     plural: 'Lobos',     hp: 3,  spd: 5, atk: 5, def: 4, rng: 3 },
+              map: ['U...V', '..#..', '~~~#.', '.#~~~', '....S'] },
+  yeti:     { mon: { key: 'yeti',     name: 'Yeti',     plural: 'Yetis',     hp: 4,  spd: 4, atk: 6, def: 6, rng: 3 },
+              map: ['U....', '.#..#', '~#.#.', '~~...', '.~~.S'] },
+  sorcerer: { mon: { key: 'sorcerer', name: 'Hechicero Blanco', plural: 'Hechicero Blanco', hp: 10, spd: 5, atk: 7, def: 7, rng: 7 },
+              map: ['U....', '~~~#.', '.#~~~', '..#..', 'V...S'] }
+};
+const LEVEL_DEFS_PEAK = [
+  { title: 'Sendero helado',        o: 'goblin',   at: [[4,0],[3,1]] },
+  { title: 'Aullidos en la nieve',  o: 'wolf',     at: [[3,1],[1,2]] },
+  { title: 'Guarida del yeti',      o: 'yeti',     at: [[2,1]] },
+  { title: 'Campamento goblin',     o: 'goblin',   at: [[2,1],[4,1],[1,3]] },
+  { title: 'Colmillos de escarcha', o: 'wolf',     at: [[0,1],[4,1],[0,3]] },
+  { title: 'Ventisquero del yeti',  o: 'yeti',     at: [[1,0],[0,4]] },
+  { title: 'Horda goblin',          o: 'goblin',   at: [[3,0],[1,1],[4,2],[2,3]] },
+  { title: 'Manada del huargo',     o: 'wolf',     at: [[3,0],[1,1],[4,2],[2,3]] },
+  { title: 'Cumbre del yeti',       o: 'yeti',     at: [[3,0],[0,1],[4,2]] },
+  { title: 'El Hechicero Blanco',   o: 'sorcerer', at: [[2,0]] }
+];
+
+const GAMES = {
+  base: { key: 'base', name: 'One Card Dungeon', pwLen: 4,
+          levels: LEVEL_DEFS.map(d => buildLevel(d, ORIENTS[d.o])) },
+  peak: { key: 'peak', name: 'Montaña Eterna', pwLen: 5,
+          levels: LEVEL_DEFS_PEAK.map(d => buildLevel(d, ORIENTS_PEAK[d.o])) }
+};
+let GAME = 'base';
+let LEVELS = GAMES.base.levels;
+function useGame(key) { GAME = GAMES[key] ? key : 'base'; LEVELS = GAMES[GAME].levels; return LEVELS; }
 
 /* ---------- Caminos y distancias ---------- */
 function neighbors(lv, i, cut) {
@@ -504,7 +592,8 @@ function hasLOS(lv, a, b, blockers) {
 }
 
 /* ---------- Estado ---------- */
-const HERO_KEYS = ['paladin', 'barbarian', 'ranger', 'mage'];
+const HERO_KEYS = ['paladin', 'barbarian', 'ranger', 'mage', 'sherpa'];
+const ITEM_KEYS = ['cloak', 'axe', 'herbs', 'wyrm', 'flame'];
 
 function freshTurn() {
   return { dice: null, assign: { spd: -1, atk: -1, def: -1, rng: -1 }, sel: -1, lock: -1, ranger: false, rerolled: false,
@@ -512,6 +601,7 @@ function freshTurn() {
 }
 
 function setupLevel(st, i) {
+  useGame(st.game || 'base');
   const lv = LEVELS[i];
   st.levelIdx = i;
   const [x, y] = XY(lv.start);
@@ -525,13 +615,19 @@ function setupLevel(st, i) {
   st.turn = freshTurn();
   st.undo = [];
   st.turnNo = 1;
-  st.cp = { hp: st.adv.hp };   // Vida al empezar el nivel (para la contraseña)
+  st.cp = { hp: st.adv.hp, items: (st.items || []).slice() };   // Vida y objetos al empezar el nivel (contraseña)
   st.abil = false;             // habilidad de héroe usada en este nivel
+  st.cloak = false;            // Capa de cuero activa en este nivel
+  st.sherpaOn = false;         // Sherpa: el próximo traslado ignora los muros
+  st.pendingDmg = 0;
   return st;
 }
 
-function newRun(hero) {
-  const st = { hero: HERO_KEYS.includes(hero) ? hero : 'paladin', levelIdx: 0,
+function newRun(hero, game, items) {
+  game = GAMES[game] ? game : 'base';
+  useGame(game);
+  const st = { game, items: game === 'peak' ? (items || []).filter(i => ITEM_KEYS.includes(i)).slice(0, 3) : [],
+               hero: HERO_KEYS.includes(hero) ? hero : 'paladin', levelIdx: 0,
                adv: { x: 0, y: 0, hp: START_HP, spd: 1, atk: 1, def: 1, rng: 2 },
                mons: [], phase: 'energy', turn: null, undo: [], turnNo: 1, prev: null };
   return setupLevel(st, 0);
@@ -574,8 +670,15 @@ function toggleRanger(st) {
   if (!t.ranger) { t.ranger = true; st.abil = true; t.assign.spd = -1; }
   else { t.ranger = false; st.abil = false; t.assign.rng = -1; }
 }
+function toggleSherpa(st) {
+  if (st.sherpaOn) { st.sherpaOn = false; st.abil = false; } else { st.sherpaOn = true; st.abil = true; }
+}
 function abilityInfo(st) {
   const t = st.turn;
+  if (st.hero === 'sherpa') {
+    if (st.phase !== 'move') return null;
+    return (!st.abil || st.sherpaOn) ? { id: 'sherpa', label: st.sherpaOn ? 'Cancelar muros' : 'Atravesar muros' } : null;
+  }
   if (st.phase !== 'energy') return null;
   if (st.hero === 'paladin') return !t.dice && !st.abil && st.prev && Object.keys(st.prev).length ? { id: 'keep', label: 'Conservar dado' } : null;
   if (st.hero === 'barbarian') return t.dice && !t.rerolled && st.adv.hp === 1 ? { id: 'reroll', label: 'Volver a tirar' } : null;
@@ -589,8 +692,21 @@ function reachFromAdv(st) {
   const lv = LEVELS[st.levelIdx];
   const blocked = new Array(N).fill(false);
   for (const m of st.mons) blocked[idx(m.x, m.y)] = true;
+  if (st.sherpaOn) {
+    // Sherpa: los muros cuentan como casillas normales al moverse, pero no se puede terminar en uno
+    const R = dijkstra({ walls: lv.voids }, idx(st.adv.x, st.adv.y), blocked);
+    for (let i = 0; i < N; i++) if (lv.walls[i]) R.dist[i] = Infinity;
+    return R;
+  }
   return dijkstra(lv, idx(st.adv.x, st.adv.y), blocked);
 }
+
+// Ventisca: con el aventurero sobre una casilla de ventisca, -1 al Ataque y a la Defensa base
+function blizzPen(st) {
+  const lv = LEVELS[st.levelIdx];
+  return lv.blizz[idx(st.adv.x, st.adv.y)] && !st.cloak ? 1 : 0;
+}
+const atkAvail = st => Math.max(0, st.turn.atkLeft - blizzPen(st));
 
 function attackInfo(st, m) {
   const lv = LEVELS[st.levelIdx], a = idx(st.adv.x, st.adv.y), t = idx(m.x, m.y);
@@ -598,18 +714,19 @@ function attackInfo(st, m) {
   if (rd > (st.turn.rng || st.adv.rng)) return { ok: false, why: 'range', rd };
   const others = st.mons.filter(o => o !== m).map(o => idx(o.x, o.y));
   if (!hasLOS(lv, a, t, others)) return { ok: false, why: 'los', rd };
-  if (st.turn.atkLeft < m.def) return { ok: false, why: 'points', rd };
+  if (atkAvail(st) < m.def) return { ok: false, why: 'points', rd };
   return { ok: true, rd };
 }
 
 function pushUndo(st) {
   st.undo.push(JSON.stringify({ x: st.adv.x, y: st.adv.y, mons: st.mons,
-                                spdLeft: st.turn.spdLeft, atkLeft: st.turn.atkLeft }));
+                                spdLeft: st.turn.spdLeft, atkLeft: st.turn.atkLeft, sherpaOn: !!st.sherpaOn, abil: !!st.abil }));
 }
 function popUndo(st) {
   const s = JSON.parse(st.undo.pop());
   st.adv.x = s.x; st.adv.y = s.y; st.mons = s.mons;
   st.turn.spdLeft = s.spdLeft; st.turn.atkLeft = s.atkLeft;
+  st.sherpaOn = s.sherpaOn; st.abil = s.abil;
 }
 
 function moveAdv(st, i, dist) {
@@ -617,6 +734,44 @@ function moveAdv(st, i, dist) {
   const [x, y] = XY(i);
   st.turn.spdLeft -= dist;
   st.adv.x = x; st.adv.y = y;
+  st.sherpaOn = false;   // el traslado con la habilidad del Sherpa se consume
+}
+
+/* ---------- Objetos (módulo de cartas de objeto) ---------- */
+function itemUsable(st, id) {
+  if (!st.items || !st.items.includes(id)) return false;
+  const t = st.turn;
+  if (id === 'cloak') return !st.cloak && (st.phase === 'energy' || st.phase === 'move');
+  if (id === 'axe' || id === 'wyrm') return st.phase === 'move';
+  if (id === 'flame') return st.phase === 'energy' && !!t.dice;
+  return false;   // las hierbas se ofrecen al recibir un ataque
+}
+function useItem(st, id) {
+  if (!itemUsable(st, id)) return false;
+  const t = st.turn;
+  st.items = st.items.filter(i => i !== id);
+  if (id === 'cloak') st.cloak = true;
+  else if (id === 'axe') { t.atk += 2; t.atkLeft += 2; t.rng = (t.rng || st.adv.rng) + 2; st.undo = []; }
+  else if (id === 'wyrm') { t.spd += 4; t.spdLeft += 4; st.undo = []; }
+  return true;
+}
+// Llama del destino: vuelve a tirar los dados elegidos y se queda con la segunda tirada
+function useFlame(st, picks) {
+  if (!itemUsable(st, 'flame')) return false;
+  const t = st.turn, list = picks.filter(i => i !== t.lock && i >= 0 && i < 3);
+  if (!list.length) return false;
+  st.items = st.items.filter(i => i !== 'flame');
+  for (const i of list) t.dice[i] = rollDie();
+  t.sel = -1;
+  return true;
+}
+// Hierbas curativas: tras el ataque de los monstruos, el daño pendiente se reduce a la mitad (hacia arriba)
+function resolveDamage(st, useHerbs) {
+  let dmg = st.pendingDmg || 0;
+  st.pendingDmg = 0;
+  if (useHerbs && st.items.includes('herbs')) { dmg = Math.ceil(dmg / 2); st.items = st.items.filter(i => i !== 'herbs'); }
+  st.adv.hp = Math.max(0, st.adv.hp - dmg);
+  return dmg;
 }
 
 // devuelve true si el monstruo muere
@@ -717,9 +872,11 @@ function playMonsters(st) {
   }
   const att = attackers(st);
   const total = att.reduce((s, m) => s + m.atk, 0);
-  const dmg = Math.floor(total / st.turn.def);
-  st.adv.hp = Math.max(0, st.adv.hp - dmg);
-  ev.push({ t: 'attack', ids: att.map(m => m.id), total, def: st.turn.def, dmg });
+  const def = Math.max(1, st.turn.def - blizzPen(st));
+  const dmg = Math.floor(total / def);
+  const pending = dmg > 1 && !!st.items && st.items.includes('herbs');   // la UI ofrece las Hierbas curativas
+  if (pending) st.pendingDmg = dmg; else st.adv.hp = Math.max(0, st.adv.hp - dmg);
+  ev.push({ t: 'attack', ids: att.map(m => m.id), total, def, dmg, pending });
   return ev;
 }
 
@@ -736,14 +893,17 @@ function applyBreak(st, choice) { // 'spd' | 'atk' | 'def' | 'rng' | 'heal'
   if (choice === 'heal') st.adv.hp = START_HP; else st.adv[choice] += 1;
 }
 function nextLevel(st) {
+  useGame(st.game || 'base');
   if (st.levelIdx >= LEVELS.length - 1) { st.phase = 'won'; return false; }
   setupLevel(st, st.levelIdx + 1);
   return true;
 }
 
-/* ---------- Contraseña de 4 caracteres (inicio de nivel) ---------- */
+/* ---------- Contraseña (inicio de nivel) ----------
+   Juego original: 4 caracteres. Montaña Eterna: 5 (incluye los objetos que conservas). */
 const PW_ALPHA = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // 32 símbolos, sin 0 1 I O
 const PW_MOD = 1 << 20, PW_A = 618033, PW_B = 0x5A3C1;
+const PW5_MOD = 1 << 25, PW5_A = 15485863, PW5_B = 0x1B3C5D;
 const PW_PAIRS = [], PW_INDEX = new Map();
 for (let L = 0; L < 12; L++)
   for (let a = 0; a <= L; a++) for (let b = 0; a + b <= L; b++)
@@ -751,59 +911,85 @@ for (let L = 0; L < 12; L++)
       PW_INDEX.set([L, a, b, c, d].join(), PW_PAIRS.length);
       PW_PAIRS.push([L, a, b, c, d]);
     }
-const PW_N = PW_PAIRS.length;                          // 4368 (nivel + mejoras posibles)
+const PW_N = PW_PAIRS.length;                          // 4368 (nivel + mejoras posibles, 12 niveles)
+const PW_N10 = PW_PAIRS.filter(p => p[0] < 10).length; // 2002 (10 niveles)
 const PW_TOTAL = HERO_KEYS.length * 6 * PW_N;          // héroe × vida × (nivel+mejoras)
+const ITEM_SETS = [];                                   // subconjuntos de 0 a 3 de los 5 objetos
+for (let m = 0; m < 32; m++) { let c = 0; for (let b = 0; b < 5; b++) c += (m >> b) & 1; if (c <= 3) ITEM_SETS.push(m); }
+const PW5_TOTAL = HERO_KEYS.length * 6 * PW_N10 * ITEM_SETS.length;
+const itemMask = items => (items || []).reduce((s, i) => s | (1 << ITEM_KEYS.indexOf(i)), 0);
+const itemsOf = m => ITEM_KEYS.filter((_, b) => (m >> b) & 1);
 function modInv(a, m) {
   let r0 = m, r1 = a % m, t0 = 0, t1 = 1;
   while (r1) { const q = Math.floor(r0 / r1); [r0, r1] = [r1, r0 - q * r1]; [t0, t1] = [t1, t0 - q * t1]; }
   return ((t0 % m) + m) % m;
 }
-const PW_AINV = modInv(PW_A, PW_MOD);
+const PW_AINV = modInv(PW_A, PW_MOD), PW5_AINV = modInv(PW5_A, PW5_MOD);
 const pwCheck = n => (n ^ (n >> 3) ^ (n >> 7) ^ (n >> 11) ^ (n >> 15)) & 7;
+const pwCheck5 = n => (n ^ (n >> 4) ^ (n >> 8) ^ (n >> 12) ^ (n >> 16) ^ (n >> 20)) & 15;
 
-function fromCheckpoint(hero, L, hp, u) {
-  const st = newRun(hero);
+function fromCheckpoint(hero, L, hp, u, game, items) {
+  const st = newRun(hero, game, items);
   st.adv.hp = hp; st.adv.spd = 1 + u[0]; st.adv.atk = 1 + u[1]; st.adv.def = 1 + u[2]; st.adv.rng = 2 + u[3];
   return setupLevel(st, L);
 }
 const upgradesOf = st => [st.adv.spd - 1, st.adv.atk - 1, st.adv.def - 1, st.adv.rng - 2];
 
+function toText(p, len) { let out = ''; for (let i = 0; i < len; i++) { out = PW_ALPHA[p & 31] + out; p = Math.floor(p / 32); } return out; }
+
 function encodePassword(st) {
+  const game = st.game || 'base';
   const pi = PW_INDEX.get([st.levelIdx].concat(upgradesOf(st)).join());
   const hp = st.cp ? st.cp.hp : st.adv.hp;
   if (pi === undefined || hp < 1 || hp > START_HP) return null;
-  const n = ((HERO_KEYS.indexOf(st.hero) * 6 + (hp - 1)) * PW_N) + pi;
-  let p = ((n * 8 + pwCheck(n)) * PW_A + PW_B) % PW_MOD;
-  let out = '';
-  for (let i = 0; i < 4; i++) { out = PW_ALPHA[p & 31] + out; p >>= 5; }
-  return out;
+  const h = HERO_KEYS.indexOf(st.hero);
+  if (game === 'peak') {
+    if (st.levelIdx >= 10) return null;
+    const si = ITEM_SETS.indexOf(itemMask(st.cp ? st.cp.items : st.items));
+    if (si < 0) return null;
+    const n = (((h * 6 + (hp - 1)) * PW_N10 + pi) * ITEM_SETS.length) + si;
+    return toText(((n * 16 + pwCheck5(n)) * PW5_A + PW5_B) % PW5_MOD, 5);
+  }
+  const n = ((h * 6 + (hp - 1)) * PW_N) + pi;
+  return toText(((n * 8 + pwCheck(n)) * PW_A + PW_B) % PW_MOD, 4);
 }
 
 function decodePassword(text) {
   const s = String(text).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (s.length !== 4) return null;
+  if (s.length !== 4 && s.length !== 5) return null;
   let p = 0;
   for (const ch of s) { const v = PW_ALPHA.indexOf(ch); if (v < 0) return null; p = p * 32 + v; }
+  if (s.length === 5) {
+    const raw = ((((p - PW5_B) % PW5_MOD) + PW5_MOD) % PW5_MOD * PW5_AINV) % PW5_MOD;
+    if (raw >= PW5_TOTAL * 16) return null;
+    const n = Math.floor(raw / 16);
+    if ((raw & 15) !== pwCheck5(n)) return null;
+    const si = n % ITEM_SETS.length, rest = Math.floor(n / ITEM_SETS.length);
+    const [L, a, b, c, d] = PW_PAIRS[rest % PW_N10], r2 = Math.floor(rest / PW_N10);
+    return fromCheckpoint(HERO_KEYS[Math.floor(r2 / 6)], L, (r2 % 6) + 1, [a, b, c, d], 'peak', itemsOf(ITEM_SETS[si]));
+  }
   const raw = ((((p - PW_B) % PW_MOD) + PW_MOD) % PW_MOD * PW_AINV) % PW_MOD;
   if (raw >= PW_TOTAL * 8) return null;
   const n = raw >> 3;
   if ((raw & 7) !== pwCheck(n)) return null;
   const [L, a, b, c, d] = PW_PAIRS[n % PW_N];
   const rest = Math.floor(n / PW_N);
-  return fromCheckpoint(HERO_KEYS[Math.floor(rest / 6)], L, (rest % 6) + 1, [a, b, c, d]);
+  return fromCheckpoint(HERO_KEYS[Math.floor(rest / 6)], L, (rest % 6) + 1, [a, b, c, d], 'base', []);
 }
 
-// Reintenta el nivel actual desde su inicio (vida y mejoras del inicio)
+// Reintenta el nivel actual desde su inicio (vida, mejoras y objetos del inicio)
 function retryLevel(st) {
-  const r = fromCheckpoint(st.hero, st.levelIdx, st.cp.hp, upgradesOf(st));
+  const r = fromCheckpoint(st.hero, st.levelIdx, st.cp.hp, upgradesOf(st), st.game || 'base', st.cp.items || []);
   r.prev = st.prev;
   return r;
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { COLS, ROWS, N, idx, XY, LEVELS, LEVEL_DEFS, START_HP, dijkstra, rangeDist, hasLOS, newRun, setupLevel,
-    rollDice, assignComplete, confirmEnergy, HERO_KEYS, rerollDice, useReroll, rollWithKeep, toggleRanger, abilityInfo,
-    encodePassword, decodePassword, retryLevel, PW_TOTAL, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
+  module.exports = { COLS, ROWS, N, idx, XY, get LEVELS() { return LEVELS; }, LEVEL_DEFS, LEVEL_DEFS_PEAK, GAMES, useGame, START_HP,
+    dijkstra, rangeDist, hasLOS, newRun, setupLevel, rollDice, assignComplete, confirmEnergy,
+    HERO_KEYS, ITEM_KEYS, rerollDice, useReroll, rollWithKeep, toggleRanger, toggleSherpa, abilityInfo,
+    itemUsable, useItem, useFlame, resolveDamage, blizzPen, atkAvail,
+    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
     playMonsters, endTurnCleanup, levelCleared, applyBreak, nextLevel, attackers, freshTurn };
 }
 
@@ -813,7 +999,8 @@ if (typeof module !== 'undefined') {
 (function () {
   const $ = s => document.querySelector(s);
   const E = { newRun, rollDice, assignComplete, confirmEnergy, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo, playMonsters, endTurnCleanup, levelCleared, applyBreak, nextLevel,
-    rerollDice, useReroll, rollWithKeep, toggleRanger, abilityInfo, encodePassword, decodePassword, retryLevel };
+    rerollDice, useReroll, rollWithKeep, toggleRanger, abilityInfo, encodePassword, decodePassword, retryLevel,
+    toggleSherpa, itemUsable, useItem, useFlame, resolveDamage, blizzPen, atkAvail, useGame };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const SAVE_KEY = 'dioc-run-v3', BEST_KEY = 'dioc-best-v1';
   const svg = inner => `<svg viewBox="0 0 32 32" aria-hidden="true">${inner}</svg>`;
@@ -831,6 +1018,9 @@ if (typeof module !== 'undefined') {
     golem: svg(`<rect x="10" y="3" width="12" height="9" rx="1.5" ${F}/><rect x="7" y="13" width="18" height="12" rx="1.5" ${F}/><path d="M4 14v12M28 14v12M10 25v4M22 25v4M13 7h2M17 7h2"/>`),
     wraith: svg(`<path d="M16 3c-7 3-9 10-8 17l-4 8h24l-4-8c1-7-1-14-8-17z" ${F}/><path d="M11 12c1-3 3-4 5-4s4 1 5 4c0 4-2 7-5 7s-5-3-5-7z" style="fill:var(--card)"/><circle cx="14" cy="13" r="1.3" ${S}/><circle cx="18" cy="13" r="1.3" ${S}/>`),
     demon: svg(`<path d="M8 12 5 3l8 5M24 12l3-9-8 5"/><circle cx="16" cy="17" r="9" ${F}/><path d="M10.5 15l4 2M21.5 15l-4 2"/><path d="M12 22l1.5 3 1.5-3zM17 22l1.5 3 1.5-3z" ${S}/>`),
+    wolf: svg(`<path d="M5 4l1 12c0 5 4 8 10 12 6-4 10-7 10-12l1-12-7 5h-8z" ${F}/><path d="M10 15l4 1.5M22 15l-4 1.5"/><path d="M14 22h4l-2 2z" ${S}/><path d="M13 25l1 2.5 1-2.5M17 25l1 2.5 1-2.5"/>`),
+    yeti: svg(`<path d="M6 12c0-6 4-9 10-9s10 3 10 9v8c0 5-4 9-10 9S6 25 6 20z" ${F}/><path d="M10 13h12v7c0 3-2 5-6 5s-6-2-6-5z" style="fill:var(--card)"/><circle cx="13" cy="16" r="1.4" ${S}/><circle cx="19" cy="16" r="1.4" ${S}/><path d="M13 21l1.5 3.5L16 21l1.5 3.5L19 21M3 14l3 1M29 14l-3 1M4 21l3-1.5M28 21l-3-1.5"/>`),
+    sorcerer: svg(`<path d="M16 2 8 16h16z" ${F}/><path d="M5 16h22"/><path d="M10 16v5c0 5 2.5 8 6 9 3.5-1 6-4 6-9v-5" ${F}/><circle cx="13.5" cy="19.5" r="1" ${S}/><circle cx="18.5" cy="19.5" r="1" ${S}/><path d="M12 24c2 1.5 6 1.5 8 0M15 27l1 2 1-2"/><path d="M27 8v9M25 8h4"/>`),
     dragon: svg(`<path d="M3 20 8 8l5 4 3-6 3 6 5-4 5 12-5 7H8z" ${F}/><circle cx="12" cy="19" r="1.5" ${S}/><circle cx="20" cy="19" r="1.5" ${S}/><path d="M14 24h4M16 14v3"/>`)
   };
   const ICON_ADV = svg(`<path d="M16 3 6 6v9c0 7 4 11 10 14 6-3 10-7 10-14V6z" ${F}/><path d="M16 9v13M11 13h10"/>`);
@@ -838,13 +1028,30 @@ if (typeof module !== 'undefined') {
     paladin: ICON_ADV,
     barbarian: svg(`<path d="M7 28 21 8"/><path d="M13 9c4-6 12-5 15-1-1 6-6 10-12 9z" ${F}/><path d="M18 14l5-4"/>`),
     ranger: svg(`<path d="M9 3c12 4 12 22 0 26" ${F}/><path d="M9 3v26M4 16h20M19 11l5 5-5 5"/>`),
+    sherpa: svg(`<path d="M2 27 11 9l5 8 3-4 11 14z" ${F}/><path d="M11 9l-2.500 4.500 2.500-1 2.500 2 3-3"/><path d="M5 30h22" stroke-dasharray="2 3"/>`),
     mage: svg(`<path d="M7 29 19 13"/><path d="M23 3l1.8 4.7L29.5 9.5l-4.7 1.8L23 16l-1.8-4.7L16.5 9.5l4.7-1.8z" ${F}/><path d="M8 8v4M6 10h4M26 21v4M24 23h4"/>`)
   };
   const HEROES = {
     paladin: { name: 'Paladín', txt: 'Una vez por nivel, antes de tirar, conserva el dado que diste a una habilidad el turno anterior y tira solo los otros dos.' },
     barbarian: { name: 'Bárbaro', txt: 'Con 1 de Vida, puede volver a tirar los tres dados una vez por turno.' },
     ranger: { name: 'Ranger', txt: 'Una vez por nivel, puede sumar un dado al Alcance en lugar de al Movimiento.' },
-    mage: { name: 'Mago', txt: 'Una vez por nivel, puede volver a tirar los tres dados.' }
+    mage: { name: 'Mago', txt: 'Una vez por nivel, puede volver a tirar los tres dados.' },
+    sherpa: { name: 'Sherpa', txt: 'Una vez por nivel, puede moverse ignorando los muros, pero no puede terminar sobre uno.' }
+  };
+  const ICON_WIND = svg(`<path d="M4 11h13c4 0 5-5 1.5-5.5M4 17h19c4 0 5 5 1.5 5.5M4 23h9c3 0 4 3 1.5 3.5"/>`);
+  const ITEM_ICONS = {
+    cloak: svg(`<path d="M11 5h10l5 8-3 15H9L6 13z" ${F}/><path d="M11 5c1 3 4 3 5 3s4 0 5-3M16 8v20"/>`),
+    axe: svg(`<path d="M8 28 21 8"/><path d="M19 7c4-1 7 1 9 4-4 1-7 0-9-4z" ${F}/><path d="M4 6c4-2 7 2 4 4s-3 4 1 5"/>`),
+    herbs: svg(`<path d="M16 29V13"/><path d="M16 20c-7 0-10-5-10-11 6 0 10 4 10 11zM16 16c0-6 4-11 10-11 0 6-4 11-10 11z" ${F}/>`),
+    wyrm: svg(`<path d="M13 3h6M14 3v7l-6 14c-1 3 1 5 3 5h10c2 0 4-2 3-5l-6-14V3"/><path d="M10 21h12l2.5 5c.5 2-.7 3-2 3H9.5c-1.3 0-2.500-1-2-3z" ${F}/>`),
+    flame: svg(`<path d="M16 3c1 6 8 9 8 17a8 8 0 0 1-16 0c0-4 2-6 4-8 0 3 1 4 2 4 1-4 0-8 2-13z" ${F}/><path d="M16 27c-2 0-3-1.500-3-3 0-2 2-3 3-5 1 2 3 3 3 5 0 1.500-1 3-3 3z"/>`)
+  };
+  const ITEMS = {
+    cloak: { name: 'Capa de cuero', short: 'Capa', txt: 'Durante todo un nivel, ignoras el efecto de las ventiscas.' },
+    axe: { name: 'Cuerda y piolet', short: 'Piolet', txt: 'En tu turno, suma +2 a tu Ataque y +2 a tu Alcance.' },
+    herbs: { name: 'Hierbas curativas', short: 'Hierbas', txt: 'Al recibir un ataque, reduces el daño a la mitad, redondeando hacia arriba.' },
+    wyrm: { name: 'Extracto de Wyrm', short: 'Extracto', txt: 'Suma hasta +4 a tu Movimiento este turno.' },
+    flame: { name: 'Llama del destino', short: 'Llama', txt: 'En la fase de Energía, vuelve a tirar uno o más dados y quédate con la segunda tirada.' }
   };
   const ICON_STAIR = svg(`<path d="M4 26h7v-6h6v-6h6v-6h5"/>`);
 
@@ -852,6 +1059,7 @@ if (typeof module !== 'undefined') {
   const LONG = { spd: 'Movimiento', atk: 'Ataque', def: 'Defensa', rng: 'Alcance' };
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
+  let keepSet = new Set();
   let G = null, busy = false, rolling = false, builtLevel = -1, lastHp = START_HP;
   const tok = { adv: null, mons: new Map() };
   let bestLevel = 0;
@@ -874,9 +1082,20 @@ if (typeof module !== 'undefined') {
       return validState(g) ? g : null;
     } catch (e) { return null; }
   }
+  const okItems = (a, game) => Array.isArray(a) && a.length <= 3 && new Set(a).size === a.length && a.every(i => ITEM_KEYS.includes(i)) && (game === 'peak' || !a.length);
   function validState(g) {
-    if (!g || !g.adv || !g.turn || !Array.isArray(g.mons) || !LEVELS[g.levelIdx]) return false;
-    if (!HERO_KEYS.includes(g.hero) || !g.cp || !Number.isInteger(g.cp.hp) || g.cp.hp < 1 || g.cp.hp > START_HP) return false;
+    if (!g || !g.adv || !g.turn || !Array.isArray(g.mons)) return false;
+    if (g.game == null) g.game = 'base';             // partidas guardadas antes de las expansiones
+    if (!GAMES[g.game]) return false;
+    useGame(g.game);
+    if (!LEVELS[g.levelIdx]) return false;
+    if (g.items == null) g.items = [];
+    if (g.cp && g.cp.items == null) g.cp.items = [];
+    if (g.cloak == null) g.cloak = false;
+    if (g.sherpaOn == null) g.sherpaOn = false;
+    if (g.pendingDmg == null) g.pendingDmg = 0;
+    if (!okItems(g.items, g.game) || !g.cp || !okItems(g.cp.items, g.game)) return false;
+    if (!HERO_KEYS.includes(g.hero) || !Number.isInteger(g.cp.hp) || g.cp.hp < 1 || g.cp.hp > START_HP) return false;
     const m0 = LEVELS[g.levelIdx].mon;
     const inGrid = o => Number.isInteger(o.x) && Number.isInteger(o.y) && o.x >= 0 && o.y >= 0 && o.x < COLS && o.y < ROWS;
     return inGrid(g.adv) && g.mons.every(m => inGrid(m) && m.def === m0.def && m.atk === m0.atk && m.spd === m0.spd && m.rng === m0.rng && m.maxHp === m0.hp);
@@ -902,11 +1121,12 @@ if (typeof module !== 'undefined') {
       const [x, y] = XY(i);
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'tile' + (lv.walls[i] ? ' wall' : '');
+      b.className = 'tile' + (lv.walls[i] ? ' wall' : '') + (lv.voids[i] ? ' void' : '') + (lv.blizz[i] ? ' blizz' : '');
       b.dataset.i = i;
-      b.setAttribute('aria-label', lv.walls[i] ? 'Muro' : `Casilla columna ${x + 1}, fila ${y + 1}`);
+      b.setAttribute('aria-label', lv.voids[i] ? 'Hueco' : lv.walls[i] ? 'Muro' : lv.blizz[i] ? `Ventisca, columna ${x + 1}, fila ${y + 1}` : `Casilla columna ${x + 1}, fila ${y + 1}`);
       if (lv.walls[i]) b.tabIndex = -1;
       if (lv.stairs.includes(i)) b.innerHTML = `<span class="stair">${ICON_STAIR}</span>`;
+      else if (lv.blizz[i]) b.innerHTML = `<span class="wind">${ICON_WIND}</span>`;
       grid.appendChild(b);
     }
     $('#tokens').innerHTML = '';
@@ -1001,6 +1221,7 @@ if (typeof module !== 'undefined') {
   function renderHead() {
     const lv = LEVELS[G.levelIdx];
     $('#lvlNum').textContent = G.levelIdx + 1;
+    $('#lvlTot').textContent = LEVELS.length;
     $('#lvlName').textContent = lv.title;
     $('#dots').innerHTML = LEVELS.map((_, i) => `<i class="${i < G.levelIdx ? 'done' : i === G.levelIdx ? 'now' : ''}"></i>`).join('');
     const m = lv.mon;
@@ -1029,6 +1250,7 @@ if (typeof module !== 'undefined') {
   const slotKeys = t => (t.ranger ? ['atk', 'def', 'rng'] : ['spd', 'atk', 'def']);
   const usedDice = t => new Set([t.assign.spd, t.assign.atk, t.assign.def, t.assign.rng]);
 
+  const pen0 = k => (G.phase === 'move' || G.phase === 'monsters') && (k === 'atk' || k === 'def') && E.blizzPen(G) > 0;
   function renderChips() {
     const t = G.turn, a = G.adv, ph = G.phase;
     const sk = slotKeys(t);
@@ -1045,11 +1267,13 @@ if (typeof module !== 'undefined') {
         }
       } else if (ph === 'energy') sub = 'sin dado';
       else if (ph === 'move' || ph === 'monsters') {
+        const pen = E.blizzPen(G);
         if (k === 'spd') { val = t.spdLeft; sub = `de ${t.spd}`; bar = `<span class="bar"><i style="width:${t.spd ? (100 * t.spdLeft / t.spd) : 0}%"></i></span>`; }
-        else if (k === 'atk') { val = t.atkLeft; sub = `de ${t.atk}`; bar = `<span class="bar"><i style="width:${t.atk ? (100 * t.atkLeft / t.atk) : 0}%"></i></span>`; }
-        else if (k === 'def') { val = t.def; sub = 'este turno'; }
+        else if (k === 'atk') { val = E.atkAvail(G); sub = pen ? 'ventisca −1' : `de ${t.atk}`; bar = `<span class="bar"><i style="width:${t.atk ? (100 * t.atkLeft / t.atk) : 0}%"></i></span>`; }
+        else if (k === 'def') { val = Math.max(1, t.def - pen); sub = pen ? 'ventisca −1' : 'este turno'; }
         else { val = t.rng || a.rng; sub = t.ranger ? 'este turno' : 'fijo'; }
       }
+      if (pen0(k)) cls += ' chilled';
       const clickable = slot && t.dice && !rolling && t.lock !== k;
       out.push(`<button type="button" class="${cls}" data-k="${k}" ${clickable ? '' : 'tabindex="-1"'} aria-label="${LONG[k]} ${val}">
         <span class="lbl">${NAMES[k]}</span><span class="val">${val}</span><span class="sub">${sub}</span>${bar}</button>`);
@@ -1066,7 +1290,7 @@ if (typeof module !== 'undefined') {
     }
     if (!t.dice) { row.innerHTML = '<span class="hint">Tres dados de Energía por turno</span>'; return; }
     if (rolling) {
-      row.innerHTML = [0, 1, 2].map(i => (t.lock >= 0 && i === 0) ? dieHTML(t.dice[0], 'locked') : dieHTML(1 + Math.floor(Math.random() * 6), 'rolling')).join('');
+      row.innerHTML = [0, 1, 2].map(i => (t.lock >= 0 && i === 0) ? dieHTML(t.dice[0], 'locked') : keepSet.has(i) ? dieHTML(t.dice[i], 'used') : dieHTML(1 + Math.floor(Math.random() * 6), 'rolling')).join('');
       return;
     }
     const used = usedDice(t);
@@ -1105,11 +1329,24 @@ if (typeof module !== 'undefined') {
       if (!t.dice) box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnRoll" ${rolling ? 'disabled' : ''}>Tirar dados</button>`;
       else box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnConfirm" ${E.assignComplete(t) && !rolling ? '' : 'disabled'}>Confirmar</button>`;
     } else if (ph === 'move') {
-      box.innerHTML = `<button type="button" class="btn small" id="btnUndo" ${G.undo.length && !busy ? '' : 'disabled'}>Deshacer</button>
+      const ab = E.abilityInfo(G);
+      const abBtn = ab ? `<button type="button" class="btn abil tight ${G.sherpaOn ? 'on' : ''}" id="btnAbil" ${busy ? 'disabled' : ''}>${ab.label}</button>` : '';
+      box.innerHTML = `<button type="button" class="btn small" id="btnUndo" ${G.undo.length && !busy ? '' : 'disabled'}>Deshacer</button>${abBtn}
         <button type="button" class="btn primary ${nothingLeft() ? 'pulse' : ''}" id="btnEnd" ${busy ? 'disabled' : ''}>Fin de turno</button>`;
     } else {
       box.innerHTML = `<button type="button" class="btn" disabled>${ph === 'monsters' ? 'Los monstruos actúan…' : '…'}</button>`;
     }
+  }
+
+  function renderItems() {
+    const box = $('#items');
+    const list = G.items || [];
+    if (!list.length && !G.cloak) { box.innerHTML = ''; box.hidden = true; return; }
+    box.hidden = false;
+    const idle = id => !E.itemUsable(G, id) || busy || rolling || G.phase === 'monsters';
+    box.innerHTML = list.map(id => `<button type="button" class="item ${idle(id) ? 'idle' : ''}" data-item="${id}" aria-label="${ITEMS[id].name}">
+        <span class="ico">${ITEM_ICONS[id]}</span><span>${ITEMS[id].short}</span></button>`).join('')
+      + (G.cloak ? `<span class="item on" aria-label="Capa de cuero activa"><span class="ico">${ITEM_ICONS.cloak}</span><span>Capa activa</span></span>` : '');
   }
 
   function say(html) { $('#log').innerHTML = html; }
@@ -1122,6 +1359,7 @@ if (typeof module !== 'undefined') {
     renderChips();
     renderDice();
     renderBanner();
+    renderItems();
     renderActions();
     renderTiles();
     if (!busy) save();
@@ -1147,7 +1385,7 @@ if (typeof module !== 'undefined') {
   function rulesSheet() {
     openSheet(`
       <h3>Cómo se juega</h3>
-      <p class="lead">Atraviesa 12 niveles. En el último hay que derrotar a los tres demonios. Si tu Vida llega a 0, caes.</p>
+      <p class="lead">${G && G.game === 'peak' ? 'Sube los 10 niveles de la Montaña Eterna. En el último te espera el Hechicero Blanco.' : G ? 'Atraviesa 12 niveles. En el último hay que derrotar a los tres demonios.' : 'Aventura original: 12 niveles y, al final, tres demonios. Montaña Eterna: 10 niveles y el Hechicero Blanco.'} Si tu Vida llega a 0, caes.</p>
       <h4>1 · Energía</h4>
       <p>Tira tres dados. Asigna uno a <b>Mov</b>, otro a <b>Atq</b> y otro a <b>Def</b>: su valor se suma a la habilidad base. <b>Alc</b> no recibe dado, salvo con la habilidad del Ranger.</p>
       <h4>2 · Tu turno</h4>
@@ -1164,9 +1402,15 @@ if (typeof module !== 'undefined') {
       <p>Mejora una habilidad en 1 <b>o</b> recupera tu Vida hasta 6. Nunca las dos.</p>
       <h4>Héroes</h4>
       <ul>${HERO_KEYS.map(k => `<li><b>${HEROES[k].name}.</b> ${HEROES[k].txt}</li>`).join('')}</ul>
+      ${!G || G.game === 'peak' ? `<h4>Montaña Eterna</h4>
+      <ul>
+        <li><b>Ventisca.</b> Mientras estés sobre una casilla de ventisca, tu Ataque y tu Defensa bases valen 1 menos.</li>
+        <li><b>Objetos.</b> Al empezar recibes 3 de estos 5, a tu elección o al azar. Cada uno se usa una vez y se descarta.</li>
+        ${ITEM_KEYS.map(k => `<li><b>${ITEMS[k].name}.</b> ${ITEMS[k].txt}</li>`).join('')}
+      </ul>` : ''}
       <h4>Contraseña</h4>
-      <p>Cada nivel empieza con una contraseña de 4 letras o números (botón <b>Contraseña</b>). Anótala: desde el menú, «Continuar con contraseña» te devuelve al inicio de ese nivel con tu héroe, tu Vida y tus mejoras de ese momento. No guarda el turno en curso.</p>
-      <p class="fine">Versión web no oficial del juego solitario One Card Dungeon, de Barny Skinner. Los mapas, las cifras de los monstruos y su aparición por nivel siguen la carta original; las ilustraciones y los textos son propios. Si te gusta, apoya al autor y consigue el juego.</p>
+      <p>Cada nivel empieza con una contraseña (botón <b>Contraseña</b>): 4 letras o números en la aventura original y 5 en la Montaña Eterna, que también guarda tus objetos. Anótala: desde el menú, «Continuar con contraseña» te devuelve al inicio de ese nivel con tu héroe, tu Vida y tus mejoras de ese momento. No guarda el turno en curso.</p>
+      <p class="fine">Versión web no oficial del juego solitario One Card Dungeon y de su pack Eternal Peak, de Barny Skinner (Little Rocket Games). Los mapas, las cifras de los monstruos y su aparición por nivel siguen las cartas originales; las ilustraciones del juego y los textos son propios. Las portadas del menú son de Little Rocket Games. Si te gusta, apoya al autor y consigue el juego.</p>
       <button type="button" class="btn primary" id="x">Entendido</button>`, [['#x', closeSheet]], true);
   }
 
@@ -1196,8 +1440,9 @@ if (typeof module !== 'undefined') {
 
   function winSheet() {
     noteBest();
-    openSheet(`<h3>Cáliz de Brasas</h3>
-      <p class="lead">Los tres demonios han caído y el cáliz es tuyo. Superaste los 12 niveles como ${HEROES[G.hero].name} en ${G.totalTurns} turnos con ${G.adv.hp} de Vida.</p>
+    const peak = G.game === 'peak';
+    openSheet(`<h3>${peak ? 'Cima despejada' : 'Cáliz de Brasas'}</h3>
+      <p class="lead">${peak ? 'El Hechicero Blanco ha caído y la tormenta se calma.' : 'Los tres demonios han caído y el cáliz es tuyo.'} Superaste los ${LEVELS.length} niveles como ${HEROES[G.hero].name} en ${G.totalTurns} turnos con ${G.adv.hp} de Vida.</p>
       <button type="button" class="btn primary" id="menu">Ir al menú</button>`, [['#menu', goMenu]], false);
   }
 
@@ -1219,41 +1464,94 @@ if (typeof module !== 'undefined') {
     G = null; busy = false; rolling = false;
     const sv = loadSaved();
     showScreen(`<div class="splash">${LOGO}
-      <p class="tagline">Una carta, doce niveles y tres dados.</p>
+      <p class="tagline">Una carta, tres dados y una aventura por elegir.</p>
       <div class="menu-btns">
-        ${sv ? `<button type="button" class="btn primary menu-main" id="mContinue"><span>Seguir en este dispositivo</span><small>${HEROES[sv.hero].name} · nivel ${sv.levelIdx + 1} · Vida ${sv.adv.hp}</small></button>` : ''}
+        ${sv ? `<button type="button" class="btn primary menu-main" id="mContinue"><span>Seguir en este dispositivo</span><small>${HEROES[sv.hero].name} · ${GAMES[sv.game].name} · nivel ${sv.levelIdx + 1} · Vida ${sv.adv.hp}</small></button>` : ''}
         <button type="button" class="btn ${sv ? '' : 'primary'} menu-main" id="mNew"><span>Nueva partida</span></button>
-        <button type="button" class="btn menu-main" id="mPass"><span>Continuar con contraseña</span><small>4 letras o números</small></button>
+        <button type="button" class="btn menu-main" id="mPass"><span>Continuar con contraseña</span><small>4 o 5 letras o números</small></button>
         <button type="button" class="ghost" id="mRules">Cómo se juega</button>
       </div>
       <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner.</p></div>`,
-      [['#mContinue', () => resume(sv)], ['#mNew', heroScreen], ['#mPass', () => passScreen('')], ['#mRules', rulesSheet]]);
+      [['#mContinue', () => resume(sv)], ['#mNew', adventureScreen], ['#mPass', () => passScreen('')], ['#mRules', rulesSheet]]);
   }
 
-  function heroScreen() {
+  const ADV_INFO = {
+    base: { img: 'img/core.jpg', alt: 'Portada de One Card Dungeon', tag: 'Original', txt: '12 niveles y tres demonios.' },
+    peak: { img: 'img/peak.jpg', alt: 'Portada de One Card Dungeon: Eternal Peak', tag: 'Expansión', txt: '10 niveles, ventiscas, Sherpa y objetos.' }
+  };
+
+  function adventureScreen() {
+    const sc = showScreen(`<div class="splash">
+      <button type="button" class="ghost back" id="back">‹ Atrás</button>
+      <h2 class="screen-h">Elige la aventura</h2>
+      <div class="adv-list">${Object.keys(GAMES).map(k => `<button type="button" class="adv-card" data-game="${k}">
+        <img src="${ADV_INFO[k].img}" alt="${ADV_INFO[k].alt}" width="440" height="614" loading="eager" decoding="async">
+        <span class="adv-tag">${ADV_INFO[k].tag}</span><b>${GAMES[k].name}</b><p>${ADV_INFO[k].txt}</p></button>`).join('')}</div>
+      <p class="fine">Portadas © Little Rocket Games. One Card Dungeon es de Barny Skinner.</p></div>`,
+      [['#back', menuScreen]]);
+    sc.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => heroScreen(b.dataset.game)));
+  }
+
+  function heroScreen(game) {
     const sc = showScreen(`<div class="splash">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">Elige a tu héroe</h2>
       <div class="hero-list">${HERO_KEYS.map(k => `<button type="button" class="hero-card" data-hero="${k}">
         <span class="ico">${HERO_ICONS[k]}</span><span><b>${HEROES[k].name}</b><p>${HEROES[k].txt}</p></span></button>`).join('')}</div></div>`,
-      [['#back', menuScreen]]);
-    sc.querySelectorAll('[data-hero]').forEach(b => b.addEventListener('click', () => startGame(b.dataset.hero)));
+      [['#back', adventureScreen]]);
+    sc.querySelectorAll('[data-hero]').forEach(b => b.addEventListener('click', () => {
+      if (game === 'peak') itemsScreen(game, b.dataset.hero); else startGame(b.dataset.hero, game, []);
+    }));
+  }
+
+  function drawItems() {
+    const a = ITEM_KEYS.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a.slice(0, 3);
+  }
+
+  function itemsScreen(game, hero, pick) {
+    pick = pick || drawItems();
+    const list = () => ITEM_KEYS.map(k => `<button type="button" class="hero-card item-card ${pick.includes(k) ? 'chosen' : ''}" data-it="${k}" aria-pressed="${pick.includes(k)}">
+        <span class="ico">${ITEM_ICONS[k]}</span><span><b>${ITEMS[k].name}</b><p>${ITEMS[k].txt}</p></span><i class="tick" aria-hidden="true"></i></button>`).join('');
+    const sc = showScreen(`<div class="splash">
+      <button type="button" class="ghost back" id="back">‹ Atrás</button>
+      <h2 class="screen-h">Tus tres objetos</h2>
+      <p class="lead">Se han sorteado tres. Puedes quedártelos o elegir los que prefieras para ${HEROES[hero].name}. Cada objeto se usa una sola vez.</p>
+      <div class="hero-list" id="itList">${list()}</div>
+      <p class="err" id="itMsg" role="status"></p>
+      <div class="actions"><button type="button" class="btn mini" id="itRoll">Sortear otra vez</button></div>
+      <button type="button" class="btn primary" id="itGo">Empezar</button></div>`,
+      [['#back', () => heroScreen(game)], ['#itRoll', () => itemsScreen(game, hero, drawItems())], ['#itGo', () => { if (pick.length === 3) startGame(hero, game, pick); }]]);
+    const go = sc.querySelector('#itGo'), msg = sc.querySelector('#itMsg');
+    const refresh = () => { go.disabled = pick.length !== 3; };
+    sc.querySelector('#itList').addEventListener('click', e => {
+      const b = e.target.closest('[data-it]'); if (!b) return;
+      const k = b.dataset.it;
+      if (pick.includes(k)) pick = pick.filter(x => x !== k);
+      else if (pick.length < 3) pick = pick.concat(k);
+      else { msg.textContent = 'Ya tienes tres: quita uno antes de elegir otro.'; return; }
+      msg.textContent = '';
+      b.classList.toggle('chosen', pick.includes(k)); b.setAttribute('aria-pressed', pick.includes(k));
+      refresh();
+    });
+    refresh();
   }
 
   function passScreen(err) {
     const sc = showScreen(`<div class="splash">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">Contraseña</h2>
-      <p class="lead">Escribe la contraseña de 4 letras o números que te dio el juego al empezar un nivel.</p>
-      <input id="pwIn" class="pw" type="text" maxlength="4" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="••••" aria-label="Contraseña de 4 caracteres">
+      <p class="lead">Escribe la contraseña que te dio el juego al empezar un nivel: 4 letras o números en la aventura original, 5 en la Montaña Eterna.</p>
+      <input id="pwIn" class="pw" type="text" maxlength="5" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="•••••" aria-label="Contraseña de 4 o 5 caracteres">
       <p class="err" id="pwErr" role="alert">${err || ''}</p>
       <button type="button" class="btn primary" id="pwGo" disabled>Continuar</button>
       <p class="fine">Las contraseñas no usan 0, 1, I ni O, para que no se confundan.</p></div>`,
       [['#back', menuScreen], ['#pwGo', submitPass]]);
     const inp = sc.querySelector('#pwIn'), go = sc.querySelector('#pwGo');
     inp.addEventListener('input', () => {
-      inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
-      go.disabled = inp.value.length !== 4;
+      inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+      go.disabled = inp.value.length < 4;
       $('#pwErr').textContent = '';
     });
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitPass(); });
@@ -1262,28 +1560,30 @@ if (typeof module !== 'undefined') {
   }
 
   function submitPass() {
-    const inp = $('#pwIn'); if (!inp || inp.value.length !== 4) return;
+    const inp = $('#pwIn'); if (!inp || inp.value.length < 4) return;
     const g = E.decodePassword(inp.value);
-    if (!g) { $('#pwErr').textContent = 'Esa contraseña no es válida. Revisa las 4 letras o números.'; return; }
+    if (!g) { $('#pwErr').textContent = 'Esa contraseña no es válida. Revisa las letras y números.'; return; }
     G = g; G.totalTurns = 0; lastHp = G.adv.hp; builtLevel = -1;
     hideScreen(); render();
-    say(`<b>Contraseña aceptada.</b> ${HEROES[G.hero].name}, nivel ${G.levelIdx + 1} (${LEVELS[G.levelIdx].title}) con ${G.adv.hp} de Vida. Tira los dados.`);
+    say(`<b>Contraseña aceptada.</b> ${GAMES[G.game].name}: ${HEROES[G.hero].name}, nivel ${G.levelIdx + 1} (${LEVELS[G.levelIdx].title}) con ${G.adv.hp} de Vida${G.items.length ? ' y ' + G.items.length + ' objeto' + (G.items.length > 1 ? 's' : '') : ''}. Tira los dados.`);
   }
 
-  function startGame(hero) {
-    G = E.newRun(hero); G.totalTurns = 0; lastHp = START_HP; builtLevel = -1;
+  function startGame(hero, game, items) {
+    G = E.newRun(hero, game, items); G.totalTurns = 0; lastHp = START_HP; builtLevel = -1;
     hideScreen(); render();
-    say(`<b>${HEROES[hero].name}.</b> Una carta, doce niveles. Tira los dados para empezar.`);
+    say(game === 'peak'
+      ? `<b>${HEROES[hero].name}.</b> Montaña Eterna: las casillas de ventisca restan 1 a tu Atq y Def. Tira los dados para empezar.`
+      : `<b>${HEROES[hero].name}.</b> Una carta, doce niveles. Tira los dados para empezar.`);
   }
 
   function resume(g) {
-    G = g;
+    G = g; useGame(G.game || 'base');
     if (G.totalTurns == null) G.totalTurns = 0;
     if (G.phase === 'monsters') G.phase = 'move';
     lastHp = G.adv.hp; builtLevel = -1;
     hideScreen(); render();
     if (G.phase === 'clear') breakSheet();
-    else say(G.levelIdx === 0 && G.turnNo === 1 && !G.turn.dice ? 'Una carta, doce niveles. Tira los dados para empezar.' : `Nivel ${G.levelIdx + 1}: ${LEVELS[G.levelIdx].title}.`);
+    else say(G.levelIdx === 0 && G.turnNo === 1 && !G.turn.dice ? `Una carta, ${LEVELS.length} niveles. Tira los dados para empezar.` : `Nivel ${G.levelIdx + 1}: ${LEVELS[G.levelIdx].title}.`);
   }
 
   function goMenu() { if (busy) return; closeSheet(); menuScreen(); }
@@ -1355,7 +1655,7 @@ if (typeof module !== 'undefined') {
     const iv = setInterval(renderDice, 110);
     await sleep(700);
     clearInterval(iv);
-    rolling = false;
+    rolling = false; keepSet = new Set();
     render();
     say(msg);
   }
@@ -1371,6 +1671,11 @@ if (typeof module !== 'undefined') {
     if (!ab || rolling || busy) return;
     if (ab.id === 'keep') keepSheet();
     else if (ab.id === 'reroll') { E.useReroll(G); animateRoll('Vuelves a tirar. Reparte los dados otra vez.'); }
+    else if (ab.id === 'sherpa') {
+      E.toggleSherpa(G);
+      render();
+      say(G.sherpaOn ? 'Habilidad del Sherpa: tu próximo traslado <b>ignora los muros</b>, pero no puedes terminar sobre uno. Toca el destino.' : 'Habilidad cancelada.');
+    }
     else if (ab.id === 'ranger') {
       E.toggleRanger(G);
       render();
@@ -1441,9 +1746,73 @@ if (typeof module !== 'undefined') {
       await glide(tok.adv, path, G.turn.spd);
       busy = false;
       render();
-      say(`Te mueves. Te quedan <b>${G.turn.spdLeft}</b> de Mov y <b>${G.turn.atkLeft}</b> de Atq.`);
+      say(`Te mueves. Te quedan <b>${G.turn.spdLeft}</b> de Mov y <b>${E.atkAvail(G)}</b> de Atq.${E.blizzPen(G) ? ' <b>Ventisca:</b> −1 a tu Atq y Def mientras estés aquí.' : ''}`);
     } else if (R.dist[i] < Infinity) say(`Llegar ahí cuesta <b>${R.dist[i]}</b> de Mov y te quedan <b>${G.turn.spdLeft}</b>.`);
     else say('No hay camino hasta esa casilla.');
+  }
+
+  /* ---------- objetos ---------- */
+  function itemSheet(id) {
+    if (busy || rolling || !G || G.phase === 'monsters') return;
+    const it = ITEMS[id], ok = E.itemUsable(G, id);
+    const why = id === 'herbs' ? 'Se te ofrecerá solas cuando un ataque te haga daño.'
+      : id === 'cloak' ? 'Úsala en la fase de Energía o de movimiento.'
+      : id === 'flame' ? 'Solo en la fase de Energía, con los dados ya tirados.'
+      : 'Solo en tu fase de movimiento y ataque, después de confirmar la Energía.';
+    openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS[id]}</span><h3>${it.name}</h3></div>
+      <p class="lead">${it.txt}</p>
+      ${ok ? '' : `<p class="fine">${why}</p>`}
+      <button type="button" class="btn primary" id="iUse" ${ok ? '' : 'disabled'}>Usar</button>
+      <button type="button" class="btn" id="iNo">Cerrar</button>`,
+      [['#iNo', closeSheet], ['#iUse', () => useItemUI(id)]], true);
+  }
+
+  function useItemUI(id) {
+    closeSheet();
+    if (id === 'flame') { flameSheet(); return; }
+    if (!E.useItem(G, id)) return;
+    render();
+    const t = G.turn;
+    if (id === 'cloak') say('<b>Capa de cuero.</b> Ignoras las ventiscas hasta el final del nivel.');
+    else if (id === 'axe') say(`<b>Cuerda y piolet.</b> Este turno: Atq <b>${t.atk}</b> (te quedan <b>${E.atkAvail(G)}</b>) y Alcance <b>${t.rng}</b>.`);
+    else if (id === 'wyrm') say(`<b>Extracto de Wyrm.</b> Mov +4: te quedan <b>${t.spdLeft}</b>.`);
+  }
+
+  function flameSheet() {
+    const t = G.turn, picks = new Set();
+    const open = () => {
+      const die = i => t.lock === i
+        ? dieHTML(t.dice[i], 'locked')
+        : dieHTML(t.dice[i], picks.has(i) ? 'sel' : '').replace('<span class="die', `<button type="button" data-p="${i}" class="die`).replace('</span>', '</button>');
+      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.flame}</span><h3>Llama del destino</h3></div>
+        <p class="lead">Toca los dados que quieres volver a tirar. Te quedas con la segunda tirada.</p>
+        <div class="dice-row pick">${[0, 1, 2].map(die).join('')}</div>
+        <button type="button" class="btn primary" id="fGo" ${picks.size ? '' : 'disabled'}>Volver a tirar${picks.size ? ' (' + picks.size + ')' : ''}</button>
+        <button type="button" class="btn" id="fNo">Cancelar</button>`,
+        [['#fNo', closeSheet], ['#fGo', () => {
+          const list = [...picks];
+          closeSheet();
+          keepSet = new Set([0, 1, 2].filter(i => !list.includes(i)));
+          if (!E.useFlame(G, list)) { keepSet = new Set(); return; }
+          animateRoll('<b>Llama del destino.</b> Dados nuevos: reparte o revisa tu reparto.');
+        }]], true);
+      document.querySelectorAll('#veil [data-p]').forEach(b => b.addEventListener('click', () => {
+        const i = +b.dataset.p;
+        if (picks.has(i)) picks.delete(i); else picks.add(i);
+        open();
+      }));
+    };
+    open();
+  }
+
+  function askHerbs(dmg) {
+    return new Promise(res => {
+      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.herbs}</span><h3>Hierbas curativas</h3></div>
+        <p class="lead">Te van a hacer <b>${dmg}</b> de daño. Con las hierbas solo recibirías <b>${Math.ceil(dmg / 2)}</b>. Se gastan al usarlas.</p>
+        <button type="button" class="btn primary" id="hUse">Usar hierbas (−${Math.ceil(dmg / 2)})</button>
+        <button type="button" class="btn" id="hNo">Recibir ${dmg}</button>`,
+        [['#hUse', () => { closeSheet(); res(true); }], ['#hNo', () => { closeSheet(); res(false); }]], false);
+    });
   }
 
   async function levelClear() {
@@ -1481,15 +1850,17 @@ if (typeof module !== 'undefined') {
         if (e.ids.length) {
           for (const id of e.ids) { const el = tok.mons.get(id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } }
           await sleep(350);
-          if (e.dmg > 0) {
-            floatText(G.adv.x, G.adv.y, '−' + e.dmg, 'dmg');
+          let dmg = e.dmg;
+          if (e.pending) dmg = E.resolveDamage(G, await askHerbs(e.dmg));
+          if (dmg > 0) {
+            floatText(G.adv.x, G.adv.y, '−' + dmg, 'dmg');
             tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
           } else {
             floatText(G.adv.x, G.adv.y, 'BLOCK', 'dmg block');
             tok.adv.classList.add('blocked'); setTimeout(() => tok.adv.classList.remove('blocked'), 600);
           }
           renderHP();
-          say(`Atacan <b>${e.ids.length}</b>: Ataque total <b>${e.total}</b> ÷ Defensa <b>${e.def}</b> = <b>${e.dmg}</b> de daño.${e.dmg ? '' : ' <b>¡Bloqueado!</b>'}`);
+          say(`Atacan <b>${e.ids.length}</b>: Ataque total <b>${e.total}</b> ÷ Defensa <b>${e.def}</b> = <b>${e.dmg}</b> de daño.${e.dmg ? (dmg < e.dmg ? ` Con las hierbas recibes <b>${dmg}</b>.` : '') : ' <b>¡Bloqueado!</b>'}`);
           await sleep(650);
         } else say('Ningún monstruo te alcanza este turno.');
       }
@@ -1513,6 +1884,7 @@ if (typeof module !== 'undefined') {
       else if (b.id === 'btnAbil') onAbility();
       else if (b.id === 'btnUndo') undo(); else if (b.id === 'btnEnd') endTurn();
     });
+    $('#items').addEventListener('click', e => { const b = e.target.closest('[data-item]'); if (b) itemSheet(b.dataset.item); });
     $('#btnRules').addEventListener('click', rulesSheet);
     $('#btnPass').addEventListener('click', passwordSheet);
     if (window.ResizeObserver) new ResizeObserver(fit).observe($('#boxBoard')); else window.addEventListener('resize', fit);

@@ -1,4 +1,4 @@
-const E=require('../src/engine.js');
+const E=require('../engine.js');
 // nivel sintético: muros dados como lista de [x,y]
 function lv(walls){const w=new Array(E.N).fill(false);for(const [x,y] of walls)w[E.idx(x,y)]=true;return{walls:w,lm:{}};}
 const I=E.idx; let bad=0;
