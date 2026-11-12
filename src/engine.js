@@ -765,6 +765,16 @@ function chooseMove(lv, st, m) {
     if (D.dist[target] <= m.spd) return target;          // llega este turno
     // No llega: gasta toda su velocidad acercándose al máximo al destino. Se elige entre todas las
     // casillas alcanzables, no solo a lo largo de un camino, para no desperdiciar puntos de velocidad.
+    // Si desde alguna casilla alcanzable ya puede atacar, nunca se queda fuera de alcance: elige la de mayor Alcance
+    let atk = -1, atkRd = -1, atkC = Infinity;
+    for (let i = 0; i < N; i++) {
+      if (!free(i) && i !== me) continue;
+      if (D.dist[i] > m.spd) continue;
+      const rd = rangeDist(lv, i, advI);
+      if (rd > R(i) || !hasLOS(lv, i, advI, others)) continue;
+      if (rd > atkRd || (rd === atkRd && D.dist[i] < atkC)) { atk = i; atkRd = rd; atkC = D.dist[i]; }
+    }
+    if (atk >= 0) return atk;
     const T = dijkstra(lv, target, blocked, blocked).dist;
     let best = me, bestT = T[me], bestR = rangeDist(lv, me, advI), bestC = 0;
     for (let i = 0; i < N; i++) {
