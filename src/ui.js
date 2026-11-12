@@ -192,11 +192,28 @@
   }
 
   /* ---------- tablero ---------- */
+  // El tamaño de casilla se ajusta al ancho y también al alto de la pantalla, para que el mapa y los mandos
+  // quepan juntos sin tener que desplazarse (con un mínimo de 40 px: si aun así no cabe, queda un poco de scroll).
   function fit() {
-    const w = $('#boxBoard').clientWidth || 340;
-    const t = Math.max(40, Math.min(68, Math.floor((w - 4) / COLS)));
-    document.documentElement.style.setProperty('--t', t + 'px');
+    if (document.body.classList.contains('menu')) return;
+    const root = document.documentElement, box = $('#boxBoard');
+    const w = box.clientWidth || 340;
+    let t = Math.max(40, Math.min(68, Math.floor((w - 4) / COLS)));
+    const vh = window.innerHeight || 700;
+    document.body.classList.toggle('tight', vh < 780);
+    root.style.setProperty('--t', t + 'px');
+    const app = $('.app'), board = $('#board'), panel = $('.panel'), dr = $('#diceRow');
+    // alto de todo lo que no es el tablero; el panel se cuenta con la fila de dados, que solo se ve en la fase de Energía
+    const panelH = panel.offsetHeight + (dr.offsetHeight ? 0 : 54);
+    const cs = getComputedStyle(app), gap = parseFloat(cs.rowGap) || 0;
+    const others = $('.top').offsetHeight + ($('#card').offsetHeight - board.offsetHeight) + panelH + gap * 2
+      + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const byH = Math.floor((vh - others - 22) / ROWS);
+    if (byH < t) t = Math.max(38, byH);
+    root.style.setProperty('--t', t + 'px');
   }
+  let fitTimer = 0, needFit = false, lastW = 0;
+  const fitSoon = () => { clearTimeout(fitTimer); fitTimer = setTimeout(fit, 120); };
 
   function buildBoard() {
     const lv = LEVELS[G.levelIdx];
@@ -221,6 +238,7 @@
     $('#tokens').innerHTML = '';
     tok.adv = null; tok.mons = new Map();
     builtLevel = G.levelIdx;
+    needFit = true;
   }
 
   const setPos = (el, x, y) => { el.style.setProperty('--x', x); el.style.setProperty('--y', y); };
@@ -408,6 +426,7 @@
 
   function renderDice() {
     const t = G.turn, row = $('#diceRow');
+    row.classList.toggle('moving', G.phase !== 'energy');
     if (G.phase !== 'energy') {
       if (G.phase === 'move' && t.dice) row.innerHTML = t.dice.map(v => dieHTML(v, 'used')).join('');
       else row.innerHTML = '';
@@ -518,6 +537,7 @@
     renderLoot();
     renderActions();
     renderTiles();
+    if (needFit) { needFit = false; fit(); requestAnimationFrame(fit); }
     if (!busy) save();
   }
 
@@ -1312,7 +1332,10 @@
     $('#loot').addEventListener('click', e => { if (e.target.closest('#btnLoot') && G && G.phase === 'energy' && G.turn.dice && !rolling) lootSheet(); });
     $('#btnRules').addEventListener('click', rulesSheet);
     $('#btnPass').addEventListener('click', passwordSheet);
-    if (window.ResizeObserver) new ResizeObserver(fit).observe($('#boxBoard')); else window.addEventListener('resize', fit);
+    if (window.ResizeObserver) new ResizeObserver(() => { const w = $('#boxBoard').clientWidth; if (w !== lastW) { lastW = w; fitSoon(); } }).observe($('#boxBoard'));
+    window.addEventListener('resize', fitSoon);
+    window.addEventListener('orientationchange', fitSoon);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSoon);
     fit();
   }
 

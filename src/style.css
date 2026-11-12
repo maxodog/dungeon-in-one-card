@@ -405,3 +405,51 @@ body.menu .screen {
 .wnote.hell.on { color: #ff5a46; font-weight: 700; }
 .wnote.hell.off { color: #9fd8ff; }
 .item.on .ico { color: inherit; }
+
+/* ===== Disposición compacta: mapa y mandos en la misma pantalla ===== */
+.app { min-height: 100vh; min-height: 100dvh; gap: 8px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+.brand .mark { font-size: 26px; }
+.brand .sub { font-size: 11px; margin-top: 1px; }
+.top-actions .ghost { min-height: 32px; padding: 5px 9px; font-size: 13px; }
+.card { padding: 8px; gap: 6px; }
+.card-head { flex-direction: row; align-items: center; justify-content: space-between; padding: 0 4px; gap: 8px; }
+.card-head .lvl-name { order: 0; font-size: 22px; min-width: 0; }
+.card-head .head-row { order: 1; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
+.lvl-num { font-size: 12px; letter-spacing: .18em; white-space: nowrap; }
+.lvl-num b { font-size: 14px; }
+.dots i { width: 6px; height: 6px; }
+.foot { grid-template-columns: 40px 1fr; gap: 8px; padding: 6px 2px 0; }
+.foot .ico { width: 40px; height: 40px; border-radius: 7px; }
+.foot .nm { font-size: 18px; }
+.foot .nm small { font-size: 12px; margin-left: 5px; }
+.stats { margin-top: 3px; gap: 3px; }
+.stats div { padding: 1px 0 0; position: relative; }
+.stats b { font-size: 17px; }
+.stats span { font-size: 10px; letter-spacing: .1em; }
+.stats b + u { right: 2px; font-size: 10px; }
+.wnote { margin-top: 2px; font-size: 12px; line-height: 1.15; }
+.panel { position: sticky; bottom: 0; z-index: 6; margin-top: auto; gap: 6px; padding: 6px 0 2px; background: linear-gradient(to bottom, rgba(6,13,26,0), var(--bg) 10px); }
+.banner { min-height: 0; gap: 8px; }
+.banner p { font-size: 15px; line-height: 1.15; }
+.step { width: 22px; height: 22px; font-size: 13px; }
+.hp-row { gap: 8px; }
+.pips i { width: 12px; height: 12px; }
+.chips { gap: 6px; }
+.chip { min-height: 62px; padding: 4px 3px; border-radius: 8px; }
+.chip .val { font-size: 26px; }
+.chip .lbl { font-size: 11px; }
+.chip .sub { font-size: 11.5px; min-height: 22px; white-space: nowrap; }
+.chip .bar { bottom: 3px; height: 2px; }
+.die { width: 42px; height: 42px; padding: 6px; }
+.dice-row { min-height: 48px; gap: 12px; }
+.dice-row:empty { display: none; }
+.btn { min-height: 44px; font-size: 17px; padding: 6px 10px; }
+.btn.small { padding: 6px 12px; font-size: 15px; }
+.log { min-height: 36px; font-size: 15px; line-height: 1.2; max-height: 64px; overflow-y: auto; }
+.items { gap: 6px; }
+.item { min-height: 36px; }
+/* pantallas bajas: se oculta la instrucción de arriba (el mensaje de abajo ya la repite) y los dados usados */
+body.tight .banner { display: none; }
+body.tight .dice-row.moving { display: none; }
+.dots { flex-wrap: nowrap; gap: 3px; }
+.dots i { width: 5px; height: 5px; }

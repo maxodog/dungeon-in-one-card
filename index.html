@@ -417,6 +417,54 @@ body.menu .screen {
 .wnote.hell.off { color: #9fd8ff; }
 .item.on .ico { color: inherit; }
 
+/* ===== Disposición compacta: mapa y mandos en la misma pantalla ===== */
+.app { min-height: 100vh; min-height: 100dvh; gap: 8px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+.brand .mark { font-size: 26px; }
+.brand .sub { font-size: 11px; margin-top: 1px; }
+.top-actions .ghost { min-height: 32px; padding: 5px 9px; font-size: 13px; }
+.card { padding: 8px; gap: 6px; }
+.card-head { flex-direction: row; align-items: center; justify-content: space-between; padding: 0 4px; gap: 8px; }
+.card-head .lvl-name { order: 0; font-size: 22px; min-width: 0; }
+.card-head .head-row { order: 1; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
+.lvl-num { font-size: 12px; letter-spacing: .18em; white-space: nowrap; }
+.lvl-num b { font-size: 14px; }
+.dots i { width: 6px; height: 6px; }
+.foot { grid-template-columns: 40px 1fr; gap: 8px; padding: 6px 2px 0; }
+.foot .ico { width: 40px; height: 40px; border-radius: 7px; }
+.foot .nm { font-size: 18px; }
+.foot .nm small { font-size: 12px; margin-left: 5px; }
+.stats { margin-top: 3px; gap: 3px; }
+.stats div { padding: 1px 0 0; position: relative; }
+.stats b { font-size: 17px; }
+.stats span { font-size: 10px; letter-spacing: .1em; }
+.stats b + u { right: 2px; font-size: 10px; }
+.wnote { margin-top: 2px; font-size: 12px; line-height: 1.15; }
+.panel { position: sticky; bottom: 0; z-index: 6; margin-top: auto; gap: 6px; padding: 6px 0 2px; background: linear-gradient(to bottom, rgba(6,13,26,0), var(--bg) 10px); }
+.banner { min-height: 0; gap: 8px; }
+.banner p { font-size: 15px; line-height: 1.15; }
+.step { width: 22px; height: 22px; font-size: 13px; }
+.hp-row { gap: 8px; }
+.pips i { width: 12px; height: 12px; }
+.chips { gap: 6px; }
+.chip { min-height: 62px; padding: 4px 3px; border-radius: 8px; }
+.chip .val { font-size: 26px; }
+.chip .lbl { font-size: 11px; }
+.chip .sub { font-size: 11.5px; min-height: 22px; white-space: nowrap; }
+.chip .bar { bottom: 3px; height: 2px; }
+.die { width: 42px; height: 42px; padding: 6px; }
+.dice-row { min-height: 48px; gap: 12px; }
+.dice-row:empty { display: none; }
+.btn { min-height: 44px; font-size: 17px; padding: 6px 10px; }
+.btn.small { padding: 6px 12px; font-size: 15px; }
+.log { min-height: 36px; font-size: 15px; line-height: 1.2; max-height: 64px; overflow-y: auto; }
+.items { gap: 6px; }
+.item { min-height: 36px; }
+/* pantallas bajas: se oculta la instrucción de arriba (el mensaje de abajo ya la repite) y los dados usados */
+body.tight .banner { display: none; }
+body.tight .dice-row.moving { display: none; }
+.dots { flex-wrap: nowrap; gap: 3px; }
+.dots i { width: 5px; height: 5px; }
+
 </style>
 </head>
 <body>
@@ -1719,11 +1767,28 @@ if (typeof module !== 'undefined') {
   }
 
   /* ---------- tablero ---------- */
+  // El tamaño de casilla se ajusta al ancho y también al alto de la pantalla, para que el mapa y los mandos
+  // quepan juntos sin tener que desplazarse (con un mínimo de 40 px: si aun así no cabe, queda un poco de scroll).
   function fit() {
-    const w = $('#boxBoard').clientWidth || 340;
-    const t = Math.max(40, Math.min(68, Math.floor((w - 4) / COLS)));
-    document.documentElement.style.setProperty('--t', t + 'px');
+    if (document.body.classList.contains('menu')) return;
+    const root = document.documentElement, box = $('#boxBoard');
+    const w = box.clientWidth || 340;
+    let t = Math.max(40, Math.min(68, Math.floor((w - 4) / COLS)));
+    const vh = window.innerHeight || 700;
+    document.body.classList.toggle('tight', vh < 780);
+    root.style.setProperty('--t', t + 'px');
+    const app = $('.app'), board = $('#board'), panel = $('.panel'), dr = $('#diceRow');
+    // alto de todo lo que no es el tablero; el panel se cuenta con la fila de dados, que solo se ve en la fase de Energía
+    const panelH = panel.offsetHeight + (dr.offsetHeight ? 0 : 54);
+    const cs = getComputedStyle(app), gap = parseFloat(cs.rowGap) || 0;
+    const others = $('.top').offsetHeight + ($('#card').offsetHeight - board.offsetHeight) + panelH + gap * 2
+      + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const byH = Math.floor((vh - others - 22) / ROWS);
+    if (byH < t) t = Math.max(38, byH);
+    root.style.setProperty('--t', t + 'px');
   }
+  let fitTimer = 0, needFit = false, lastW = 0;
+  const fitSoon = () => { clearTimeout(fitTimer); fitTimer = setTimeout(fit, 120); };
 
   function buildBoard() {
     const lv = LEVELS[G.levelIdx];
@@ -1748,6 +1813,7 @@ if (typeof module !== 'undefined') {
     $('#tokens').innerHTML = '';
     tok.adv = null; tok.mons = new Map();
     builtLevel = G.levelIdx;
+    needFit = true;
   }
 
   const setPos = (el, x, y) => { el.style.setProperty('--x', x); el.style.setProperty('--y', y); };
@@ -1935,6 +2001,7 @@ if (typeof module !== 'undefined') {
 
   function renderDice() {
     const t = G.turn, row = $('#diceRow');
+    row.classList.toggle('moving', G.phase !== 'energy');
     if (G.phase !== 'energy') {
       if (G.phase === 'move' && t.dice) row.innerHTML = t.dice.map(v => dieHTML(v, 'used')).join('');
       else row.innerHTML = '';
@@ -2045,6 +2112,7 @@ if (typeof module !== 'undefined') {
     renderLoot();
     renderActions();
     renderTiles();
+    if (needFit) { needFit = false; fit(); requestAnimationFrame(fit); }
     if (!busy) save();
   }
 
@@ -2839,7 +2907,10 @@ if (typeof module !== 'undefined') {
     $('#loot').addEventListener('click', e => { if (e.target.closest('#btnLoot') && G && G.phase === 'energy' && G.turn.dice && !rolling) lootSheet(); });
     $('#btnRules').addEventListener('click', rulesSheet);
     $('#btnPass').addEventListener('click', passwordSheet);
-    if (window.ResizeObserver) new ResizeObserver(fit).observe($('#boxBoard')); else window.addEventListener('resize', fit);
+    if (window.ResizeObserver) new ResizeObserver(() => { const w = $('#boxBoard').clientWidth; if (w !== lastW) { lastW = w; fitSoon(); } }).observe($('#boxBoard'));
+    window.addEventListener('resize', fitSoon);
+    window.addEventListener('orientationchange', fitSoon);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitSoon);
     fit();
   }
 
