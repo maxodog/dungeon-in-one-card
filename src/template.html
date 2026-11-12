@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060d1a">
+<title>Dungeon in One Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Pirata+One&display=swap" rel="stylesheet">
+<style>
+/*STYLE*/
+</style>
+</head>
+<body>
+<div class="screen" id="screen"></div>
+<main class="app">
+  <header class="top">
+    <div class="brand"><span class="mark">Dungeon</span><span class="sub">in one card</span></div>
+    <div class="top-actions">
+      <button type="button" class="ghost" id="btnRules">Reglas</button>
+      <button type="button" class="ghost" id="btnPass">Contraseña</button>
+    </div>
+  </header>
+
+  <section class="card-wrap">
+    <article class="card" id="card">
+      <div class="card-head">
+        <div class="head-row">
+          <div class="lvl-num">Nivel <b id="lvlNum">1</b> de 12</div>
+          <div class="dots" id="dots" aria-hidden="true"></div>
+        </div>
+        <h2 class="lvl-name" id="lvlName">Sótano de telarañas</h2>
+      </div>
+      <div class="board-box" id="boxBoard">
+        <div class="board" id="board">
+          <div class="grid" id="grid"></div>
+          <div class="tokens" id="tokens"></div>
+        </div>
+      </div>
+      <div class="foot" id="foot"></div>
+    </article>
+  </section>
+
+  <section class="panel" aria-label="Mandos">
+    <div class="banner"><span class="step" id="step">1</span><p id="bannerText"></p></div>
+    <div class="hp-row"><span class="lab" id="heroTag"></span><div class="pips" id="pips"></div><span class="hpnum" id="hpnum"></span></div>
+    <div class="chips" id="chips"></div>
+    <div class="dice-row" id="diceRow"></div>
+    <div class="actions" id="actions"></div>
+    <p class="log" id="log" aria-live="polite"></p>
+  </section>
+</main>
+<script>
+/*ENGINE*/
+</script>
+<script>
+/*UI*/
+</script>
+</body>
+</html>
