@@ -41,7 +41,7 @@
   const LONG = { spd: 'Movimiento', atk: 'Ataque', def: 'Defensa', rng: 'Alcance' };
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
-  let walkTimer = 0, G = null, busy = false, rolling = false, builtLevel = -1, lastHp = START_HP;
+  let G = null, busy = false, rolling = false, builtLevel = -1, lastHp = START_HP;
   const tok = { adv: null, mons: new Map() };
   let bestLevel = 0;
 
@@ -113,7 +113,7 @@
       a.innerHTML = (HERO_ICONS[G.hero] || ICON_ADV) + '<span class="badge"></span>';
       layer.appendChild(a); tok.adv = a;
     }
-    setPos(tok.adv, G.adv.x, G.adv.y);
+    if (!tok.adv.dataset.anim) setPos(tok.adv, G.adv.x, G.adv.y);
     tok.adv.querySelector('.badge').textContent = G.adv.hp;
     const alive = new Set(G.mons.map(m => m.id));
     for (const [id, el] of tok.mons) {
@@ -129,7 +129,7 @@
         setPos(el, m.x, m.y);
         layer.appendChild(el); tok.mons.set(m.id, el);
       }
-      setPos(el, m.x, m.y);
+      if (!el.dataset.anim) setPos(el, m.x, m.y);
       el.querySelector('.badge').textContent = m.hp;
     }
   }
@@ -150,6 +150,29 @@
       t.classList.toggle('target', targets.has(i));
     }
   }
+
+  // Desliza una ficha por un camino. Todo el traslado dura `ms` en total, sin importar cuántas
+  // casillas recorra; cada tramo dura en proporción a su coste de movimiento (2 recto, 3 diagonal).
+  async function glide(el, path, ms) {
+    el.dataset.anim = '1';
+    const cost = (a, b) => { const [ax, ay] = XY(a), [bx, by] = XY(b); return ax !== bx && ay !== by ? 3 : 2; };
+    let total = 0;
+    for (let k = 1; k < path.length; k++) total += cost(path[k - 1], path[k]);
+    el.classList.add('walking');
+    el.style.transitionTimingFunction = 'linear';
+    for (let k = 1; k < path.length; k++) {
+      const [px] = XY(path[k - 1]), [x, y] = XY(path[k]);
+      const dur = ms * cost(path[k - 1], path[k]) / total;
+      el.style.transitionDuration = dur + 'ms';
+      if (x !== px) el.style.setProperty('--flip', x < px ? -1 : 1);
+      setPos(el, x, y);
+      await sleep(dur);
+    }
+    el.classList.remove('walking');
+    el.style.transitionDuration = ''; el.style.transitionTimingFunction = '';
+    delete el.dataset.anim;
+  }
+  const MOVE_MS = 3000;
 
   function floatText(x, y, text, cls) {
     const f = document.createElement('div');
@@ -575,7 +598,7 @@
     say(`Mov <b>${G.turn.spd}</b> · Atq <b>${G.turn.atk}</b> · Def <b>${G.turn.def}</b>${G.turn.ranger ? ` · Alc <b>${G.turn.rng}</b>` : ''}. ${nothingLeft() ? 'No puedes hacer nada útil: termina el turno.' : ''}`);
   }
 
-  function onTile(i) {
+  async function onTile(i) {
     if (G.phase !== 'move' || busy) return;
     const lv = LEVELS[G.levelIdx];
     if (lv.walls[i]) return;
@@ -599,11 +622,16 @@
     if (i === idx(G.adv.x, G.adv.y)) return;
     const R = E.reachFromAdv(G);
     if (R.dist[i] > 0 && R.dist[i] <= G.turn.spdLeft) {
-      const fx = G.adv.x;
+      const path = [];
+      for (let c = i; c !== -1; c = R.prev[c]) path.push(c);
+      path.reverse();
       E.moveAdv(G, i, R.dist[i]);
-      if (G.adv.x !== fx) tok.adv.style.setProperty('--flip', G.adv.x < fx ? -1 : 1);
-      tok.adv.classList.add('walking');
-      clearTimeout(walkTimer); walkTimer = setTimeout(() => tok.adv.classList.remove('walking'), 430);
+      busy = true;
+      tok.adv.dataset.anim = '1';
+      render();
+      say('Te mueves…');
+      await glide(tok.adv, path, MOVE_MS);
+      busy = false;
       render();
       say(`Te mueves. Te quedan <b>${G.turn.spdLeft}</b> de Mov y <b>${G.turn.atkLeft}</b> de Atq.`);
     } else if (R.dist[i] < Infinity) say(`Llegar ahí cuesta <b>${R.dist[i]}</b> de Mov y te quedan <b>${G.turn.spdLeft}</b>.`);
@@ -640,21 +668,8 @@
     for (const e of ev) {
       if (e.t === 'move') {
         const el = tok.mons.get(e.id);
-        if (el) {
-          // 2 s por casilla en recto, 3 s en diagonal
-          el.style.transitionTimingFunction = 'linear';
-          el.classList.add('walking');
-          for (let k = 1; k < e.path.length; k++) {
-            const [px, py] = XY(e.path[k - 1]), [x, y] = XY(e.path[k]);
-            const secs = (px !== x && py !== y) ? 3 : 2;
-            el.style.transitionDuration = secs + 's';
-            if (x !== px) el.style.setProperty('--flip', x < px ? -1 : 1);
-            setPos(el, x, y);
-            await sleep(secs * 1000);
-          }
-          el.classList.remove('walking');
-          el.style.transitionDuration = ''; el.style.transitionTimingFunction = '';
-        }
+        if (el) await glide(el, e.path, MOVE_MS);
+        else await sleep(MOVE_MS);
       } else if (e.t === 'attack') {
         if (e.ids.length) {
           for (const id of e.ids) { const el = tok.mons.get(id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } }
