@@ -8,6 +8,60 @@
     chestInfo, openChest, setLoot, necroInfo, necroStrike, demonReach, demonMove,
     stoneInfo, breakStone, resolveAttack, laurelStart, laurelMon, laurelReach, laurelMove, laurelAttackInfo, laurelAttack, laurelEnd };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  /* ---------- sonido: cada acción sortea entre varios clips y no repite el último ---------- */
+  const Sfx = (() => {
+    let ctx = null, master = null, on = true; const bufs = {}, last = {};
+    try { on = localStorage.getItem('dioc-sound') !== '0'; } catch (e) {}
+    function init() {
+      if (ctx || typeof SND_CLIPS === 'undefined') return;
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      try { ctx = new AC(); } catch (e) { ctx = null; return; }
+      master = ctx.createGain(); master.gain.value = .9; master.connect(ctx.destination);
+      for (const k of Object.keys(SND_CLIPS)) {
+        try {
+          const bin = atob(SND_CLIPS[k]), u8 = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+          const ok = b => { bufs[k] = b; }, bad = () => {};
+          const p = ctx.decodeAudioData(u8.buffer, ok, bad); if (p && p.catch) p.catch(bad);
+        } catch (e) {}
+      }
+    }
+    const unlock = () => { init(); if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} } };
+    ['pointerdown', 'touchstart', 'keydown', 'click'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    // pools: nombre de grupo o lista de grupos; vol: volumen 0–1
+    function play(pools, vol) {
+      if (!on || !ctx || document.hidden || typeof SND_POOLS === 'undefined') return;
+      const names = Array.isArray(pools) ? pools : [pools];
+      const list = [...new Set(names.flatMap(n => SND_POOLS[n] || []))].filter(k => bufs[k]);
+      if (!list.length) return;
+      const id = names.join('+');
+      let k = list[Math.floor(Math.random() * list.length)];
+      if (list.length > 1) while (k === last[id]) k = list[Math.floor(Math.random() * list.length)];
+      last[id] = k;
+      try {
+        const s = ctx.createBufferSource(), g = ctx.createGain();
+        s.buffer = bufs[k]; s.playbackRate.value = .96 + Math.random() * .08; g.gain.value = vol == null ? 1 : vol;
+        s.connect(g); g.connect(master); s.start(0);
+      } catch (e) {}
+    }
+    const paint = () => {
+      const b = $('#btnSnd'); if (b) { b.classList.toggle('muted', !on); b.setAttribute('aria-pressed', String(on)); b.title = on ? 'Sonido: sí (tocar para silenciar)' : 'Sonido: no (tocar para activar)'; }
+      const d = $('#sndBtnD'); if (d) d.textContent = on ? 'Sonido: sí' : 'Sonido: no';
+    };
+    function toggle() { on = !on; try { localStorage.setItem('dioc-sound', on ? '1' : '0'); } catch (e) {} paint(); unlock(); if (on) play('atk', .5); }
+    return { play, toggle, paint, get on() { return on; } };
+  })();
+  // voz del héroe: según el arte de cada carta (M masculina, F femenina, N sin distinguir)
+  const HERO_VOICE = { mage: 'F', ranger: 'F', rogue: 'N', cleric: 'N', necromancer: 'N' };
+  const voice = () => HERO_VOICE[G && G.hero] || 'M';
+  const sfxHurt = () => Sfx.play({ M: ['hurtM', 'hurtN'], F: ['hurtF', 'hurtN'], N: ['hurtM', 'hurtF', 'hurtN'] }[voice()]);
+  const sfxDie = () => Sfx.play({ M: ['dieM'], F: ['dieF'], N: ['dieM', 'dieF'] }[voice()]);
+  const KILL_POOL = { spider: 'killS', goblin: 'killS', wolf: 'killS', skeleton: 'killS', crab: 'killS', octopus: 'killS', imp: 'killS',
+    orc: 'killB', yeti: 'killB', zombie: 'killB', kraken: 'killB', demon: 'killD', fiend: 'killD', chained: 'killD', maw: 'killD' };
+  const sfxKill = () => { const lv = LEVELS[G.levelIdx]; Sfx.play(lv.boss || lv.mon.key === 'sorcerer' ? 'killJ' : (KILL_POOL[lv.mon.key] || 'killS')); };
+  // golpe del héroe: si el monstruo cae suena su muerte; si no, el golpe
+  const sfxStrike = dead => dead ? sfxKill() : Sfx.play('atk', .75);
   const SAVE_KEY = 'dioc-run-v3', BEST_KEY = 'dioc-best-v1';
   const svg = inner => `<svg viewBox="0 0 32 32" aria-hidden="true">${inner}</svg>`;
   const F = 'fill="currentColor" fill-opacity=".25"', S = 'fill="currentColor"';
@@ -635,6 +689,7 @@
   }
 
   function deathSheet() {
+    sfxDie();
     noteBest();
     const lv = LEVELS[G.levelIdx], lab = stageLabel(lv), pw = E.encodePassword(G);
     openSheet(`<h3>Has caído</h3>
@@ -1007,6 +1062,7 @@
           return;
         }
         const dead = E.laurelAttack(G, m);
+        sfxStrike(dead);
         floatText(m.x, m.y, dead ? '✕' : '−1', 'good');
         hitFx(m); render();
         if (E.levelCleared(G)) { E.laurelEnd(G); levelClear(); return; }
@@ -1032,6 +1088,7 @@
       if (!info.ok) { say(whyMsg(info, 0, 0, 'Ese monstruo')); return; }
       mode = null;
       const dead = E.necroStrike(G, m);
+      sfxStrike(dead); sfxHurt();
       floatText(m.x, m.y, dead ? '✕' : '−1', 'good'); floatText(G.adv.x, G.adv.y, '−1', 'dmg');
       hitFx(m);
       render();
@@ -1077,6 +1134,8 @@
       const val = G.stone.val, dmgM = G.fist ? 2 : 1;
       const before = G.mons.map(o => [o.x, o.y]);
       const alive = E.breakStone(G);
+      if (G.mons.length < before.length) sfxKill(); else Sfx.play('atk', .75);
+      if (alive) sfxHurt();
       for (const [x, y] of before) floatText(x, y, '−' + dmgM, 'good');
       floatText(G.adv.x, G.adv.y, '−1', 'dmg');
       tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
@@ -1092,6 +1151,7 @@
       const info = E.attackInfo(G, m);
       if (!info.ok) { say(whyMsg(info, E.mStat(G, m, 'def'), E.atkAvail(G), 'Ese monstruo')); return; }
       const dead = E.attackMon(G, m);
+      sfxStrike(dead);
       floatText(m.x, m.y, dead ? '✕' : '−1', 'good');
       hitFx(m);
       render();
@@ -1302,6 +1362,7 @@
         if (el) await glide(el, e.path, LEVELS[G.levelIdx].mon.spd);
       } else if (e.t === 'attack') {
         if (e.ids.length) {
+          Sfx.play('atk');
           for (const id of e.ids) { const el = tok.mons.get(id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } }
           await sleep(350);
           let dmg = e.dmg, usedMail = false, usedHerbs = false;
@@ -1312,9 +1373,11 @@
             dmg = E.resolveAttack(G, usedMail, usedHerbs);
           }
           if (dmg > 0) {
+            sfxHurt();
             floatText(G.adv.x, G.adv.y, '−' + dmg, 'dmg');
             tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
           } else {
+            Sfx.play('blk');
             floatText(G.adv.x, G.adv.y, 'BLOCK', 'dmg block');
             tok.adv.classList.add('blocked'); setTimeout(() => tok.adv.classList.remove('blocked'), 600);
           }
@@ -1350,6 +1413,7 @@
     $('#loot').addEventListener('click', e => { if (e.target.closest('#btnLoot') && G && G.phase === 'energy' && G.turn.dice && !rolling) lootSheet(); });
     $('#btnRules').addEventListener('click', rulesSheet);
     $('#btnPass').addEventListener('click', passwordSheet);
+    $('#btnSnd').addEventListener('click', Sfx.toggle); Sfx.paint();
     if (window.ResizeObserver) new ResizeObserver(() => { const w = $('#boxBoard').clientWidth; if (w !== lastW) { lastW = w; fitSoon(); } }).observe($('#boxBoard'));
     window.addEventListener('resize', fitSoon);
     window.addEventListener('orientationchange', fitSoon);
@@ -1357,7 +1421,7 @@
     if (DESK.addEventListener) DESK.addEventListener('change', fitSoon);
     $('#sysBox').addEventListener('click', e => {
       const b = e.target.closest('[data-act]'); if (!b || !G) return;
-      if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu();
+      if (b.dataset.act === 'snd') Sfx.toggle(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu();
     });
     fit();
   }

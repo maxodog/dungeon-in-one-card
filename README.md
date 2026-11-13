@@ -15,3 +15,5 @@ Adaptación no oficial: los mapas, las cifras de los monstruos y su aparición p
 - `test/` tiene pruebas del motor con Node: `node test/pw_test.js`, `node test/los_test.js`, `node test/diag_test.js`, `node test/peak_test.js`, `node test/exp_test.js`. Las pruebas de interfaz (Playwright) están en `test/*.py`.
 
 **Escritorio.** En pantallas anchas (apaisadas, desde 1000 px) el juego se muestra sobre un tapete: el mapa en la carta de la izquierda, tus mandos en la de la derecha, el héroe y el menú en los marcos de arriba y los objetos en las casillas pequeñas. En el teléfono se usa la disposición compacta de siempre. El tapete (`img/playmat.jpg`) es de Little Rocket Games.
+
+Sonido: la carpeta `src/sounds.js` guarda los clips (mp3 mono recomprimidos, aportados por el autor del proyecto) dentro de la propia página; cada acción sortea uno de su grupo y no repite el anterior. Hay un botón para silenciar. `tools/` tiene los scripts con los que se prepararon.

@@ -521,3 +521,26 @@ body.tight .dice-row.moving { display: none; }
 
 .updbar { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 8px 14px; background: var(--card); border: 1.5px solid var(--torch); border-radius: 10px; font-size: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .updbar .btn { flex: none; min-height: 38px; background: var(--torch); border-color: var(--torch); color: #1a0d03; }
+
+/* ---- botón de sonido ---- */
+#btnSnd .off { display: none; }
+#btnSnd.muted .off { display: inline; }
+#btnSnd.muted .on { display: none; }
+#btnSnd.muted { color: var(--muted); }
+
+/* ---- cabecera en pantallas estrechas (360–400 px): caben título, vida y tres botones ---- */
+@media (max-width: 420px) {
+  .top { gap: 5px; }
+  .brand .mark { font-size: 21px; }
+  .top .hp-row { gap: 4px; }
+  .top .pips { gap: 3px; }
+  .top .pips i { width: 9px; height: 9px; border-width: 1.2px; }
+  .top .hpnum { font-size: 12px; }
+  .top-actions { gap: 4px; }
+  .top-actions .ghost.icon { min-width: 30px; width: 30px; min-height: 32px; }
+}
+
+/* escritorio: con el botón de sonido, los cuatro botones del cuadro del título deben dejar sitio al crédito */
+@media (min-width: 1000px) and (min-aspect-ratio: 3/2) {
+  .app .sysbox .btn { min-height: 0; height: calc(112 * var(--u)); padding-top: 0; padding-bottom: 0; }
+}
