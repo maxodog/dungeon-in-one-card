@@ -308,6 +308,10 @@
       if (reach && isReach) t.dataset.cost = reach.free ? '·' : reach.dist[i]; else if (demon && isReach) t.dataset.cost = demon.dist[i]; else if (isLau) t.dataset.cost = lau.R.dist[i]; else delete t.dataset.cost;
       t.classList.toggle('target', targets.has(i));
     }
+    // Segundo dibujo del héroe, fijo dentro de su casilla (sin transformaciones): así se ve aunque el navegador falle con la ficha flotante
+    const hi = idx(G.adv.x, G.adv.y), showSpot = !(tok.adv && tok.adv.dataset.anim);
+    for (let i = 0; i < N; i++) { const sp = tiles[i].querySelector('.herospot'); if (sp && !(showSpot && i === hi)) sp.remove(); }
+    if (showSpot && !tiles[hi].querySelector('.herospot')) tiles[hi].insertAdjacentHTML('beforeend', `<span class="herospot" aria-hidden="true">${HERO_ICONS[G.hero] || ICON_ADV}</span>`);
     if (G.chest) {
       const c = $('#grid').children[G.chest.at].querySelector('.chest');
       if (c) { c.classList.toggle('open', G.chest.open); c.querySelector('em').textContent = G.chest.open ? '' : G.chest.val; }
@@ -679,7 +683,7 @@
         <button type="button" class="btn menu-main" id="mPass"><span>Continuar con contraseña</span><small>4, 5, 7 u 8 letras o números</small></button>
         <button type="button" class="ghost" id="mRules">Cómo se juega</button>
       </div>
-      <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner.</p></div>`,
+      <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner. · versión ${(document.querySelector('meta[name=build]') || {}).content || '?'}</p></div>`,
       [['#mContinue', () => resume(sv)], ['#mNew', adventureScreen], ['#mPass', () => passScreen('')], ['#mRules', rulesSheet]]);
   }
 
