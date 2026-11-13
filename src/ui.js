@@ -61,7 +61,7 @@
     orc: 'killB', yeti: 'killB', zombie: 'killB', kraken: 'killB', demon: 'killD', fiend: 'killD', chained: 'killD', maw: 'killD' };
   const sfxKill = () => { const lv = LEVELS[G.levelIdx]; Sfx.play(lv.boss || lv.mon.key === 'sorcerer' ? 'killJ' : (KILL_POOL[lv.mon.key] || 'killS')); };
   // golpe del héroe: si el monstruo cae suena su muerte; si no, el golpe
-  const sfxStrike = dead => dead ? sfxKill() : Sfx.play('atk', .75);
+  const sfxStrike = dead => dead ? sfxKill() : Sfx.play('atk');
   const SAVE_KEY = 'dioc-run-v3', BEST_KEY = 'dioc-best-v1';
   const svg = inner => `<svg viewBox="0 0 32 32" aria-hidden="true">${inner}</svg>`;
   const F = 'fill="currentColor" fill-opacity=".25"', S = 'fill="currentColor"';
@@ -1134,7 +1134,7 @@
       const val = G.stone.val, dmgM = G.fist ? 2 : 1;
       const before = G.mons.map(o => [o.x, o.y]);
       const alive = E.breakStone(G);
-      if (G.mons.length < before.length) sfxKill(); else Sfx.play('atk', .75);
+      if (G.mons.length < before.length) sfxKill(); else Sfx.play('atk');
       if (alive) sfxHurt();
       for (const [x, y] of before) floatText(x, y, '−' + dmgM, 'good');
       floatText(G.adv.x, G.adv.y, '−1', 'dmg');
@@ -1362,7 +1362,6 @@
         if (el) await glide(el, e.path, LEVELS[G.levelIdx].mon.spd);
       } else if (e.t === 'attack') {
         if (e.ids.length) {
-          Sfx.play('atk');
           for (const id of e.ids) { const el = tok.mons.get(id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } }
           await sleep(350);
           let dmg = e.dmg, usedMail = false, usedHerbs = false;
