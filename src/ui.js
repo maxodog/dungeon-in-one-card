@@ -136,7 +136,14 @@
       if (cur && !cur.tr.l && inPool(cur.tr, want)) return;
       const tr = choose(); if (tr && !(cur && cur.tr.f === tr.f)) begin(tr);
     }
-    function stop() { seq++; fadeOut(cur); cur = null; floorId = null; }
+    // música del menú (mientras no hay mazmorra en curso)
+    function menu() {
+      floorId = null; want = { game: 'menu', boss: false };
+      if (!on || !unlocked || !T.length) return;
+      if (cur && inPool(cur.tr, want)) return;
+      const tr = choose(); if (tr) begin(tr);
+    }
+    function stop() { seq++; fadeOut(cur); cur = null; floorId = null; want = null; }
     function unlock() {
       if (!T.length) return;
       if (!unlocked) { unlocked = true; setup(); if (!primed) { primed = true; slots.forEach(s => { try { s.el.src = MUSIC_SILENCE; const p = s.el.play(); if (p && p.then) p.then(() => s.el.pause(), () => {}); } catch (e) {} }); } }
@@ -150,7 +157,7 @@
     });
     function setOn(v) { on = !!v; save(); if (!on) { seq++; fadeOut(cur); cur = null; } else if (want) { unlocked = true; setup(); Sfx.unlock(); next(); } Sfx.paint(); }
     function setVol(v) { vol = Math.max(0, Math.min(1, v)); save(); if (out && ctx) out.gain.value = vol; else if (cur && cur.kind === 'el') { try { cur.slot.el.volume = (cur.lvl || 1) * vol; } catch (e) {} } }
-    return { floor, stop, setOn, setVol, get on() { return on; }, get vol() { return vol; }, get has() { return T.length > 0; } };
+    return { floor, menu, stop, setOn, setVol, get on() { return on; }, get vol() { return vol; }, get has() { return T.length > 0; } };
   })();
   const bossFloor = () => {
     const lv = LEVELS[G.levelIdx], k = lv.mon.key;
@@ -816,36 +823,97 @@
     if (G && G.phase === 'dead') endScreen(false);
   }
 
-  // pantalla final (victoria o derrota) con las estadísticas de la partida
+  // pantalla final (victoria o derrota) con las estadísticas de la partida, premios y frases con humor
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const SI = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const STAT_ICO = {
+    stage: SI('<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>'),
+    turns: SI('<path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/>'),
+    kills: SI('<path d="M5 11a7 7 0 1 1 14 0c0 2-1 3-2 4v3H7v-3c-1-1-2-2-2-4z"/><circle cx="9.5" cy="11" r="1.3"/><circle cx="14.5" cy="11" r="1.3"/><path d="M10 18v2M14 18v2"/>'),
+    hits: SI('<path d="M14 4l6-1-1 6-9 9-3-3zM7 14l-3 3M5 19l2 2"/>'),
+    dmg: SI('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/>'),
+    blocks: SI('<path d="M12 3 5 6v6c0 4.500 3 7.500 7 9 4-1.500 7-4.500 7-9V6z"/>'),
+    chests: SI('<rect x="3" y="9" width="18" height="11" rx="1.500"/><path d="M3 9a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4M12 12v3"/>'),
+    deaths: SI('<path d="M7 21V9a5 5 0 0 1 10 0v12zM12 9v6M9.500 12h5"/>'),
+    life: SI('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/>'),
+    best: SI('<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8 21h8M10 17h4"/>')
+  };
+  const ICON_TOMB = `<svg viewBox="0 0 64 80" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M14 72V30a18 18 0 0 1 36 0v42z" fill="currentColor" fill-opacity=".14"/><path d="M32 22v22M24 31h16"/><path d="M6 72h52M20 72v-5M44 72v-5M10 66l6-2M50 66l5-2"/></svg>`;
+  const ICON_TROPHY = `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M20 8h24v14a12 12 0 0 1-24 0z" fill="currentColor" fill-opacity=".16"/><path d="M20 12h-9v3a9 9 0 0 0 9 9M44 12h9v3a9 9 0 0 1-9 9M32 34v10M22 56h20M26 44h12v12H26z"/><path d="m32 14 2 4.500 5 .6-3.700 3.300 1 5-4.300-2.500-4.300 2.500 1-5-3.700-3.300 5-.6z" fill="currentColor"/></svg>`;
+  const EPITAFIOS = ['«Dijo: “yo puedo con uno más”.»', '«Su plan era bueno. El monstruo no lo leyó.»', '«Aquí yace un héroe y varias decisiones cuestionables.»',
+    '«Se fue como vivió: confiando en los dados.»', '«Los dados lo traicionaron. Él también, un poco.»', '«Pudo ser leyenda. Quedó en anécdota.»',
+    '«Descansa en paz. El monstruo descansa sobre tu botín.»', '«Murió haciendo lo que amaba: caer en trampas obvias.»'];
+  const TAUNTS = ['¡Gracias por la visita!', '¿Eso era todo? Qué decepción.', 'Cinco minutos más y me aburría.', 'Deja la puerta abierta al salir.',
+    'Tranquilo, puedes reintentar. Aquí te espero.', 'Ni siquiera despeiné mi armadura.', 'Anotaré esto en mi currículum.', 'Me caíste bien. Estabas muy blandito.'];
+  const BOSS_LAST = ['Esto no estaba en mi contrato.', 'Voy a pedir una revisión del combate.', 'Me voy a quejar con la administración de la mazmorra.',
+    '¡Pero si yo era el jefe final!', 'Llamaré a mi abogado… cuando me levante.', 'Quería ser el villano de una secuela. Qué mal.'];
   function endScreen(won) {
     const s = G.stats || {}, a = G.adv, lv = LEVELS[G.levelIdx], lab = stageLabel(lv), pw = E.encodePassword(G);
-    const w = WIN[G.game] || WIN.base, hasChest = G.game !== 'base';
-    const cell = (v, l) => `<div><b>${v}</b><span>${l}</span></div>`;
+    const w = WIN[G.game] || WIN.base, hasChest = G.game !== 'base', mon = lv.mon, N = LEVELS.length;
+    const k = s.kills || 0, hits = s.hits || 0, dmg = s.dmgIn || 0, blk = s.blocks || 0, ch = s.chests || 0, dth = s.deaths || 0, turns = G.totalTurns || 0;
+    const plural = n => n === 1 ? 'vez' : 'veces';
+    // título de rango / veredicto / premios
+    let rank, quip, awards = [];
+    if (won) {
+      if (dth === 0 && dmg <= 10) { rank = 'Intocable'; quip = 'Ni despeinado. Los monstruos piden una reunión urgente con Recursos Humanos.'; }
+      else if (dth === 0) { rank = 'Héroe de manual'; quip = 'Sin una sola caída. Los monstruos piden que, por favor, no vuelvas.'; }
+      else if (dth <= 2) { rank = 'Terco con suerte'; quip = `Caíste ${dth} ${plural(dth)} y te levantaste igual. Cabezadura con certificado.`; }
+      else { rank = 'Cucaracha inmortal'; quip = `${dth} caídas y aquí estás, sacudiéndote el polvo. Los monstruos ya perdieron la fe en la lógica.`; }
+      if (blk >= 8) awards.push('Muro humano'); if (k >= 10) awards.push('Exterminador'); if (ch >= 3) awards.push('Saqueador'); if (dmg <= 5) awards.push('Piel de roca');
+      if (hits >= 15) awards.push('Manos rápidas'); if (dth === 0) awards.push('Sin pausa para morir'); if (turns <= 70) awards.push('Con prisa');
+      if (!awards.length) awards.push('Superviviente');
+    } else {
+      rank = pick(['Mártir', 'Aperitivo', 'Lección aprendida', 'Daño colateral']);
+      const opts = [];
+      if (dth >= 2) opts.push(`Es tu caída número ${dth + 1}. ${mon.name === 'Orco' ? 'El orco' : 'El monstruo'} ya te guarda el asiento.`);
+      if (blk === 0) opts.push('0 ataques bloqueados. La defensa era una sugerencia, claro.');
+      if (k === 0) opts.push('0 monstruos vencidos. Más que una aventura, un paseo turístico.');
+      if (dmg >= 15) opts.push(`Recibiste ${dmg} de daño. Como saco de boxeo, de primera.`);
+      if (turns <= 25) opts.push(`Solo ${turns} turnos. Hasta el café se enfría más lento.`);
+      if (G.levelIdx === 0) opts.push(`Caíste en la primera etapa. ${mon.plural} están organizando una fiesta.`);
+      if (G.levelIdx >= N - 2) opts.push('Tan cerca del final… y aun así tan lejos. Qué estilo para perder.');
+      opts.push('Las estadísticas dicen que fue una buena pelea. Las estadísticas mienten.', 'Como héroe eres un excelente espectador de monstruos.');
+      quip = pick(opts);
+      awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
+    }
+    const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(TAUNTS)}»`;
+    const cell = (ico, v, l, wide) => `<div class="${wide ? 'wide' : ''}"><i>${STAT_ICO[ico]}</i><b>${v}</b><span>${l}</span></div>`;
     const cells = [
-      cell(won ? `${LEVELS.length}/${LEVELS.length}` : `${G.levelIdx + 1}/${LEVELS.length}`, won ? 'Etapas superadas' : 'Etapa alcanzada'),
-      cell(G.totalTurns, 'Turnos'),
-      cell(s.kills || 0, 'Monstruos vencidos'),
-      cell(s.hits || 0, 'Golpes dados'),
-      cell(s.dmgIn || 0, 'Daño recibido'),
-      cell(s.blocks || 0, 'Ataques bloqueados'),
-      hasChest ? cell(s.chests || 0, 'Cofres abiertos') : '',
-      cell(won ? `${a.hp}/${START_HP}` : bestLevel, won ? 'Vida final' : 'Mejor etapa'),
-      s.deaths ? cell(s.deaths, 'Veces caído') : ''
+      cell('stage', won ? `${N}/${N}` : `${G.levelIdx + 1}/${N}`, won ? 'Etapas superadas' : 'Etapa alcanzada'),
+      cell('turns', turns, 'Turnos'),
+      cell('kills', k, 'Monstruos vencidos'),
+      cell('hits', hits, 'Golpes dados'),
+      cell('dmg', dmg, 'Daño recibido'),
+      cell('blocks', blk, 'Ataques bloqueados'),
+      hasChest ? cell('chests', ch, 'Cofres abiertos') : '',
+      won ? cell('life', `${a.hp}/${START_HP}`, 'Vida final') : cell('best', bestLevel, 'Mejor etapa'),
+      dth ? cell('deaths', dth, 'Veces caído') : ''
     ].join('');
-    const items = (G.items || []).map(k => ITEMS[k] ? `<span class="chip">${ITEMS[k].short || ITEMS[k].name}</span>` : '').join('');
+    const items = (G.items || []).map(i => ITEMS[i] ? `<span class="chip">${ITEMS[i].short || ITEMS[i].name}</span>` : '').join('');
+    const embers = won ? Array.from({ length: 22 }, (_, i) => `<span style="--x:${(i * 47 + 9) % 100}%;--d:${(i * 0.37) % 4}s;--s:${3 + (i * 7) % 5}px;--t:${4 + (i * 3) % 4}s"></span>`).join('') : '';
     showScreen(`<div class="splash endscr ${won ? 'won' : 'lost'}">
-      <div class="end-head"><span class="end-ico">${HERO_ICONS[G.hero] || ICON_ADV}</span>
-        <div><h2>${won ? w[0] : 'Has caído'}</h2>
-        <p class="lead">${won ? w[1] : `Caíste en ${lab.toLowerCase()}: ${lv.title}.`} ${HEROES[G.hero].name} · ${GAMES[G.game].name}</p></div></div>
-      <div class="end-grid">${cells}</div>
-      <div class="end-skills"><b>Habilidades</b>
-        <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
-      ${won ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste${pw ? `: contraseña <b>${pw}</b>` : ''}.</p>`}
-      <div class="menu-btns">
-        ${won ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>Reintentar ${lab.toLowerCase()}</span></button>`}
-        <button type="button" class="btn ${won ? 'primary ' : ''}menu-main" id="eMenu"><span>Ir al menú</span></button>
+      <div class="end-fx">${embers}</div>
+      <div class="end-frame">
+        <div class="end-badge">${won ? ICON_TROPHY : ICON_TOMB}</div>
+        <div class="end-kicker">${won ? '¡Mazmorra completada!' : 'Fin del camino'}</div>
+        <h2>${won ? w[0] : 'Has caído'}</h2>
+        <p class="lead">${won ? w[1] : `Derrotado por ${mon.name} en ${lab.toLowerCase()}: ${lv.title}.`}</p>
+        <div class="end-hero"><span class="ico">${HERO_ICONS[G.hero] || ICON_ADV}</span><span>${HEROES[G.hero].name} · ${GAMES[G.game].name}</span></div>
+        ${won ? `<div class="end-rank"><small>Rango obtenido</small><b>${rank}</b></div>`
+              : `<div class="end-epitaph"><small>${HEROES[G.hero].name} · ${rank}</small><q>${pick(EPITAFIOS)}</q></div>`}
+        <p class="end-quip">${quip}</p>
+        <div class="end-grid">${cells}</div>
+        <div class="end-skills"><b>Habilidades</b>
+          <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
+        <div class="end-say"><span class="mico">${ICONS[mon.key] || ''}</span><q>${say}</q></div>
+        <div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${awards.map(x => `<span class="award">${x}</span>`).join('')}</div>
+        ${won ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste${pw ? `: contraseña <b>${pw}</b>` : ''}.</p>`}
+        <div class="menu-btns">
+          ${won ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>Reintentar ${lab.toLowerCase()}</span></button>`}
+          <button type="button" class="btn ${won ? 'primary ' : ''}menu-main" id="eMenu"><span>Ir al menú</span></button>
+        </div>
       </div></div>`,
-      [['#eRetry', () => { busy = false; retry(); }], ['#eMenu', () => { busy = false; goMenu(); }]]);
+      [['#eRetry', () => { busy = false; retry(); }], ['#eMenu', () => { busy = false; goMenu(); }]], true);
     Sfx.play(won ? 'win' : 'died');
   }
 
@@ -863,8 +931,8 @@
   }
 
   /* ---------- pantallas de inicio ---------- */
-  function showScreen(html, binds) {
-    closeSheet(); Music.stop();
+  function showScreen(html, binds, silent) {
+    closeSheet(); if (silent) Music.stop(); else Music.menu();
     const sc = $('#screen');
     sc.innerHTML = html;
     document.body.classList.add('menu');

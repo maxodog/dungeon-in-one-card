@@ -24,8 +24,8 @@ async def main():
         b,page,reqs,errs=await open_(p,'base',0)
         first=[r for r in reqs]
         # saltar casi al final de la canción para que termine y entre otra
-        await page.evaluate("window.__els[0].dispatchEvent(new Event('ended'))"); await page.wait_for_timeout(4000)
-        print('estado:', await page.evaluate("(()=>{const e=window.__els[0];return [e.src.split('/').pop(),e.currentTime,e.duration,e.paused,e.ended,e.loop,e.readyState]})()"))
+        await page.evaluate("window.__els.find(e=>/core_game/.test(e.src)).dispatchEvent(new Event('ended'))"); await page.wait_for_timeout(4000)
+        print('estado:', await page.evaluate("(()=>{const e=window.__els.find(e=>/core_game/.test(e.src))||window.__els[0];return [e.src.split('/').pop(),e.currentTime,e.duration,e.paused,e.ended,e.loop,e.readyState]})()"))
         print('al terminar:', first, '->', reqs, errs)
         # cambio de piso normal->normal: no debe cortar la canción
         await page.evaluate("document.querySelector('#btnMenu')&&0"); await b.close()
