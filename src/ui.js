@@ -46,12 +46,117 @@
       } catch (e) {}
     }
     const paint = () => {
-      const b = $('#btnSnd'); if (b) { b.classList.toggle('muted', !on); b.setAttribute('aria-pressed', String(on)); b.title = on ? 'Sonido: sí (tocar para silenciar)' : 'Sonido: no (tocar para activar)'; }
-      const d = $('#sndBtnD'); if (d) d.textContent = on ? 'Sonido: sí' : 'Sonido: no';
+      const any = on || Music.on, b = $('#btnSnd');
+      if (b) { b.classList.toggle('muted', !any); b.title = 'Sonido y música'; }
     };
-    function toggle() { on = !on; try { localStorage.setItem('dioc-sound', on ? '1' : '0'); } catch (e) {} paint(); unlock(); if (on) play('atk', .5); }
-    return { play, toggle, paint, get on() { return on; } };
+    function set(v) { on = !!v; try { localStorage.setItem('dioc-sound', on ? '1' : '0'); } catch (e) {} paint(); unlock(); if (on) play('atk', .5); }
+    return { play, set, paint, ctx: () => { init(); return ctx; }, unlock, get on() { return on; } };
   })();
+
+  /* ---------- música: una canción por piso según la aventura; BOSS en pisos de jefe; LOOP se repite todo el piso ---------- */
+  const Music = (() => {
+    const T = typeof MUSIC_TRACKS !== 'undefined' ? MUSIC_TRACKS : [];
+    const http = /^https?:/.test(location.protocol);   // fuera de http (archivo local) no hay streaming con efectos
+    const ls = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
+    let on = ls('dioc-music', '1') !== '0', vol = parseFloat(ls('dioc-musvol', '0.5'));
+    if (!(vol >= 0 && vol <= 1)) vol = .5;
+    let ctx = null, out = null, slots = null, cur = null, floorId = null, want = null, seq = 0, lastF = null, unlocked = false, primed = false;
+    const FADE = 1.4;
+    const save = () => { try { localStorage.setItem('dioc-music', on ? '1' : '0'); localStorage.setItem('dioc-musvol', String(vol)); } catch (e) {} };
+
+    function setup() {
+      if (slots) return;
+      ctx = http ? Sfx.ctx() : null;
+      if (ctx) { out = ctx.createGain(); out.gain.value = vol; out.connect(ctx.destination); }
+      slots = [0, 1].map(() => {
+        const el = new Audio(); el.preload = 'auto';
+        if (!ctx) return { el, lvl: 0 };
+        try { const g = ctx.createGain(); g.gain.value = 0; ctx.createMediaElementSource(el).connect(g); g.connect(out); return { el, g }; }
+        catch (e) { return { el, lvl: 0 }; }
+      });
+    }
+    // sube o baja el nivel de un nodo (0–1) en s segundos
+    function ramp(n, to, s) {
+      if (n.g && ctx) { const t = ctx.currentTime; n.g.gain.cancelScheduledValues(t); n.g.gain.setValueAtTime(n.g.gain.value, t); n.g.gain.linearRampToValueAtTime(to, t + s); return; }
+      const el = n.slot && n.slot.el; if (!el) return;
+      clearInterval(n.iv); const from = n.lvl || 0, t0 = performance.now();
+      n.iv = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (s * 1000)); n.lvl = from + (to - from) * k; try { el.volume = Math.max(0, Math.min(1, n.lvl * vol)); } catch (e) {} if (k >= 1) clearInterval(n.iv); }, 50);
+    }
+    function fadeOut(n) {
+      if (!n) return;
+      ramp(n.kind === 'el' && n.slot.g ? n.slot : n, 0, FADE);
+      setTimeout(() => {
+        if (n.kind === 'buf') { try { n.s && n.s.stop(); n.g.disconnect(); } catch (e) {} }
+        else { try { n.slot.el.pause(); n.slot.el.onended = null; } catch (e) {} }
+      }, FADE * 1000 + 100);
+    }
+    const pool = (w, boss) => {
+      let p = T.filter(t => t.g === w.game && t.b === boss);
+      if (!p.length) p = T.filter(t => t.g === w.game && t.b === !boss);
+      return p;
+    };
+    const inPool = (tr, w) => pool(w, w.boss).some(t => t.f === tr.f);
+    function choose() {
+      const p = pool(want, want.boss); if (!p.length) return null;
+      const q = p.length > 1 ? p.filter(t => t.f !== lastF) : p;
+      return q[Math.floor(Math.random() * q.length)];
+    }
+    function begin(tr) {
+      if (!tr || !on || !unlocked) return;
+      setup();
+      const my = ++seq, old = cur; lastF = tr.f; fadeOut(old);
+      const url = 'musica/' + tr.f;
+      if (tr.l && ctx) {     // bucle sin cortes: se decodifica entera (son canciones cortas)
+        const node = { tr, kind: 'buf', g: ctx.createGain() }; node.g.gain.value = 0; node.g.connect(out); cur = node;
+        fetch(url).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); })
+          .then(ab => new Promise((ok, bad) => { const p = ctx.decodeAudioData(ab, ok, bad); if (p && p.then) p.then(ok, bad); }))
+          .then(buf => { if (my !== seq) return; const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(node.g); s.start(0); node.s = s; ramp(node, 1, FADE); })
+          .catch(() => { if (my === seq) viaElement(tr, my, old); });
+      } else viaElement(tr, my, old);
+    }
+    function viaElement(tr, my, old) {
+      const used = old && old.slot;
+      const slot = slots[0] === used ? slots[1] : slots[0];
+      const node = { tr, kind: 'el', slot, lvl: 0 }; cur = node;
+      const el = slot.el; el.onended = null; el.loop = !!tr.l; el.src = 'musica/' + tr.f;
+      if (slot.g && ctx) { slot.g.gain.cancelScheduledValues(0); slot.g.gain.value = 0; } else { try { el.volume = 0; } catch (e) {} }
+      const p = el.play();
+      const ok = () => { if (my === seq) ramp(slot.g && ctx ? slot : node, 1, FADE); };
+      if (p && p.then) p.then(ok, () => { if (my === seq) cur = null; }); else ok();
+      el.onended = () => { if (cur === node && !tr.l) next(); };
+    }
+    function next() { const tr = choose(); if (tr) begin(tr); }
+
+    // al entrar a un piso: se mantiene la canción si sirve para este piso y no es un bucle
+    function floor(game, boss) {
+      if (document.body.classList.contains('menu') || !T.length) return;
+      const id = game + ':' + G.levelIdx; if (id === floorId) return;
+      floorId = id; want = { game, boss };
+      if (!on || !unlocked) return;
+      if (cur && !cur.tr.l && inPool(cur.tr, want)) return;
+      const tr = choose(); if (tr && !(cur && cur.tr.f === tr.f)) begin(tr);
+    }
+    function stop() { seq++; fadeOut(cur); cur = null; floorId = null; }
+    function unlock() {
+      if (!T.length) return;
+      if (!unlocked) { unlocked = true; setup(); if (!primed) { primed = true; slots.forEach(s => { try { s.el.src = MUSIC_SILENCE; const p = s.el.play(); if (p && p.then) p.then(() => s.el.pause(), () => {}); } catch (e) {} }); } }
+      if (on && want && !cur) next();
+    }
+    ['pointerdown', 'touchend', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    document.addEventListener('visibilitychange', () => {
+      if (!slots) return;
+      if (document.hidden) { slots.forEach(s => { try { s.el.pause(); } catch (e) {} }); if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {}); }
+      else { if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); if (cur && cur.kind === 'el') { try { cur.slot.el.play().catch(() => {}); } catch (e) {} } }
+    });
+    function setOn(v) { on = !!v; save(); if (!on) { seq++; fadeOut(cur); cur = null; } else if (want) { unlocked = true; setup(); Sfx.unlock(); next(); } Sfx.paint(); }
+    function setVol(v) { vol = Math.max(0, Math.min(1, v)); save(); if (out && ctx) out.gain.value = vol; else if (cur && cur.kind === 'el') { try { cur.slot.el.volume = (cur.lvl || 1) * vol; } catch (e) {} } }
+    return { floor, stop, setOn, setVol, get on() { return on; }, get vol() { return vol; }, get has() { return T.length > 0; } };
+  })();
+  const bossFloor = () => {
+    const lv = LEVELS[G.levelIdx], k = lv.mon.key;
+    return !!lv.boss || (G.game === 'peak' && k === 'sorcerer') || (G.game === 'harbour' && k === 'kraken') || (G.game === 'base' && k === 'demon');
+  };
+  const musicFloor = () => { if (G && G.game && LEVELS[G.levelIdx]) Music.floor(G.game, bossFloor()); };
   // voz del héroe: según el arte de cada carta (M masculina, F femenina, N sin distinguir)
   const HERO_VOICE = { mage: 'F', ranger: 'F', rogue: 'N', cleric: 'N', necromancer: 'N' };
   const voice = () => HERO_VOICE[G && G.hero] || 'M';
@@ -295,6 +400,7 @@
     tok.adv = null; tok.mons = new Map();
     builtLevel = G.levelIdx;
     needFit = true;
+    musicFloor();
   }
 
   const setPos = (el, x, y) => { el.style.setProperty('--x', x); el.style.setProperty('--y', y); };
@@ -633,6 +739,19 @@
     harbour: 'Defiende el puerto a lo largo de 8 niveles. Al final despierta el Kraken.',
     hell: 'Desciende 12 niveles por la Puerta del Infierno. Tras el 3, el 6 y el 9 te espera un jefe, y tras el 12, el Señor del Infierno.'
   };
+
+  function soundSheet() {
+    openSheet(`<h3>Sonido</h3>
+      <label class="opt"><input type="checkbox" id="oSfx" ${Sfx.on ? 'checked' : ''}><span>Efectos de sonido</span></label>
+      ${Music.has ? `<label class="opt"><input type="checkbox" id="oMus" ${Music.on ? 'checked' : ''}><span>Música</span></label>
+      <label class="opt vol"><span>Volumen de la música</span><input type="range" id="oVol" min="0" max="100" value="${Math.round(Music.vol * 100)}"></label>
+      <p class="small">La música se descarga mientras suena (cerca de 1 MB por canción).</p>` : ''}
+      <button type="button" class="btn" id="oOk">Listo</button>`, [['#oOk', closeSheet]], true);
+    const q = s => document.querySelector('#veil ' + s);
+    q('#oSfx').addEventListener('change', e => Sfx.set(e.target.checked));
+    if (q('#oMus')) { q('#oMus').addEventListener('change', e => Music.setOn(e.target.checked)); q('#oVol').addEventListener('input', e => Music.setVol(e.target.value / 100)); }
+  }
+
   function rulesSheet() {
     const g = G ? G.game : null;
     const has = k => !g || g === k;
@@ -689,7 +808,7 @@
   }
 
   function deathSheet() {
-    sfxDie();
+    sfxDie(); Music.stop();
     noteBest();
     const lv = LEVELS[G.levelIdx], lab = stageLabel(lv), pw = E.encodePassword(G);
     openSheet(`<h3>Has caído</h3>
@@ -708,6 +827,7 @@
     hell: ['Puerta cerrada', 'El Señor del Infierno cae y las llamas se apagan.']
   };
   function winSheet() {
+    Music.stop();
     noteBest();
     const w = WIN[G.game] || WIN.base;
     openSheet(`<h3>${w[0]}</h3>
@@ -717,7 +837,7 @@
 
   /* ---------- pantallas de inicio ---------- */
   function showScreen(html, binds) {
-    closeSheet();
+    closeSheet(); Music.stop();
     const sc = $('#screen');
     sc.innerHTML = html;
     document.body.classList.add('menu');
@@ -725,7 +845,7 @@
     for (const [sel, fn] of binds || []) { const el = sc.querySelector(sel); if (el) el.addEventListener('click', fn); }
     return sc;
   }
-  function hideScreen() { document.body.classList.remove('menu'); $('#screen').innerHTML = ''; fit(); }
+  function hideScreen() { document.body.classList.remove('menu'); $('#screen').innerHTML = ''; fit(); musicFloor(); }
 
   const LOGO = '<div class="logo"><span class="mark">Dungeon</span><span class="sub">in one card</span></div>';
 
@@ -1417,7 +1537,7 @@
     $('#loot').addEventListener('click', e => { if (e.target.closest('#btnLoot') && G && G.phase === 'energy' && G.turn.dice && !rolling) lootSheet(); });
     $('#btnRules').addEventListener('click', rulesSheet);
     $('#btnPass').addEventListener('click', passwordSheet);
-    $('#btnSnd').addEventListener('click', Sfx.toggle); Sfx.paint();
+    $('#btnSnd').addEventListener('click', soundSheet); Sfx.paint();
     if (window.ResizeObserver) new ResizeObserver(() => { const w = $('#boxBoard').clientWidth; if (w !== lastW) { lastW = w; fitSoon(); } }).observe($('#boxBoard'));
     window.addEventListener('resize', fitSoon);
     window.addEventListener('orientationchange', fitSoon);
@@ -1425,7 +1545,7 @@
     if (DESK.addEventListener) DESK.addEventListener('change', fitSoon);
     $('#sysBox').addEventListener('click', e => {
       const b = e.target.closest('[data-act]'); if (!b || !G) return;
-      if (b.dataset.act === 'snd') Sfx.toggle(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu();
+      if (b.dataset.act === 'snd') soundSheet(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu();
     });
     fit();
   }

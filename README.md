@@ -17,3 +17,6 @@ Adaptación no oficial: los mapas, las cifras de los monstruos y su aparición p
 **Escritorio.** En pantallas anchas (apaisadas, desde 1000 px) el juego se muestra sobre un tapete: el mapa en la carta de la izquierda, tus mandos en la de la derecha, el héroe y el menú en los marcos de arriba y los objetos en las casillas pequeñas. En el teléfono se usa la disposición compacta de siempre. El tapete (`img/playmat.jpg`) es de Little Rocket Games.
 
 Sonido: la carpeta `src/sounds.js` guarda los clips (mp3 mono recomprimidos, aportados por el autor del proyecto) dentro de la propia página; cada acción sortea uno de su grupo y no repite el anterior. Hay un botón para silenciar. `tools/` tiene los scripts con los que se prepararon.
+
+Música: la carpeta `musica/` guarda las canciones (mp3 estéreo a 64 kbps, volumen parejo; unos 28 MB en total) y `src/music.js` la lista. El nombre original decide el uso: la aventura (core, mgufyn, eternal peak, harbour, hell), `boss` para pisos de jefe y `loop` para repetir durante todo un piso. Se descargan en streaming, una a la vez, y solo si la música está activada. Los scripts de preparación están en `tools/`.
+
