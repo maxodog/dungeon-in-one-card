@@ -309,7 +309,7 @@ function itemPool(game) { return ITEM_POOL_ALL.filter(k => !ITEM_ONLY[k] || ITEM
 
 const NO_SKILLS = () => ({ spd: -1, atk: -1, def: -1, rng: -1 });
 function freshTurn() {
-  return { dice: null, assign: NO_SKILLS(), assign2: NO_SKILLS(), sel: -1, lock: -1, ranger: false, knight: false, rerolled: false,
+  return { dice: null, d12: [false, false, false], assign: NO_SKILLS(), assign2: NO_SKILLS(), sel: -1, lock: -1, ranger: false, knight: false, rerolled: false,
            boosted: false, loot: { k: null, n: 0 }, spd: 0, atk: 0, def: 0, rng: 0, spdLeft: 0, atkLeft: 0 };
 }
 const rollDie = (rnd = Math.random) => 1 + Math.floor(rnd() * 6);
@@ -398,6 +398,8 @@ function confirmEnergy(st) {
   const pv = {};
   for (const k of ['spd', 'atk', 'def', 'rng']) if (t.assign[k] >= 0) pv[k] = t.dice[t.assign[k]];
   st.prev = pv;
+  st.prevD12 = {};
+  for (const k in pv) if (t.d12 && t.d12[t.assign[k]]) st.prevD12[k] = true;   // un dado D12 conservado sigue siendo D12
   st.phase = 'move';
   st.undo = [];
 }
@@ -421,14 +423,14 @@ function heroDice(st, dice) {
 function rollTurn(st) { st.turn.dice = heroDice(st, rollDice()); return st.turn.dice; }
 function rerollDice(st) {
   const t = st.turn;
-  t.dice = heroDice(st, rollDice());
+  t.dice = heroDice(st, rollDice()); t.d12 = [false, false, false];
   t.assign = NO_SKILLS(); t.assign2 = NO_SKILLS(); t.loot = { k: null, n: 0 };
   t.sel = -1; t.lock = -1; t.ranger = false; t.knight = false;
 }
 function useReroll(st) { if (st.hero === 'mage') st.abil = true; else st.turn.rerolled = true; rerollDice(st); }
 function rollWithKeep(st, k) { // Paladín: conserva el dado que tenía la ranura k el turno anterior
   const t = st.turn;
-  t.dice = rollDice(); t.dice[0] = st.prev[k]; t.assign[k] = 0; t.lock = k; st.abil = true;
+  t.dice = rollDice(); t.d12 = [!!(st.prevD12 && st.prevD12[k]), false, false]; t.dice[0] = st.prev[k]; t.assign[k] = 0; t.lock = k; st.abil = true;
 }
 function toggleRanger(st) {
   const t = st.turn;
@@ -692,7 +694,7 @@ function useFlame(st, picks) {
   const t = st.turn, list = picks.filter(i => i !== t.lock && i >= 0 && i < 3);
   if (!list.length) return false;
   st.items = st.items.filter(i => i !== 'flame');
-  for (const i of list) t.dice[i] = rollDie();
+  for (const i of list) { t.dice[i] = rollDie(); if (t.d12) t.d12[i] = false; }
   t.sel = -1;
   return true;
 }
@@ -702,6 +704,7 @@ function useEye(st, i, rnd = Math.random) {
   if (!itemUsable(st, 'eye') || i === t.lock || i < 0 || i > 2) return false;
   st.items = st.items.filter(x => x !== 'eye');
   t.dice[i] = 1 + Math.floor(rnd() * 12);
+  t.d12 = t.d12 || [false, false, false]; t.d12[i] = true;
   t.sel = -1;
   return true;
 }
@@ -1065,7 +1068,7 @@ function retryLevel(st) {
   const cp = st.cp;
   const r = fromCheckpoint(st.hero, st.levelIdx, cp.hp, upgradesOf(st), st.game || 'base', cp.items || [],
     { chests: st.chests, loot: cp.loot || 0, abil: cp.abil, cloak: cp.cloak, sands: cp.sands });
-  r.prev = st.prev;
+  r.prev = st.prev; r.prevD12 = st.prevD12;
   return r;
 }
 

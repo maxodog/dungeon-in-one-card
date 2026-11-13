@@ -23,6 +23,7 @@ pools={
  'win':['dungeon_completed','dungeon_completed_2'],
  'died':['you_died'],
  'lvl':['level_up'],
+ 'roll':['dice_roll'],
 }
 pools={p:sorted(set(R(k) for k in ks),key=lambda k:ks.index(k) if k in ks else 99) for p,ks in pools.items()}
 js="/* Sonidos aportados por el autor del proyecto, recomprimidos (mono, mp3). */\nconst SND_CLIPS = "+json.dumps(clips,separators=(',',':'))+";\nconst SND_POOLS = "+json.dumps(pools,separators=(',',':'))+";\n"

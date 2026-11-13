@@ -523,8 +523,10 @@
   }
 
   /* ---------- panel ---------- */
-  function dieHTML(v, extra) {
-    if (v > 6) return `<span class="die num ${extra || ''}" aria-label="Dado ${v}"><b>${v}</b><small>D12</small></span>`;
+  // dado D12 (Ojo de dragón): dodecaedro violeta, distinto de los D6 con puntos
+  const D12_SVG = '<svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="o" points="50,3 96,37 79,94 21,94 4,37"/><polygon class="m" points="50,28 74,45 65,73 35,73 26,45"/><path class="l" d="M50 3v25M96 37 74 45M79 94 65 73M21 94 35 73M4 37 26 45"/></svg>';
+  function dieHTML(v, extra, d12) {
+    if (v > 6 || d12) return `<span class="die d12 ${extra || ''}" aria-label="Dado D12: ${v}">${D12_SVG}<b>${v}</b><small>D12</small></span>`;
     const on = PIPS[v] || [];
     let s = '';
     for (let i = 0; i < 9; i++) s += `<i class="${on.includes(i) ? 'on' : ''}"></i>`;
@@ -582,7 +584,7 @@
         if (slot) cls += ' slot';
         if (t.dice) {
           const ds = [t.assign[k], t.assign2 ? t.assign2[k] : -1].filter(i => i >= 0);
-          const parts = ds.map(i => dieHTML(t.dice[i], 'mini'));
+          const parts = ds.map(i => dieHTML(t.dice[i], 'mini', (t.d12 || [])[i]));
           if (lootHere) parts.push(`<span class="lootn">+${lootHere}</span>`);
           if (ds.length || lootHere) {
             val = a[k] + ds.reduce((x, i) => x + t.dice[i], 0) + lootHere;
@@ -611,18 +613,18 @@
     const t = G.turn, row = $('#diceRow');
     row.classList.toggle('moving', G.phase !== 'energy');
     if (G.phase !== 'energy') {
-      if (G.phase === 'move' && t.dice) row.innerHTML = t.dice.map(v => dieHTML(v, 'used')).join('');
+      if (G.phase === 'move' && t.dice) row.innerHTML = t.dice.map((v, i) => dieHTML(v, 'used', (t.d12 || [])[i])).join('');
       else row.innerHTML = '';
       return;
     }
     if (!t.dice) { row.innerHTML = '<span class="hint">Tres dados de Energía por turno</span>'; return; }
     if (rolling) {
-      row.innerHTML = [0, 1, 2].map(i => (t.lock >= 0 && i === 0) ? dieHTML(t.dice[0], 'locked') : keepSet.has(i) ? dieHTML(t.dice[i], 'used') : dieHTML(1 + Math.floor(Math.random() * 6), 'rolling')).join('');
+      row.innerHTML = [0, 1, 2].map(i => (t.lock >= 0 && i === 0) ? dieHTML(t.dice[0], 'locked', (t.d12 || [])[0]) : keepSet.has(i) ? dieHTML(t.dice[i], 'used', (t.d12 || [])[i]) : (t.d12 || [])[i] ? dieHTML(1 + Math.floor(Math.random() * 12), 'rolling', true) : dieHTML(1 + Math.floor(Math.random() * 6), 'rolling')).join('');
       return;
     }
     const used = usedDice(t);
     row.innerHTML = t.dice.map((v, i) => {
-      const d = dieHTML(v, (t.sel === i ? 'sel ' : '') + (used.has(i) ? 'used' : ''));
+      const d = dieHTML(v, (t.sel === i ? 'sel ' : '') + (used.has(i) ? 'used' : ''), (t.d12 || [])[i]);
       return d.replace('<span class="die', `<button type="button" data-d="${i}" class="die`).replace('</span>', '</button>');
     }).join('');
   }
@@ -1159,7 +1161,7 @@
   }
 
   async function animateRoll(msg) {
-    rolling = true;
+    rolling = true; Sfx.play('roll');
     render();
     const iv = setInterval(renderDice, 110);
     await sleep(700);
@@ -1449,8 +1451,8 @@
     const t = G.turn;
     openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.eye}</span><h3>Ojo de dragón</h3></div>
       <p class="lead">Elige el dado que se convertirá en un D12. Se tira de nuevo y lo asignas como un dado normal.</p>
-      <div class="dice-row pick">${[0, 1, 2].map(i => t.lock === i ? dieHTML(t.dice[i], 'locked')
-        : dieHTML(t.dice[i], '').replace('<span class="die', `<button type="button" data-e="${i}" class="die`).replace('</span>', '</button>')).join('')}</div>
+      <div class="dice-row pick">${[0, 1, 2].map(i => t.lock === i ? dieHTML(t.dice[i], 'locked', (t.d12 || [])[i])
+        : dieHTML(t.dice[i], '', (t.d12 || [])[i]).replace('<span class="die', `<button type="button" data-e="${i}" class="die`).replace('</span>', '</button>')).join('')}</div>
       <button type="button" class="btn" id="eNo">Cancelar</button>`, [['#eNo', closeSheet]], true);
     document.querySelectorAll('#veil [data-e]').forEach(b => b.addEventListener('click', () => {
       const i = +b.dataset.e;
@@ -1482,8 +1484,8 @@
     const t = G.turn, picks = new Set();
     const open = () => {
       const die = i => t.lock === i
-        ? dieHTML(t.dice[i], 'locked')
-        : dieHTML(t.dice[i], picks.has(i) ? 'sel' : '').replace('<span class="die', `<button type="button" data-p="${i}" class="die`).replace('</span>', '</button>');
+        ? dieHTML(t.dice[i], 'locked', (t.d12 || [])[i])
+        : dieHTML(t.dice[i], picks.has(i) ? 'sel' : '', (t.d12 || [])[i]).replace('<span class="die', `<button type="button" data-p="${i}" class="die`).replace('</span>', '</button>');
       openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.flame}</span><h3>Llama del destino</h3></div>
         <p class="lead">Toca los dados que quieres volver a tirar. Te quedas con la segunda tirada.</p>
         <div class="dice-row pick">${[0, 1, 2].map(die).join('')}</div>
