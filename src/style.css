@@ -106,7 +106,9 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .token svg { width: 72%; height: 72%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
 .token.mon { color: var(--foe); }
 .token.adv { color: var(--torch); z-index: 3; }
-.token.adv svg { filter: drop-shadow(0 0 6px rgba(255,139,61,.55)); }
+.token.adv::before { content: ""; position: absolute; left: 10%; top: 10%; width: 80%; height: 80%; border-radius: 50%;
+  background: rgba(20,16,12,.55); box-shadow: 0 0 8px 1px rgba(255,139,61,.55), inset 0 0 0 1.5px rgba(255,139,61,.45); }
+.token.adv svg { position: relative; z-index: 1; }
 .token .badge {
   position: absolute; right: 2px; bottom: 2px; min-width: 17px; height: 17px; padding: 0 3px; border-radius: 9px;
   background: var(--card); border: 1.5px solid currentColor; font-size: 13px; font-weight: 700; line-height: 14px; text-align: center; color: var(--chalk);
@@ -295,7 +297,7 @@ body.menu .screen {
 .float { display: flex; justify-content: center; white-space: nowrap; }
 .float.block { color: var(--line); }
 .token.blocked svg { animation: guard .6s ease-out; }
-@keyframes guard { 0% { filter: drop-shadow(0 0 0 rgba(127,168,220,0)); } 30% { filter: drop-shadow(0 0 9px #7fa8dc); } 100% { filter: drop-shadow(0 0 6px rgba(255,139,61,.55)); } }
+@keyframes guard { 0% { filter: drop-shadow(0 0 0 rgba(127,168,220,0)); } 30% { filter: drop-shadow(0 0 9px #7fa8dc); } 100% { filter: none; } }
 
 /* ---- Montaña Eterna: ventiscas, huecos y nuevos monstruos ---- */
 .tile.blizz { background: linear-gradient(135deg, rgba(190,225,255,.16), rgba(190,225,255,.05)); }

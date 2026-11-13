@@ -744,8 +744,8 @@
       <p class="err" id="itMsg" role="status"></p>
       <div class="actions"><button type="button" class="btn mini" id="itRoll">Sortear tres</button>${must ? '' : '<button type="button" class="btn mini" id="itNone">Ninguno</button>'}</div>
       <button type="button" class="btn primary" id="itGo">Empezar</button></div>`,
-      [['#back', () => heroScreen(game, !!more)], ['#itRoll', () => itemsScreen(game, hero, drawItems(game), more)],
-       ['#itNone', () => itemsScreen(game, hero, [], more)], ['#itGo', () => { if (pick.length === 3 || (!must && !pick.length)) startGame(hero, game, pick); }]]);
+      [['#back', () => heroScreen(game, !!more)],
+       ['#itGo', () => { if (pick.length === 3 || (!must && !pick.length)) startGame(hero, game, pick); }]]);
     const go = sc.querySelector('#itGo'), msg = sc.querySelector('#itMsg');
     const refresh = () => { go.disabled = !(pick.length === 3 || (!must && !pick.length)); go.textContent = !pick.length && !must ? 'Empezar sin objetos' : 'Empezar'; };
     sc.querySelector('#itList').addEventListener('click', e => {
@@ -758,6 +758,10 @@
       b.classList.toggle('chosen', pick.includes(k)); b.setAttribute('aria-pressed', pick.includes(k));
       refresh();
     });
+    // Sortear / Ninguno actualizan la lista en el sitio: la página no vuelve arriba
+    const setPick = np => { pick = np; sc.querySelector('#itList').innerHTML = list(); msg.textContent = ''; refresh(); };
+    sc.querySelector('#itRoll').addEventListener('click', () => setPick(drawItems(game)));
+    const none = sc.querySelector('#itNone'); if (none) none.addEventListener('click', () => setPick([]));
     refresh();
   }
 

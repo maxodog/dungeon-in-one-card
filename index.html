@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="919776a93c">
+<meta name="build" content="a97803aede">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -118,7 +118,9 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .token svg { width: 72%; height: 72%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
 .token.mon { color: var(--foe); }
 .token.adv { color: var(--torch); z-index: 3; }
-.token.adv svg { filter: drop-shadow(0 0 6px rgba(255,139,61,.55)); }
+.token.adv::before { content: ""; position: absolute; left: 10%; top: 10%; width: 80%; height: 80%; border-radius: 50%;
+  background: rgba(20,16,12,.55); box-shadow: 0 0 8px 1px rgba(255,139,61,.55), inset 0 0 0 1.5px rgba(255,139,61,.45); }
+.token.adv svg { position: relative; z-index: 1; }
 .token .badge {
   position: absolute; right: 2px; bottom: 2px; min-width: 17px; height: 17px; padding: 0 3px; border-radius: 9px;
   background: var(--card); border: 1.5px solid currentColor; font-size: 13px; font-weight: 700; line-height: 14px; text-align: center; color: var(--chalk);
@@ -307,7 +309,7 @@ body.menu .screen {
 .float { display: flex; justify-content: center; white-space: nowrap; }
 .float.block { color: var(--line); }
 .token.blocked svg { animation: guard .6s ease-out; }
-@keyframes guard { 0% { filter: drop-shadow(0 0 0 rgba(127,168,220,0)); } 30% { filter: drop-shadow(0 0 9px #7fa8dc); } 100% { filter: drop-shadow(0 0 6px rgba(255,139,61,.55)); } }
+@keyframes guard { 0% { filter: drop-shadow(0 0 0 rgba(127,168,220,0)); } 30% { filter: drop-shadow(0 0 9px #7fa8dc); } 100% { filter: none; } }
 
 /* ---- Montaña Eterna: ventiscas, huecos y nuevos monstruos ---- */
 .tile.blizz { background: linear-gradient(135deg, rgba(190,225,255,.16), rgba(190,225,255,.05)); }
@@ -2412,8 +2414,8 @@ if (typeof module !== 'undefined') {
       <p class="err" id="itMsg" role="status"></p>
       <div class="actions"><button type="button" class="btn mini" id="itRoll">Sortear tres</button>${must ? '' : '<button type="button" class="btn mini" id="itNone">Ninguno</button>'}</div>
       <button type="button" class="btn primary" id="itGo">Empezar</button></div>`,
-      [['#back', () => heroScreen(game, !!more)], ['#itRoll', () => itemsScreen(game, hero, drawItems(game), more)],
-       ['#itNone', () => itemsScreen(game, hero, [], more)], ['#itGo', () => { if (pick.length === 3 || (!must && !pick.length)) startGame(hero, game, pick); }]]);
+      [['#back', () => heroScreen(game, !!more)],
+       ['#itGo', () => { if (pick.length === 3 || (!must && !pick.length)) startGame(hero, game, pick); }]]);
     const go = sc.querySelector('#itGo'), msg = sc.querySelector('#itMsg');
     const refresh = () => { go.disabled = !(pick.length === 3 || (!must && !pick.length)); go.textContent = !pick.length && !must ? 'Empezar sin objetos' : 'Empezar'; };
     sc.querySelector('#itList').addEventListener('click', e => {
@@ -2426,6 +2428,10 @@ if (typeof module !== 'undefined') {
       b.classList.toggle('chosen', pick.includes(k)); b.setAttribute('aria-pressed', pick.includes(k));
       refresh();
     });
+    // Sortear / Ninguno actualizan la lista en el sitio: la página no vuelve arriba
+    const setPick = np => { pick = np; sc.querySelector('#itList').innerHTML = list(); msg.textContent = ''; refresh(); };
+    sc.querySelector('#itRoll').addEventListener('click', () => setPick(drawItems(game)));
+    const none = sc.querySelector('#itNone'); if (none) none.addEventListener('click', () => setPick([]));
     refresh();
   }
 
