@@ -1362,6 +1362,8 @@
         if (el) await glide(el, e.path, LEVELS[G.levelIdx].mon.spd);
       } else if (e.t === 'attack') {
         if (e.ids.length) {
+          const willBlock = !e.pending && e.dmg === 0;   // se sabe ya que no hará daño: suena el ataque antes del bloqueo
+          if (willBlock) Sfx.play('atk');
           for (const id of e.ids) { const el = tok.mons.get(id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } }
           await sleep(350);
           let dmg = e.dmg, usedMail = false, usedHerbs = false;
@@ -1376,6 +1378,7 @@
             floatText(G.adv.x, G.adv.y, '−' + dmg, 'dmg');
             tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
           } else {
+            if (!willBlock) { Sfx.play('atk'); await sleep(350); }   // el daño se anuló tras usar cota/hierbas: primero el ataque
             Sfx.play('blk');
             floatText(G.adv.x, G.adv.y, 'BLOCK', 'dmg block');
             tok.adv.classList.add('blocked'); setTimeout(() => tok.adv.classList.remove('blocked'), 600);
