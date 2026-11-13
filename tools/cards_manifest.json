@@ -1,0 +1,204 @@
+{
+ "base": {
+  "orc": {
+   "f": "base_orc.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "spider": {
+   "f": "base_spider.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "demon": {
+   "f": "base_demon.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "skeleton": {
+   "f": "base_skeleton.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  }
+ },
+ "mguf": {
+  "ogre": {
+   "f": "mguf_ogre.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "drake": {
+   "f": "mguf_drake.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "mguf": {
+   "f": "mguf_mguf.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "reaper": {
+   "f": "mguf_reaper.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  }
+ },
+ "peak": {
+  "goblin": {
+   "f": "peak_goblin.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "yeti": {
+   "f": "peak_yeti.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "wolf": {
+   "f": "peak_wolf.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "sorcerer": {
+   "f": "peak_sorcerer.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  }
+ },
+ "harbour": {
+  "crab": {
+   "f": "harbour_crab.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "zombie": {
+   "f": "harbour_zombie.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "octopus": {
+   "f": "harbour_octopus.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "kraken": {
+   "f": "harbour_kraken.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  }
+ },
+ "hell": {
+  "maw": {
+   "f": "hell_maw.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "chained": {
+   "f": "hell_chained.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "lord": {
+   "f": "hell_lord.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "goat": {
+   "f": "hell_goat.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "imp": {
+   "f": "hell_imp.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "fiend": {
+   "f": "hell_fiend.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "cultist": {
+   "f": "hell_cultist.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  },
+  "butcher": {
+   "f": "hell_butcher.webp",
+   "gx": 6.8,
+   "gy": 19.16,
+   "gw": 86.4,
+   "gh": 61.88,
+   "ar": 0.7162
+  }
+ }
+}

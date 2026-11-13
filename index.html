@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="7e0d80a243">
+<meta name="build" content="3162d1b66d">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -554,7 +554,7 @@ body.tight .dice-row.moving { display: none; }
 
 /* escritorio: con el botón de sonido, los cuatro botones del cuadro del título deben dejar sitio al crédito */
 @media (min-width: 1000px) and (min-aspect-ratio: 3/2) {
-  .app .sysbox .btn { min-height: 0; height: calc(112 * var(--u)); padding-top: 0; padding-bottom: 0; }
+  .app .sysbox .btn { min-height: 0; height: calc(100 * var(--u)); padding-top: 0; padding-bottom: 0; }
 }
 
 /* ---- panel de sonido ---- */
@@ -643,6 +643,57 @@ body.tight .dice-row.moving { display: none; }
 .tile .gem em { width: 1.7em; height: 1.5em; display: grid; place-items: end center; padding-bottom: .12em; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: linear-gradient(180deg, #c3a3ff, #9468ee); color: #1b1040; font-size: 15px; text-shadow: none; }
 .tile .gem em:empty { display: none; }
 
+/* ---- nombre de la mazmorra y modo clásico ---- */
+.title-box { order: 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.game-name { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--torch); font-weight: 700; line-height: 1.1; }
+.sys-lvl[hidden] { display: none; }
+@media (min-width: 1000px) and (min-aspect-ratio: 3/2) {
+  .game-name { display: none; }
+  .sysbox { gap: calc(20 * var(--u)); }
+  .sys-row { display: grid; grid-template-columns: 1fr 1fr; gap: calc(16 * var(--u)); flex: none; }
+  .sys-row .btn { font-size: calc(34 * var(--u)); padding-left: calc(8 * var(--u)); padding-right: calc(8 * var(--u)); }
+  .sysbox .btn.on { background: var(--torch); border-color: var(--torch); color: #1b0d00; }
+  .sys-lvl { display: none; }
+  body.classic .sys-lvl { display: flex; flex-direction: column; gap: calc(4 * var(--u)); padding: calc(14 * var(--u)) calc(20 * var(--u)); border-radius: calc(18 * var(--u)); background: rgba(255,139,61,.08); border: calc(3 * var(--u)) solid rgba(255,139,61,.35); }
+  .sys-lvl b { font-size: calc(36 * var(--u)); letter-spacing: .14em; text-transform: uppercase; color: var(--torch); }
+  .sys-lvl span { font-family: var(--display); font-size: calc(58 * var(--u)); line-height: 1.05; }
+  .sys-lvl em { font-style: normal; font-size: calc(32 * var(--u)); line-height: 1.15; color: var(--muted); }
+  .sys-lvl em.on { color: #ff8f7f; }
+
+  /* la carta real como tablero */
+  body.classic .app .card { background: #000 var(--card-img) center / 100% 100% no-repeat; border: 0; border-radius: calc(12 * var(--u)); padding: 0;
+    box-shadow: 0 calc(30 * var(--u)) calc(90 * var(--u)) rgba(0,0,0,.6), 0 0 0 calc(4 * var(--u)) rgba(0,0,0,.65); }
+  body.classic .card-head, body.classic .foot { display: none; }
+  body.classic .board-box { position: absolute; left: 6.8%; top: 19.16%; width: 86.4%; display: block; }
+  body.classic .board { --t: calc(182.99 * var(--u)); border: 0; background: none; }
+  body.classic .tile, body.classic .tile.wall, body.classic .tile.wall.void, body.classic .tile.blizz, body.classic .tile.water, body.classic .tile.damned { background: none; box-shadow: none; }
+  body.classic .tile .stair, body.classic .tile .wind, body.classic .tile .wave, body.classic .tile .curse, body.classic .tile .gem svg { display: none; }
+  body.classic .tile .gem { inset: 0; }
+  body.classic .tile .gem em { font-size: calc(46 * var(--u)); }
+  body.classic .tile.reach, body.classic .tile.blizz.reach, body.classic .tile.water.reach { background: rgba(255,214,90,.24); box-shadow: inset 0 0 0 calc(5 * var(--u)) rgba(255,214,90,.95); }
+  body.classic .tile.reach::before { width: calc(22 * var(--u)); height: calc(22 * var(--u)); margin: calc(-11 * var(--u)) 0 0 calc(-11 * var(--u)); background: #ffd65a; }
+  body.classic .tile.reach::after { font-size: calc(40 * var(--u)); right: calc(10 * var(--u)); bottom: calc(4 * var(--u)); color: #fff; text-shadow: 0 0 calc(8 * var(--u)) #000, 0 0 calc(4 * var(--u)) #000; }
+  body.classic .tile.target { background: rgba(255,60,90,.30); box-shadow: inset 0 0 0 calc(6 * var(--u)) #ff4d6d; }
+  body.classic .tile .chest { inset: 14%; }
+  body.classic .tile .chest em { min-width: calc(48 * var(--u)); height: calc(48 * var(--u)); font-size: calc(36 * var(--u)); line-height: calc(42 * var(--u)); }
+
+  /* héroe y monstruos como dados de colores con su vida */
+  body.classic .token svg, body.classic .herospot { display: none; }
+  body.classic .token.pj.walking::before { display: none; }
+  body.classic .token::after { content: ''; position: absolute; inset: 15%; border-radius: 20%; z-index: 0;
+    background: linear-gradient(145deg, var(--d1), var(--d2)); border: calc(5 * var(--u)) solid rgba(255,255,255,.88);
+    box-shadow: inset 0 calc(-10 * var(--u)) 0 rgba(0,0,0,.24), inset 0 calc(6 * var(--u)) 0 rgba(255,255,255,.3), 0 calc(10 * var(--u)) calc(16 * var(--u)) rgba(0,0,0,.6); }
+  body.classic .token.mon { --d1: #ff5d73; --d2: #c4162f; }
+  body.classic .token.pj { --d1: #5db8ff; --d2: #1b5fd0; }
+  body.classic .token .badge { position: relative; z-index: 2; background: none; border: 0; box-shadow: none; min-width: 0; height: auto; padding: 0; font-size: calc(88 * var(--u)); font-weight: 800; line-height: 1; color: #fff;
+    text-shadow: 0 calc(5 * var(--u)) 0 rgba(0,0,0,.35); }
+  body.classic .token.wet .badge { border: 0; box-shadow: none; }
+  body.classic .token.wet::after { box-shadow: 0 0 calc(18 * var(--u)) #7cc4ff, inset 0 calc(-10 * var(--u)) 0 rgba(0,0,0,.24); }
+  body.classic .token.hit::after { animation: hitDie .5s; }
+}
+@keyframes hitDie { 30% { filter: brightness(1.7) drop-shadow(0 0 12px #fff); } }
+@media (min-width: 1000px) and (min-aspect-ratio: 3/2) { .app .sysbox .fine { font-size: calc(27 * var(--u)); } }
+
 </style>
 </head>
 <body>
@@ -665,7 +716,7 @@ body.tight .dice-row.moving { display: none; }
           <div class="lvl-num">Nivel <b id="lvlNum">1</b> de <span id="lvlTot">12</span></div>
           <div class="dots" id="dots" aria-hidden="true"></div>
         </div>
-        <h2 class="lvl-name" id="lvlName">Sótano de telarañas</h2>
+        <div class="title-box"><div class="game-name" id="gameName"></div><h2 class="lvl-name" id="lvlName">Sótano de telarañas</h2></div>
       </div>
       <div class="board-box" id="boxBoard">
         <div class="board" id="board">
@@ -679,10 +730,10 @@ body.tight .dice-row.moving { display: none; }
 
   <aside class="herobox" id="heroBox" aria-label="Tu aventurero"></aside>
   <aside class="sysbox" id="sysBox">
-    <div class="brand"><span class="mark">Dungeon</span><span class="sub">in one card</span></div>
-    <button type="button" class="btn" data-act="rules">Reglas</button>
-    <button type="button" class="btn" data-act="pass">Contraseña</button>
-    <button type="button" class="btn" data-act="snd" id="sndBtnD">Sonido</button>
+    <div class="brand"><span class="mark">Dungeon</span><span class="sub" id="sysSub">in one card</span></div>
+    <div class="sys-lvl" id="sysLvl" hidden></div>
+    <div class="sys-row"><button type="button" class="btn" data-act="rules">Reglas</button><button type="button" class="btn" data-act="pass">Contraseña</button></div>
+    <div class="sys-row"><button type="button" class="btn" data-act="snd" id="sndBtnD">Sonido</button><button type="button" class="btn" data-act="classic" id="classicBtn" aria-pressed="false" title="Usa la carta real como tablero y dados de colores">Clásico</button></div>
     <button type="button" class="btn" data-act="menu">Menú</button>
     <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner. Portadas y tapete © Little Rocket Games.</p>
   </aside>
@@ -2205,6 +2256,7 @@ if (typeof module !== 'undefined') {
     tok.adv = null; tok.mons = new Map();
     builtLevel = G.levelIdx;
     needFit = true;
+    paintClassic();
     musicFloor();
   }
 
@@ -2331,6 +2383,23 @@ if (typeof module !== 'undefined') {
 
   const regularCount = () => LEVELS.filter(l => !l.boss).length;
   const bossCount = () => LEVELS.filter(l => l.boss).length;
+  // nombre de cada mazmorra (títulos originales de las cajas)
+  const GAME_TITLE = { base: 'One Card Dungeon', mguf: "M'Guf-yn Returns", peak: 'Eternal Peak', harbour: 'Harbour Clash', hell: "Hell's Door" };
+  // modo clásico (solo escritorio): la carta real como tablero y dados de colores como fichas
+  const CARD_SET = { base: ['spider', 'skeleton', 'orc', 'demon'], mguf: ['ogre', 'reaper', 'drake', 'mguf'], peak: ['goblin', 'wolf', 'yeti', 'sorcerer'],
+    harbour: ['crab', 'octopus', 'zombie', 'kraken'], hell: ['imp', 'chained', 'fiend', 'cultist', 'maw', 'goat', 'butcher', 'lord'] };
+  const cardUrl = (game, key) => { const g = (CARD_SET[game] || []).includes(key) ? game : 'base'; return `img/cards/${g}_${key}.webp`; };
+  let classic = false;
+  try { classic = localStorage.getItem('dioc-classic') === '1'; } catch (e) {}
+  function paintClassic() {
+    document.body.classList.toggle('classic', classic);
+    const b = $('#classicBtn'); if (b) { b.classList.toggle('on', classic); b.setAttribute('aria-pressed', classic ? 'true' : 'false'); }
+    if (G && LEVELS[G.levelIdx]) {
+      const lv = LEVELS[G.levelIdx];
+      $('#card').style.setProperty('--card-img', classic ? `url("${cardUrl(G.game, lv.mon.key)}")` : 'none');
+    }
+  }
+  function toggleClassic() { classic = !classic; try { localStorage.setItem('dioc-classic', classic ? '1' : '0'); } catch (e) {} paintClassic(); needFit = true; fit(); }
   const stageLabel = lv => lv.boss ? `Jefe ${lv.boss}` : `Nivel ${lv.num}`;
   function renderHead() {
     const lv = LEVELS[G.levelIdx];
@@ -2346,6 +2415,10 @@ if (typeof module !== 'undefined') {
         <div class="stats">${['hp', 'spd', 'atk', 'def', 'rng'].map(k => st(k, m[k])).join('')}</div>
         ${bo ? (m.bonusOn === 'hero' ? `<div class="wnote hell ${G.sands ? 'off' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'on' : ''}">${G.sands ? 'Agua bendita: los bonos no cuentan este nivel.' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'Estás en casilla maldita: suman el bono.' : 'Si estás en casilla maldita, suman el bono en rojo.'}</div>` : '<div class="wnote">En casillas de agua suman el bono en azul.</div>') : ''}
       </div>`;
+    const gt = GAME_TITLE[G.game] || GAME_TITLE.base, wn = $('#foot .wnote');
+    $('#gameName').textContent = gt; $('#sysSub').textContent = gt;
+    $('#sysLvl').hidden = false;
+    $('#sysLvl').innerHTML = `<b>${lv.boss ? `Jefe ${lv.boss} de ${bossCount()}` : `Nivel ${lv.num} de ${regularCount()}`}</b><span>${lv.title}</span>${wn ? `<em class="${wn.classList.contains('on') ? 'on' : ''}">${wn.textContent.trim()}</em>` : ''}`;
   }
 
   function renderHP() {
@@ -3439,7 +3512,7 @@ if (typeof module !== 'undefined') {
     if (DESK.addEventListener) DESK.addEventListener('change', fitSoon);
     $('#sysBox').addEventListener('click', e => {
       const b = e.target.closest('[data-act]'); if (!b || !G) return;
-      if (b.dataset.act === 'snd') soundSheet(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu();
+      if (b.dataset.act === 'snd') soundSheet(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu(); else if (b.dataset.act === 'classic') toggleClassic();
     });
     fit();
   }

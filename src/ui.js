@@ -409,6 +409,7 @@
     tok.adv = null; tok.mons = new Map();
     builtLevel = G.levelIdx;
     needFit = true;
+    paintClassic();
     musicFloor();
   }
 
@@ -535,6 +536,23 @@
 
   const regularCount = () => LEVELS.filter(l => !l.boss).length;
   const bossCount = () => LEVELS.filter(l => l.boss).length;
+  // nombre de cada mazmorra (títulos originales de las cajas)
+  const GAME_TITLE = { base: 'One Card Dungeon', mguf: "M'Guf-yn Returns", peak: 'Eternal Peak', harbour: 'Harbour Clash', hell: "Hell's Door" };
+  // modo clásico (solo escritorio): la carta real como tablero y dados de colores como fichas
+  const CARD_SET = { base: ['spider', 'skeleton', 'orc', 'demon'], mguf: ['ogre', 'reaper', 'drake', 'mguf'], peak: ['goblin', 'wolf', 'yeti', 'sorcerer'],
+    harbour: ['crab', 'octopus', 'zombie', 'kraken'], hell: ['imp', 'chained', 'fiend', 'cultist', 'maw', 'goat', 'butcher', 'lord'] };
+  const cardUrl = (game, key) => { const g = (CARD_SET[game] || []).includes(key) ? game : 'base'; return `img/cards/${g}_${key}.webp`; };
+  let classic = false;
+  try { classic = localStorage.getItem('dioc-classic') === '1'; } catch (e) {}
+  function paintClassic() {
+    document.body.classList.toggle('classic', classic);
+    const b = $('#classicBtn'); if (b) { b.classList.toggle('on', classic); b.setAttribute('aria-pressed', classic ? 'true' : 'false'); }
+    if (G && LEVELS[G.levelIdx]) {
+      const lv = LEVELS[G.levelIdx];
+      $('#card').style.setProperty('--card-img', classic ? `url("${cardUrl(G.game, lv.mon.key)}")` : 'none');
+    }
+  }
+  function toggleClassic() { classic = !classic; try { localStorage.setItem('dioc-classic', classic ? '1' : '0'); } catch (e) {} paintClassic(); needFit = true; fit(); }
   const stageLabel = lv => lv.boss ? `Jefe ${lv.boss}` : `Nivel ${lv.num}`;
   function renderHead() {
     const lv = LEVELS[G.levelIdx];
@@ -550,6 +568,10 @@
         <div class="stats">${['hp', 'spd', 'atk', 'def', 'rng'].map(k => st(k, m[k])).join('')}</div>
         ${bo ? (m.bonusOn === 'hero' ? `<div class="wnote hell ${G.sands ? 'off' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'on' : ''}">${G.sands ? 'Agua bendita: los bonos no cuentan este nivel.' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'Estás en casilla maldita: suman el bono.' : 'Si estás en casilla maldita, suman el bono en rojo.'}</div>` : '<div class="wnote">En casillas de agua suman el bono en azul.</div>') : ''}
       </div>`;
+    const gt = GAME_TITLE[G.game] || GAME_TITLE.base, wn = $('#foot .wnote');
+    $('#gameName').textContent = gt; $('#sysSub').textContent = gt;
+    $('#sysLvl').hidden = false;
+    $('#sysLvl').innerHTML = `<b>${lv.boss ? `Jefe ${lv.boss} de ${bossCount()}` : `Nivel ${lv.num} de ${regularCount()}`}</b><span>${lv.title}</span>${wn ? `<em class="${wn.classList.contains('on') ? 'on' : ''}">${wn.textContent.trim()}</em>` : ''}`;
   }
 
   function renderHP() {
@@ -1643,7 +1665,7 @@
     if (DESK.addEventListener) DESK.addEventListener('change', fitSoon);
     $('#sysBox').addEventListener('click', e => {
       const b = e.target.closest('[data-act]'); if (!b || !G) return;
-      if (b.dataset.act === 'snd') soundSheet(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu();
+      if (b.dataset.act === 'snd') soundSheet(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu(); else if (b.dataset.act === 'classic') toggleClassic();
     });
     fit();
   }

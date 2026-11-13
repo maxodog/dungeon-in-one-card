@@ -33,7 +33,7 @@
           <div class="lvl-num">Nivel <b id="lvlNum">1</b> de <span id="lvlTot">12</span></div>
           <div class="dots" id="dots" aria-hidden="true"></div>
         </div>
-        <h2 class="lvl-name" id="lvlName">Sótano de telarañas</h2>
+        <div class="title-box"><div class="game-name" id="gameName"></div><h2 class="lvl-name" id="lvlName">Sótano de telarañas</h2></div>
       </div>
       <div class="board-box" id="boxBoard">
         <div class="board" id="board">
@@ -47,10 +47,10 @@
 
   <aside class="herobox" id="heroBox" aria-label="Tu aventurero"></aside>
   <aside class="sysbox" id="sysBox">
-    <div class="brand"><span class="mark">Dungeon</span><span class="sub">in one card</span></div>
-    <button type="button" class="btn" data-act="rules">Reglas</button>
-    <button type="button" class="btn" data-act="pass">Contraseña</button>
-    <button type="button" class="btn" data-act="snd" id="sndBtnD">Sonido</button>
+    <div class="brand"><span class="mark">Dungeon</span><span class="sub" id="sysSub">in one card</span></div>
+    <div class="sys-lvl" id="sysLvl" hidden></div>
+    <div class="sys-row"><button type="button" class="btn" data-act="rules">Reglas</button><button type="button" class="btn" data-act="pass">Contraseña</button></div>
+    <div class="sys-row"><button type="button" class="btn" data-act="snd" id="sndBtnD">Sonido</button><button type="button" class="btn" data-act="classic" id="classicBtn" aria-pressed="false" title="Usa la carta real como tablero y dados de colores">Clásico</button></div>
     <button type="button" class="btn" data-act="menu">Menú</button>
     <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner. Portadas y tapete © Little Rocket Games.</p>
   </aside>
