@@ -924,6 +924,7 @@
   /* ---------- flujo ---------- */
   async function flipTo(fn) {
     const card = $('#card');
+    Sfx.play('floor');
     card.classList.add('flip-out');
     await sleep(330);
     fn();
@@ -1123,6 +1124,7 @@
       if (!info.ok) { say(whyMsg(info, G.chest.val, E.atkAvail(G), 'El cofre')); return; }
       const val = G.chest.val;
       E.openChest(G);
+      Sfx.play('chest');
       floatText(...XY(i), '+' + val, 'good');
       render();
       say(`<b>Cofre abierto.</b> Ganas <b>${val}</b> punto${val > 1 ? 's' : ''} de botín para sumar a una habilidad en tus próximas fases de Energía.`);

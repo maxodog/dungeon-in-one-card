@@ -18,6 +18,8 @@ pools={
  'killB':['kill_big_monster_1','kill_monster_2'],
  'killD':['kill_demon_monster'],
  'killJ':['kill_monster_boss'],
+ 'chest':['chest'],
+ 'floor':['next_floor'],
 }
 pools={p:sorted(set(R(k) for k in ks),key=lambda k:ks.index(k) if k in ks else 99) for p,ks in pools.items()}
 js="/* Sonidos aportados por el autor del proyecto, recomprimidos (mono, mp3). */\nconst SND_CLIPS = "+json.dumps(clips,separators=(',',':'))+";\nconst SND_POOLS = "+json.dumps(pools,separators=(',',':'))+";\n"
