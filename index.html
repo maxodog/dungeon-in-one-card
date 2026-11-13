@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="b404a305fd">
+<meta name="build" content="a092a799b8">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -122,7 +122,7 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
   background: rgba(20,16,12,.55); box-shadow: 0 0 8px 1px rgba(255,139,61,.55), inset 0 0 0 1.5px rgba(255,139,61,.45); }
 .herospot { position: absolute; left: 10%; top: 10%; width: 80%; height: 80%; border-radius: 50%; display: grid; place-items: center; pointer-events: none;
   color: var(--torch); background: rgba(20,16,12,.55); box-shadow: 0 0 8px 1px rgba(255,139,61,.55), inset 0 0 0 1.5px rgba(255,139,61,.45); }
-.herospot svg { width: 90%; height: 90%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.herospot svg { scale: var(--flip, 1) 1; width: 90%; height: 90%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
 .token.pj svg { position: relative; z-index: 1; }
 .token .badge {
   position: absolute; right: 2px; bottom: 2px; min-width: 17px; height: 17px; padding: 0 3px; border-radius: 9px;
@@ -1985,6 +1985,8 @@ if (typeof module !== 'undefined') {
     const hi = idx(G.adv.x, G.adv.y), showSpot = !(tok.adv && tok.adv.dataset.anim);
     for (let i = 0; i < N; i++) { const sp = tiles[i].querySelector('.herospot'); if (sp && !(showSpot && i === hi)) sp.remove(); }
     if (showSpot && !tiles[hi].querySelector('.herospot')) tiles[hi].insertAdjacentHTML('beforeend', `<span class="herospot" aria-hidden="true">${HERO_ICONS[G.hero] || ICON_ADV}</span>`);
+    // el dibujo de la casilla mira hacia el mismo lado que la ficha (si no, los dos dibujos se ven superpuestos y espejados)
+    if (showSpot && tok.adv) tiles[hi].querySelector('.herospot').style.setProperty('--flip', tok.adv.style.getPropertyValue('--flip') || 1);
     if (G.chest) {
       const c = $('#grid').children[G.chest.at].querySelector('.chest');
       if (c) { c.classList.toggle('open', G.chest.open); c.querySelector('em').textContent = G.chest.open ? '' : G.chest.val; }

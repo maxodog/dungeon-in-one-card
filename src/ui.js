@@ -312,6 +312,8 @@
     const hi = idx(G.adv.x, G.adv.y), showSpot = !(tok.adv && tok.adv.dataset.anim);
     for (let i = 0; i < N; i++) { const sp = tiles[i].querySelector('.herospot'); if (sp && !(showSpot && i === hi)) sp.remove(); }
     if (showSpot && !tiles[hi].querySelector('.herospot')) tiles[hi].insertAdjacentHTML('beforeend', `<span class="herospot" aria-hidden="true">${HERO_ICONS[G.hero] || ICON_ADV}</span>`);
+    // el dibujo de la casilla mira hacia el mismo lado que la ficha (si no, los dos dibujos se ven superpuestos y espejados)
+    if (showSpot && tok.adv) tiles[hi].querySelector('.herospot').style.setProperty('--flip', tok.adv.style.getPropertyValue('--flip') || 1);
     if (G.chest) {
       const c = $('#grid').children[G.chest.at].querySelector('.chest');
       if (c) { c.classList.toggle('open', G.chest.open); c.querySelector('em').textContent = G.chest.open ? '' : G.chest.val; }
