@@ -1,6 +1,6 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
-HDR = "const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"
+HDR = "const E=require('/home/claude/dungeon-in-one-card/engine.js');"
 def make_state(js):
     return subprocess.check_output(['node','-e',HDR+js+";console.log(JSON.stringify(st));"]).decode()
 MV = "E.rollTurn(st); st.turn.dice=[%s]; st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st);"

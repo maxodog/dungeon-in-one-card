@@ -1,4 +1,4 @@
-const E=require('../src/engine.js'); const I=E.idx; let bad=0;
+const E=require('../engine.js'); const I=E.idx; let bad=0;
 function lv(walls){const w=new Array(E.N).fill(false);for(const [x,y] of walls)w[I(x,y)]=true;return{walls:w,lm:{},rd:{}};}
 function arr(cells){const a=new Array(E.N).fill(false);for(const [x,y] of cells)a[I(x,y)]=true;return a;}
 function t(name,got,exp){const ok=got===exp;if(!ok)bad++;console.log((ok?'ok  ':'MAL ')+name+' → '+got+(ok?'':' (esperado '+exp+')'));}

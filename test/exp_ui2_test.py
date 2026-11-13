@@ -1,7 +1,7 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 def make_state(js):
-    return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+js+";console.log(JSON.stringify(st));"]).decode()
+    return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/engine.js');"+js+";console.log(JSON.stringify(st));"]).decode()
 S = {
  'chest': """const st=E.newRun('knight','mguf',['gorgon']); st.chest.val=2; E.rollTurn(st); st.turn.dice=[4,5,6];
    st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st);

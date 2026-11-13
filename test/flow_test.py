@@ -2,7 +2,7 @@ import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
 def make_state(js):
-    code = "const E=require('/home/claude/dungeon-in-one-card/src/engine.js');" + js + ";console.log(JSON.stringify(st));"
+    code = "const E=require('/home/claude/dungeon-in-one-card/engine.js');" + js + ";console.log(JSON.stringify(st));"
     return subprocess.check_output(['node','-e',code]).decode()
 
 STATES = {
@@ -21,6 +21,7 @@ async def run(name, steps):
         ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(state))
         page = await ctx.new_page()
+        await page.add_init_script("window.__s=[];const o=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(){window.__s.push(+this.buffer.duration.toFixed(2));return o.apply(this,arguments)}")
         errs=[]
         page.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))
         await page.goto('file:///home/claude/dungeon-in-one-card/index.html'); await page.wait_for_timeout(400)
@@ -32,21 +33,29 @@ async def run(name, steps):
 async def clear(page):
     await page.locator('.tile.target').click(); await page.wait_for_timeout(1200)
     await page.screenshot(path='/tmp/f1_break.png')
+    await page.evaluate('window.__s=[]')
     await page.locator('#veil .choice[data-c="atk"]').click(); await page.wait_for_timeout(1000)
+    print('sonidos al subir nivel:', await page.evaluate('window.__s'))
     print('level now:', await page.inner_text('#lvlNum'), '|', await page.inner_text('#lvlName'), '|', await page.inner_text('#log'))
     await page.screenshot(path='/tmp/f2_level2.png', full_page=True)
 
 async def death(page):
     await page.click('#btnEnd'); await page.wait_for_timeout(3500)
     await page.screenshot(path='/tmp/f3_death.png')
-    print('death sheet:', (await page.inner_text('#veil')).replace('\n',' | '))
-    await page.click('#retry'); await page.wait_for_timeout(500)
+    print('pantalla derrota:', (await page.inner_text('.endscr')).replace('\n',' | '))
+    print('sonidos:', await page.evaluate('window.__s'))
+    await page.click('#eRetry'); await page.wait_for_timeout(700)
+    print('menu visible tras reintentar:', await page.evaluate("document.body.classList.contains('menu')"))
     print('retry level:', await page.inner_text('#lvlNum'), await page.inner_text('#hpnum'), '|', await page.inner_text('#log'))
 
 async def win(page):
     await page.locator('.tile.target').click(); await page.wait_for_timeout(1500)
     await page.screenshot(path='/tmp/f4_win.png')
-    print('win sheet:', (await page.inner_text('#veil')).replace('\n',' | '))
+    await page.wait_for_timeout(800)
+    print('pantalla victoria:', (await page.inner_text('.endscr')).replace('\n',' | '))
+    print('sonidos:', await page.evaluate('window.__s'))
+    await page.click('#eMenu'); await page.wait_for_timeout(400)
+    print('de vuelta al menú:', await page.evaluate("!!document.querySelector('#mNew, #mContinue, .menu-main')"))
 
 async def main():
     await run('clear', clear); await run('death', death); await run('win', win)

@@ -1,4 +1,4 @@
-const E=require('../src/engine.js');
+const E=require('../engine.js');
 const {idx,XY,LEVELS}=E;
 function show(st){const lv=LEVELS[st.levelIdx];let out='';for(let y=0;y<6;y++){let r='';for(let x=0;x<7;x++){const i=idx(x,y);const m=st.mons.find(m=>m.x===x&&m.y===y);r+= (st.adv.x===x&&st.adv.y===y)?'A':m?String(m.hp):lv.walls[i]?'#':'.';}out+=r+'\n';}return out;}
 // monsters-only trace on level 5 (skeletons range 4) and 4 (bats)

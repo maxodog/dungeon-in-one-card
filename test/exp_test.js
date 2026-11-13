@@ -1,4 +1,4 @@
-const E=require('../src/engine.js');
+const E=require('../engine.js');
 let fails=0; const ck=(n,c,x)=>{ if(!c){fails++;console.log('FALLA',n,x===undefined?'':JSON.stringify(x));} else console.log('ok ',n); };
 // 1) integridad de niveles
 for(const g of Object.keys(E.GAMES)){

@@ -1,4 +1,4 @@
-const E=require('../src/engine.js');
+const E=require('../engine.js');
 const A='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 let fails=0; const ck=(n,c)=>{ if(!c){fails++;console.log('FALLA',n);} };
 const same=(r,st,items)=>r&&r.game===st.game&&r.hero===st.hero&&r.levelIdx===st.levelIdx&&r.adv.hp===st.adv.hp&&

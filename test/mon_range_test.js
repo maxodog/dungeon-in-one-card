@@ -1,4 +1,4 @@
-const E=require('../src/engine.js');
+const E=require('../engine.js');
 let bad=[],tot=0;
 for (const game of ['harbour','peak','mguf','base','hell']) { const n=E.GAMES[game].levels.length;
 for(let li=0;li<n;li++){

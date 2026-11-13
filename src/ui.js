@@ -160,13 +160,15 @@
   // voz del héroe: según el arte de cada carta (M masculina, F femenina, N sin distinguir)
   const HERO_VOICE = { mage: 'F', ranger: 'F', rogue: 'N', cleric: 'N', necromancer: 'N' };
   const voice = () => HERO_VOICE[G && G.hero] || 'M';
-  const sfxHurt = () => Sfx.play({ M: ['hurtM', 'hurtN'], F: ['hurtF', 'hurtN'], N: ['hurtM', 'hurtF', 'hurtN'] }[voice()]);
+  // contadores de la partida (se guardan dentro de G.stats y salen en la pantalla final)
+  const stat = (k, n = 1) => { if (!G) return; const s = G.stats || (G.stats = {}); s[k] = (s[k] || 0) + n; };
+  const sfxHurt = (d = 1) => { stat('dmgIn', d); Sfx.play({ M: ['hurtM', 'hurtN'], F: ['hurtF', 'hurtN'], N: ['hurtM', 'hurtF', 'hurtN'] }[voice()]); };
   const sfxDie = () => Sfx.play({ M: ['dieM'], F: ['dieF'], N: ['dieM', 'dieF'] }[voice()]);
   const KILL_POOL = { spider: 'killS', goblin: 'killS', wolf: 'killS', skeleton: 'killS', crab: 'killS', octopus: 'killS', imp: 'killS',
     orc: 'killB', yeti: 'killB', zombie: 'killB', kraken: 'killB', demon: 'killD', fiend: 'killD', chained: 'killD', maw: 'killD' };
-  const sfxKill = () => { const lv = LEVELS[G.levelIdx]; Sfx.play(lv.boss || lv.mon.key === 'sorcerer' ? 'killJ' : (KILL_POOL[lv.mon.key] || 'killS')); };
+  const sfxKill = (n = 1) => { stat('kills', n); const lv = LEVELS[G.levelIdx]; Sfx.play(lv.boss || lv.mon.key === 'sorcerer' ? 'killJ' : (KILL_POOL[lv.mon.key] || 'killS')); };
   // golpe del héroe: si el monstruo cae suena su muerte; si no, el golpe
-  const sfxStrike = dead => dead ? sfxKill() : Sfx.play('atk');
+  const sfxStrike = dead => { stat('hits'); if (dead) sfxKill(); else Sfx.play('atk'); };
   const SAVE_KEY = 'dioc-run-v3', BEST_KEY = 'dioc-best-v1';
   const svg = inner => `<svg viewBox="0 0 32 32" aria-hidden="true">${inner}</svg>`;
   const F = 'fill="currentColor" fill-opacity=".25"', S = 'fill="currentColor"';
@@ -299,7 +301,7 @@
       if (!G || G.laurel) return;
       if (G.phase === 'won') { localStorage.removeItem(SAVE_KEY); return; }
       let sv = G;
-      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; }
+      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
       localStorage.setItem(SAVE_KEY, JSON.stringify(sv));
     } catch (e) {}
   }
@@ -807,16 +809,44 @@
     document.querySelectorAll('#veil .choice').forEach(b => b.addEventListener('click', () => chooseBreak(b.dataset.c)));
   }
 
-  function deathSheet() {
+  async function deathSheet() {
     sfxDie(); Music.stop();
     noteBest();
-    const lv = LEVELS[G.levelIdx], lab = stageLabel(lv), pw = E.encodePassword(G);
-    openSheet(`<h3>Has caído</h3>
-      <p class="lead">Llegaste a ${lab.toLowerCase()} (etapa ${G.levelIdx + 1} de ${LEVELS.length}) en ${G.totalTurns} turnos. Tu mejor marca es la etapa ${bestLevel}.</p>
-      <p>Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste${pw ? `: contraseña <b>${pw}</b>` : ''}.</p>
-      <button type="button" class="btn primary" id="retry">Reintentar ${lab.toLowerCase()}</button>
-      <button type="button" class="btn" id="menu">Ir al menú</button>`,
-      [['#retry', retry], ['#menu', goMenu]], false);
+    await sleep(1700);                 // primero se oye el grito; después aparecen las estadísticas con «you died»
+    if (G && G.phase === 'dead') endScreen(false);
+  }
+
+  // pantalla final (victoria o derrota) con las estadísticas de la partida
+  function endScreen(won) {
+    const s = G.stats || {}, a = G.adv, lv = LEVELS[G.levelIdx], lab = stageLabel(lv), pw = E.encodePassword(G);
+    const w = WIN[G.game] || WIN.base, hasChest = G.game !== 'base';
+    const cell = (v, l) => `<div><b>${v}</b><span>${l}</span></div>`;
+    const cells = [
+      cell(won ? `${LEVELS.length}/${LEVELS.length}` : `${G.levelIdx + 1}/${LEVELS.length}`, won ? 'Etapas superadas' : 'Etapa alcanzada'),
+      cell(G.totalTurns, 'Turnos'),
+      cell(s.kills || 0, 'Monstruos vencidos'),
+      cell(s.hits || 0, 'Golpes dados'),
+      cell(s.dmgIn || 0, 'Daño recibido'),
+      cell(s.blocks || 0, 'Ataques bloqueados'),
+      hasChest ? cell(s.chests || 0, 'Cofres abiertos') : '',
+      cell(won ? `${a.hp}/${START_HP}` : bestLevel, won ? 'Vida final' : 'Mejor etapa'),
+      s.deaths ? cell(s.deaths, 'Veces caído') : ''
+    ].join('');
+    const items = (G.items || []).map(k => ITEMS[k] ? `<span class="chip">${ITEMS[k].short || ITEMS[k].name}</span>` : '').join('');
+    showScreen(`<div class="splash endscr ${won ? 'won' : 'lost'}">
+      <div class="end-head"><span class="end-ico">${HERO_ICONS[G.hero] || ICON_ADV}</span>
+        <div><h2>${won ? w[0] : 'Has caído'}</h2>
+        <p class="lead">${won ? w[1] : `Caíste en ${lab.toLowerCase()}: ${lv.title}.`} ${HEROES[G.hero].name} · ${GAMES[G.game].name}</p></div></div>
+      <div class="end-grid">${cells}</div>
+      <div class="end-skills"><b>Habilidades</b>
+        <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
+      ${won ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste${pw ? `: contraseña <b>${pw}</b>` : ''}.</p>`}
+      <div class="menu-btns">
+        ${won ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>Reintentar ${lab.toLowerCase()}</span></button>`}
+        <button type="button" class="btn ${won ? 'primary ' : ''}menu-main" id="eMenu"><span>Ir al menú</span></button>
+      </div></div>`,
+      [['#eRetry', () => { busy = false; retry(); }], ['#eMenu', () => { busy = false; goMenu(); }]]);
+    Sfx.play(won ? 'win' : 'died');
   }
 
   const WIN = {
@@ -829,10 +859,7 @@
   function winSheet() {
     Music.stop();
     noteBest();
-    const w = WIN[G.game] || WIN.base;
-    openSheet(`<h3>${w[0]}</h3>
-      <p class="lead">${w[1]} Superaste las ${LEVELS.length} etapas como ${HEROES[G.hero].name} en ${G.totalTurns} turnos con ${G.adv.hp} de Vida.</p>
-      <button type="button" class="btn primary" id="menu">Ir al menú</button>`, [['#menu', goMenu]], false);
+    setTimeout(() => { if (G && G.phase === 'won') endScreen(true); }, 500);
   }
 
   /* ---------- pantallas de inicio ---------- */
@@ -1002,9 +1029,9 @@
   function goMenu() { if (busy) return; closeSheet(); menuScreen(); }
 
   function retry() {
-    const t = G.totalTurns;
-    G = E.retryLevel(G); G.totalTurns = t; lastHp = G.adv.hp; builtLevel = -1;
-    closeSheet(); render();
+    const t = G.totalTurns, stt = G.stats;
+    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
+    closeSheet(); hideScreen(); render();
     say(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`);
   }
 
@@ -1057,6 +1084,7 @@
     closeSheet();
     busy = true;
     E.applyBreak(G, c);
+    Sfx.play('lvl');
     const msg = c === 'heal' ? 'Te curas hasta 6 de Vida.' : `${LONG[c]} sube a ${G.adv[c]}.`;
     noteBest();
     await flipTo(() => { E.nextLevel(G); builtLevel = -1; busy = false; render(); const pw = E.encodePassword(G); say(`<b>${msg}</b> ${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}.${pw ? ` Contraseña: <b>${pw}</b>` : ''}`); });
@@ -1244,7 +1272,7 @@
       if (!info.ok) { say(whyMsg(info, G.chest.val, E.atkAvail(G), 'El cofre')); return; }
       const val = G.chest.val;
       E.openChest(G);
-      Sfx.play('chest');
+      stat('chests'); Sfx.play('chest');
       floatText(...XY(i), '+' + val, 'good');
       render();
       say(`<b>Cofre abierto.</b> Ganas <b>${val}</b> punto${val > 1 ? 's' : ''} de botín para sumar a una habilidad en tus próximas fases de Energía.`);
@@ -1256,8 +1284,8 @@
       const val = G.stone.val, dmgM = G.fist ? 2 : 1;
       const before = G.mons.map(o => [o.x, o.y]);
       const alive = E.breakStone(G);
-      if (G.mons.length < before.length) sfxKill(); else Sfx.play('atk');
-      if (alive) sfxHurt();
+      if (G.mons.length < before.length) sfxKill(before.length - G.mons.length); else Sfx.play('atk');
+      if (alive) sfxHurt(); else stat('dmgIn');
       for (const [x, y] of before) floatText(x, y, '−' + dmgM, 'good');
       floatText(G.adv.x, G.adv.y, '−1', 'dmg');
       tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
@@ -1496,12 +1524,12 @@
             dmg = E.resolveAttack(G, usedMail, usedHerbs);
           }
           if (dmg > 0) {
-            sfxHurt();
+            sfxHurt(dmg);
             floatText(G.adv.x, G.adv.y, '−' + dmg, 'dmg');
             tok.adv.classList.add('hurt'); setTimeout(() => tok.adv.classList.remove('hurt'), 500);
           } else {
             if (!willBlock) { Sfx.play('atk'); await sleep(350); }   // el daño se anuló tras usar cota/hierbas: primero el ataque
-            Sfx.play('blk');
+            stat('blocks'); Sfx.play('blk');
             floatText(G.adv.x, G.adv.y, 'BLOCK', 'dmg block');
             tok.adv.classList.add('blocked'); setTimeout(() => tok.adv.classList.remove('blocked'), 600);
           }

@@ -551,3 +551,22 @@ body.tight .dice-row.moving { display: none; }
 .sheet .opt.vol { flex-direction: column; align-items: stretch; gap: 6px; }
 .sheet .opt.vol input[type=range] { width: 100%; accent-color: var(--torch); }
 .sheet .small { font-size: 13px; color: var(--muted); margin: 4px 4px 14px; }
+
+/* ---- pantalla final con estadísticas ---- */
+.endscr { gap: 14px; }
+.endscr .end-head { display: flex; align-items: center; gap: 14px; }
+.endscr .end-ico { flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: var(--torch);
+  background: rgba(20,16,12,.55); box-shadow: 0 0 12px 1px rgba(255,139,61,.45), inset 0 0 0 1.5px rgba(255,139,61,.45); }
+.endscr.lost .end-ico { color: #ff7d86; box-shadow: 0 0 12px 1px rgba(255,92,106,.4), inset 0 0 0 1.5px rgba(255,92,106,.4); }
+.endscr .end-ico svg { width: 66%; height: 66%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.endscr h2 { margin: 0; font-family: var(--display); font-size: 36px; line-height: 1; font-weight: 400; }
+.endscr .lead { margin: 4px 0 0; font-size: 15px; }
+.endscr .end-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.endscr .end-grid div { border: 1px solid var(--line-dim); border-radius: 8px; padding: 10px 4px 8px; text-align: center; background: rgba(255,255,255,.02); }
+.endscr .end-grid b { display: block; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.endscr .end-grid span { display: block; margin-top: 5px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.endscr .end-skills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; border-top: 1px solid var(--line-dim); padding-top: 12px; font-size: 15px; color: var(--muted); }
+.endscr .end-skills b { color: var(--text); letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+.endscr .end-skills em { font-style: normal; font-weight: 700; color: var(--text); }
+.endscr .end-items { display: flex; gap: 6px; flex-wrap: wrap; }
+.endscr .chip { border: 1px solid var(--line-dim); border-radius: 12px; padding: 1px 9px; font-size: 13px; color: var(--text); }

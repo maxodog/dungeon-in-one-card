@@ -1,4 +1,4 @@
-const E=require('../src/engine.js'); const I=E.idx; let bad=0;
+const E=require('../engine.js'); const I=E.idx; let bad=0;
 const t=(n,g,e)=>{const ok=JSON.stringify(g)===JSON.stringify(e); if(!ok)bad++; console.log((ok?'ok  ':'MAL ')+n+' → '+JSON.stringify(g)+(ok?'':' (esperado '+JSON.stringify(e)+')'));};
 E.useGame('peak');
 // --- mapas: casillas de aparición libres, distintas y conectadas con la escalera de entrada

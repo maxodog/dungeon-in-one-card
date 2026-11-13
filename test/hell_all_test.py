@@ -1,7 +1,7 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 def st_for(i):
-    js="const E=require('/home/claude/dungeon-in-one-card/src/engine.js');const st=E.newRun('demonhunter','hell',['pendant','holy','mail']);E.setupLevel(st,%d,null);console.log(JSON.stringify(st));"%i
+    js="const E=require('/home/claude/dungeon-in-one-card/engine.js');const st=E.newRun('demonhunter','hell',['pendant','holy','mail']);E.setupLevel(st,%d,null);console.log(JSON.stringify(st));"%i
     return subprocess.check_output(['node','-e',js]).decode()
 async def main():
     async with async_playwright() as p:

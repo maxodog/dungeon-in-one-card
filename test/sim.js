@@ -1,5 +1,5 @@
 'use strict';
-const E = require('../src/engine.js');
+const E = require('../engine.js');
 const { LEVELS, idx, XY, N } = E;
 
 // ---- comprobaciones estáticas de mapas ----

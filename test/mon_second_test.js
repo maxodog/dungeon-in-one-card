@@ -1,5 +1,5 @@
 // Segunda oportunidad: los monstruos sin disparo usan la velocidad que les sobra; nunca superan su velocidad total
-const E = require('../src/engine.js');
+const E = require('../engine.js');
 let fired = 0, over = 0, worse = 0, tot = 0;
 for (const game of ['base', 'harbour', 'hell', 'peak', 'mguf']) {
   const n = E.GAMES[game].levels.length;
