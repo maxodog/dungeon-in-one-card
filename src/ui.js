@@ -249,7 +249,7 @@
     const layer = $('#tokens');
     if (!tok.adv) {
       const a = document.createElement('div');
-      a.className = 'token adv';
+      a.className = 'token pj';
       a.innerHTML = (HERO_ICONS[G.hero] || ICON_ADV) + '<span class="badge"></span>';
       layer.appendChild(a); tok.adv = a;
     }

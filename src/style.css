@@ -105,13 +105,13 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 }
 .token svg { width: 72%; height: 72%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
 .token.mon { color: var(--foe); }
-.token.adv { color: var(--torch); z-index: 3; }
-.token.adv.walking::before { content: ""; position: absolute; left: 10%; top: 10%; width: 80%; height: 80%; border-radius: 50%;
+.token.pj { color: var(--torch); z-index: 3; }
+.token.pj.walking::before { content: ""; position: absolute; left: 10%; top: 10%; width: 80%; height: 80%; border-radius: 50%;
   background: rgba(20,16,12,.55); box-shadow: 0 0 8px 1px rgba(255,139,61,.55), inset 0 0 0 1.5px rgba(255,139,61,.45); }
 .herospot { position: absolute; left: 10%; top: 10%; width: 80%; height: 80%; border-radius: 50%; display: grid; place-items: center; pointer-events: none;
   color: var(--torch); background: rgba(20,16,12,.55); box-shadow: 0 0 8px 1px rgba(255,139,61,.55), inset 0 0 0 1.5px rgba(255,139,61,.45); }
 .herospot svg { width: 90%; height: 90%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
-.token.adv svg { position: relative; z-index: 1; }
+.token.pj svg { position: relative; z-index: 1; }
 .token .badge {
   position: absolute; right: 2px; bottom: 2px; min-width: 17px; height: 17px; padding: 0 3px; border-radius: 9px;
   background: var(--card); border: 1.5px solid currentColor; font-size: 13px; font-weight: 700; line-height: 14px; text-align: center; color: var(--chalk);
@@ -284,7 +284,7 @@ body.menu .screen {
 /* ---- animaciones al moverse ---- */
 .token svg { scale: var(--flip, 1) 1; }
 .token.walking svg { animation: walk .5s ease-in-out infinite; transform-origin: 50% 85%; }
-.token.adv.walking svg { animation: walk .21s ease-in-out infinite; }
+.token.pj.walking svg { animation: walk .21s ease-in-out infinite; }
 .token.k-spider.walking svg { animation: skitter .24s linear infinite; }
 .token.k-skeleton.walking svg { animation: clatter .45s ease-in-out infinite; }
 .token.k-orc.walking svg { animation: stomp .9s ease-in-out infinite; }
@@ -294,7 +294,7 @@ body.menu .screen {
 @keyframes clatter { 0%,100% { transform: translateY(0) rotate(-8deg); } 25% { transform: translateY(-8%) rotate(0); } 50% { transform: translateY(0) rotate(8deg); } 75% { transform: translateY(-8%) rotate(0); } }
 @keyframes stomp { 0%,100% { transform: translateY(0) scale(1.08,.92); } 35% { transform: translateY(-16%) scale(.96,1.06); } 60% { transform: translateY(0) scale(1.08,.92); } }
 @keyframes hover { 0%,100% { transform: translateY(-3%) scale(1); } 50% { transform: translateY(-14%) scale(1.05); } }
-.token.adv.walking { z-index: 4; }
+.token.pj.walking { z-index: 4; }
 
 /* ---- texto flotante: BLOCK con el mismo tamaño y sitio que el daño ---- */
 .float { display: flex; justify-content: center; white-space: nowrap; }

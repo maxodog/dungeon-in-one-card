@@ -28,7 +28,7 @@ async def main():
         pg = await ctx.new_page()
         await pg.goto('file:///home/claude/dungeon-in-one-card/index.html'); await pg.wait_for_timeout(300)
         await pg.click('#mContinue'); await pg.wait_for_timeout(400)
-        info = await pg.evaluate("(()=>{const t=document.querySelector('.token.adv');const r=t.getBoundingClientRect();const s=t.querySelector('svg').getBoundingClientRect();const cs=getComputedStyle(t,'::before');return {r:[r.x,r.y,r.width,r.height],svg:[s.width,s.height],bg:cs.backgroundColor}})()")
+        info = await pg.evaluate("(()=>{const t=document.querySelector('.token.pj');const r=t.getBoundingClientRect();const s=t.querySelector('svg').getBoundingClientRect();const cs=getComputedStyle(t,'::before');return {r:[r.x,r.y,r.width,r.height],svg:[s.width,s.height],bg:cs.backgroundColor}})()")
         print('hero', info)
         await pg.screenshot(path='/tmp/hero_android.png')
         print(errs); await b.close()

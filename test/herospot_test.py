@@ -15,7 +15,7 @@ async def main():
         await page.click('#mContinue'); await page.wait_for_timeout(400)
         cnt = lambda: page.evaluate("document.querySelectorAll('.herospot').length")
         print('manchas héroe al inicio:', await cnt())
-        await page.add_style_tag(content='.token.adv{display:none!important}')
+        await page.add_style_tag(content='.token.pj{display:none!important}')
         await page.screenshot(path='/tmp/spot_notoken.png')
         # mover: tirar dados, confirmar y mover
         await page.evaluate("document.querySelector('#btnRoll').click()"); await page.wait_for_timeout(1200)
