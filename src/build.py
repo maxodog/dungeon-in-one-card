@@ -1,4 +1,7 @@
+import hashlib
 t=open('template.html').read()
-t=t.replace('/*STYLE*/',open('style.css').read()).replace('/*ENGINE*/',open('engine.js').read()).replace('/*UI*/',open('ui.js').read())
+parts=[open('style.css').read(),open('engine.js').read(),open('ui.js').read(),t]
+build=hashlib.sha1(''.join(parts).encode()).hexdigest()[:10]
+t=t.replace('/*STYLE*/',parts[0]).replace('/*ENGINE*/',parts[1]).replace('/*UI*/',parts[2]).replace('/*BUILD*/',build)
 open('index.html','w').write(t)
-print(len(t),'bytes')
+print(len(t),'bytes, versión',build)

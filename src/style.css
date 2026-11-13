@@ -513,3 +513,6 @@ body.tight .dice-row.moving { display: none; }
   .splash.wide .hero-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .splash.wide .screen-h { font-size: 52px; }
 }
+
+.updbar { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 8px 14px; background: var(--card); border: 1.5px solid var(--torch); border-radius: 10px; font-size: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+.updbar .btn { flex: none; min-height: 38px; background: var(--torch); border-color: var(--torch); color: #1a0d03; }

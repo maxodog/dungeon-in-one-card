@@ -1352,8 +1352,27 @@
     fit();
   }
 
+  // Aviso de versión nueva: si la página quedó abierta (o en caché) con una versión vieja, ofrece actualizar
+  const BUILD = (document.querySelector('meta[name="build"]') || {}).content || '';
+  let updShown = false;
+  function checkUpdate() {
+    if (updShown || !BUILD || !window.fetch || location.protocol === 'file:') return;
+    fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => {
+      const m = t.match(/<meta name="build" content="([^"]+)"/);
+      if (!m || m[1] === BUILD || updShown) return;
+      updShown = true;
+      const bar = document.createElement('div');
+      bar.className = 'updbar'; bar.setAttribute('role', 'status');
+      bar.innerHTML = '<span>Hay una versión nueva del juego.</span><button type="button" class="btn mini">Actualizar</button>';
+      bar.querySelector('button').addEventListener('click', () => location.reload());
+      document.body.appendChild(bar);
+    }).catch(() => {});
+  }
   function start(data) {
     loadBest();
+    checkUpdate();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+    setInterval(checkUpdate, 600000);
     wire();
     if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => (G ? JSON.parse(JSON.stringify(G)) : null));
     if (data && validState(data)) resume(data); else menuScreen();
