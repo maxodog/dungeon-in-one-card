@@ -1034,8 +1034,15 @@
     const must = game === 'peak' || game === 'harbour' || game === 'hell';
     pick = pick || (must ? drawItems(game) : []);
     const pool = E.itemPool(game);
-    const list = () => pool.map(k => `<button type="button" class="hero-card item-card ${pick.includes(k) ? 'chosen' : ''}" data-it="${k}" aria-pressed="${pick.includes(k)}">
-        <span class="ico">${ITEM_ICONS[k]}</span><span><b>${ITEMS[k].name}</b><p>${ITEMS[k].txt}</p><small class="pk">${ITEM_PACK[k]}</small></span><i class="tick" aria-hidden="true"></i></button>`).join('');
+    // primero los de la expansión en juego y luego, con su título, los de cada expansión en orden
+    const PACKS = [['Montaña Eterna', 'peak'], ['Harbour Clash', 'harbour'], ['Puerta del Infierno', 'hell']];
+    const order = PACKS.slice().sort((a, b) => (b[1] === game) - (a[1] === game));
+    const card = k => `<button type="button" class="hero-card item-card ${pick.includes(k) ? 'chosen' : ''}" data-it="${k}" aria-pressed="${pick.includes(k)}">
+        <span class="ico">${ITEM_ICONS[k]}</span><span><b>${ITEMS[k].name}</b><p>${ITEMS[k].txt}</p></span><i class="tick" aria-hidden="true"></i></button>`;
+    const list = () => order.map(([pk, g]) => {
+      const ks = pool.filter(k => ITEM_PACK[k] === pk); if (!ks.length) return '';
+      return `<h3 class="pack-h">${GAME_TITLE[g]}${g === game ? '<small>esta aventura</small>' : ''}</h3>` + ks.map(card).join('');
+    }).join('');
     const sc = showScreen(`<div class="splash wide">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">${must ? 'Tus tres objetos' : 'Objetos (opcional)'}</h2>
@@ -1485,21 +1492,21 @@
     }));
   }
 
-  // Botín del cofre: cuántos puntos y a qué habilidad suman este turno
-  function lootSheet(k0, n0) {
-    const t = G.turn;
-    let k = k0 || (t.loot && t.loot.k) || null, n = n0 || (t.loot && t.loot.n) || 1;
-    n = Math.max(1, Math.min(n, G.loot));
+  // Botín del cofre: se pueden gastar todos los puntos o solo una parte (el resto queda para otro turno), siempre en una única habilidad por turno.
+  // Por defecto se gastan todos, así que lo habitual es un solo toque en la habilidad.
+  function lootSheet(n0) {
+    const t = G.turn, n = Math.max(1, Math.min(n0 || (t.loot && t.loot.n) || G.loot, G.loot));
+    const pl = x => `punto${x > 1 ? 's' : ''}`;
     openSheet(`<div class="item-head"><span class="ico">${ICON_CHEST}</span><h3>Botín del cofre</h3></div>
-      <p class="lead">Tienes <b>${G.loot}</b> punto${G.loot > 1 ? 's' : ''}. Este turno solo puedes sumarlos a <b>una</b> habilidad; lo que no gastes se queda para otro turno.</p>
-      <div class="choices">${['spd', 'atk', 'def', 'rng'].map(x => `<button type="button" class="choice ${k === x ? 'chosen' : ''}" data-lk="${x}"><b>${LONG[x]}</b><span>${x === 'rng' && !t.ranger ? 'Alcance' : 'suma ' + n}</span></button>`).join('')}</div>
-      <div class="stepper"><button type="button" class="btn mini" id="lMinus" ${n <= 1 ? 'disabled' : ''}>−</button><b>${n}</b><button type="button" class="btn mini" id="lPlus" ${n >= G.loot ? 'disabled' : ''}>+</button></div>
-      <button type="button" class="btn primary" id="lOk" ${k ? '' : 'disabled'}>Sumar ${n} a ${k ? LONG[k] : '…'}</button>
-      <button type="button" class="btn" id="lClear">Quitar botín</button>`,
-      [['#lMinus', () => lootSheet(k, n - 1)], ['#lPlus', () => lootSheet(k, n + 1)],
-       ['#lOk', () => { E.setLoot(G, k, n); closeSheet(); render(); say(`Botín: <b>+${n}</b> a ${LONG[k]}.`); }],
+      <p class="lead">Tienes <b>${G.loot}</b> ${pl(G.loot)}. Toca la habilidad a la que quieres sumarlos${G.loot > 1 ? '. Este turno solo puedes usar una habilidad; los puntos que no gastes quedan para otro turno' : ''}.</p>
+      ${G.loot > 1 ? `<div class="stepper"><button type="button" class="btn mini" id="lMinus" ${n <= 1 ? 'disabled' : ''}>−</button><b>${n}</b><span class="stl">${pl(n)} a gastar</span><button type="button" class="btn mini" id="lPlus" ${n >= G.loot ? 'disabled' : ''}>+</button></div>` : ''}
+      <div class="choices">${['spd', 'atk', 'def', 'rng'].map(x => `<button type="button" class="choice ${t.loot && t.loot.k === x ? 'chosen' : ''}" data-lk="${x}"><b>${LONG[x]}</b><span>suma ${n}</span></button>`).join('')}</div>
+      ${t.loot && t.loot.k ? '<button type="button" class="btn" id="lClear">Quitar botín</button>' : '<button type="button" class="btn" id="lNo">Cancelar</button>'}`,
+      [['#lMinus', () => lootSheet(n - 1)], ['#lPlus', () => lootSheet(n + 1)], ['#lNo', closeSheet],
        ['#lClear', () => { E.setLoot(G, null, 0); closeSheet(); render(); }]], true);
-    document.querySelectorAll('#veil [data-lk]').forEach(b => b.addEventListener('click', () => lootSheet(b.dataset.lk, n)));
+    document.querySelectorAll('#veil [data-lk]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.lk; E.setLoot(G, k, n); closeSheet(); render(); say(`Botín: <b>+${n}</b> a ${LONG[k]}.`);
+    }));
   }
 
   function flameSheet() {

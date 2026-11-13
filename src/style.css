@@ -681,3 +681,9 @@ body.tight .dice-row.moving { display: none; }
 }
 @keyframes hitDie { 30% { filter: brightness(1.7) drop-shadow(0 0 12px #fff); } }
 @media (min-width: 1000px) and (min-aspect-ratio: 3/2) { .app .sysbox .fine { font-size: calc(27 * var(--u)); } }
+
+/* objetos agrupados por expansión y selector de puntos del cofre */
+.pack-h { grid-column: 1 / -1; margin: 10px 0 0; padding: 0 2px 5px; font-family: var(--display); font-weight: 400; font-size: 22px; letter-spacing: .06em; line-height: 1.1; border-bottom: 1.5px solid var(--line-dim); display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pack-h:first-child { margin-top: 0; }
+.pack-h small { font-family: var(--body); font-size: 11px; white-space: nowrap; letter-spacing: .14em; text-transform: uppercase; color: var(--torch); font-weight: 700; }
+.stepper .stl { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }

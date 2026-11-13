@@ -35,8 +35,8 @@ async def chest(page):
     await page.click('#btnRoll'); await page.wait_for_timeout(1000)
     await page.click('#btnLoot'); await page.wait_for_timeout(300)
     await page.screenshot(path='/tmp/g2_lootsheet.png')
-    await page.click('#veil [data-lk="atk"]'); await page.wait_for_timeout(200)
-    await page.click('#lOk'); await page.wait_for_timeout(300)
+    await page.click('#veil [data-lk="atk"]'); await page.wait_for_timeout(300)
+    assert not await page.locator('#veil.open, #veil:visible .sheet').count(), 'la hoja debe cerrarse al tocar la habilidad'
     print('botín:', await page.inner_text('#loot'), '| chip atq:', (await page.locator('.chip[data-k="atk"]').inner_text()).replace('\n',' '))
     print('caballero botón:', await page.inner_text('#btnAbil'))
     await page.click('#btnAbil'); await page.wait_for_timeout(200)
