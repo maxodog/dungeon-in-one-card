@@ -784,3 +784,25 @@ body.tight .dice-row.moving { display: none; }
 .nf-stats b { font-size: 20px; color: var(--ink, inherit); letter-spacing: 0; }
 .nf-stats i { font-style: normal; font-size: 12px; color: #6fb2ff; margin-left: 2px; vertical-align: super; }
 .nf-note { margin: 0; font-size: 13px; color: #6fb2ff; }
+
+/* rarezas de los logros */
+.diamante { --tc: #7fe7ff; --tg: linear-gradient(135deg, #b9f6ff, #5fc8ff 45%, #c79bff); }
+.oro { --tc: #ffc94a; --tg: linear-gradient(135deg, #fff1a8, #ffc23a 50%, #d48a1a); }
+.plata { --tc: #cfd8e6; --tg: linear-gradient(135deg, #ffffff, #c3cddc 50%, #8f9bad); }
+.bronce { --tc: #e0955c; --tg: linear-gradient(135deg, #ffcfa3, #d98a4e 50%, #9c5a2c); }
+.tier-h { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px !important; font-size: 15px !important; color: var(--tc) !important; }
+.tier-h small { margin-left: auto; font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+.tier-h i, .medals i, .end-new span i { display: inline-grid; width: 18px; height: 18px; }
+.tier-h svg, .medals svg, .end-new svg { width: 100%; height: 100%; fill: none; stroke: var(--tc); stroke-width: 1.8; stroke-linejoin: round; }
+.ach.on b::before { content: none; }
+.ach { border-color: color-mix(in srgb, var(--tc) 35%, transparent); }
+.ach.on { border-style: solid; border-color: var(--tc); background: color-mix(in srgb, var(--tc) 9%, transparent); }
+.ach.on b { background: var(--tg); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ach .cat { color: var(--muted); }
+.ach.on .cat { color: var(--tc); }
+.ach.diamante.on { box-shadow: 0 0 14px color-mix(in srgb, var(--tc) 35%, transparent); }
+.medals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
+.medals span { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border: 1.5px solid color-mix(in srgb, var(--tc) 50%, transparent); border-radius: 12px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--tc); font-weight: 700; }
+.medals i { width: 22px; height: 22px; }
+.medals b { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; color: var(--ink, #eef3ff); }
+.endscr .end-new span { display: inline-flex; align-items: center; gap: 5px; border-color: var(--tc); color: var(--tc); }

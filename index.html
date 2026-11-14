@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="a04ed62bcd">
+<meta name="build" content="0dcb3c741b">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -796,6 +796,28 @@ body.tight .dice-row.moving { display: none; }
 .nf-stats b { font-size: 20px; color: var(--ink, inherit); letter-spacing: 0; }
 .nf-stats i { font-style: normal; font-size: 12px; color: #6fb2ff; margin-left: 2px; vertical-align: super; }
 .nf-note { margin: 0; font-size: 13px; color: #6fb2ff; }
+
+/* rarezas de los logros */
+.diamante { --tc: #7fe7ff; --tg: linear-gradient(135deg, #b9f6ff, #5fc8ff 45%, #c79bff); }
+.oro { --tc: #ffc94a; --tg: linear-gradient(135deg, #fff1a8, #ffc23a 50%, #d48a1a); }
+.plata { --tc: #cfd8e6; --tg: linear-gradient(135deg, #ffffff, #c3cddc 50%, #8f9bad); }
+.bronce { --tc: #e0955c; --tg: linear-gradient(135deg, #ffcfa3, #d98a4e 50%, #9c5a2c); }
+.tier-h { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px !important; font-size: 15px !important; color: var(--tc) !important; }
+.tier-h small { margin-left: auto; font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+.tier-h i, .medals i, .end-new span i { display: inline-grid; width: 18px; height: 18px; }
+.tier-h svg, .medals svg, .end-new svg { width: 100%; height: 100%; fill: none; stroke: var(--tc); stroke-width: 1.8; stroke-linejoin: round; }
+.ach.on b::before { content: none; }
+.ach { border-color: color-mix(in srgb, var(--tc) 35%, transparent); }
+.ach.on { border-style: solid; border-color: var(--tc); background: color-mix(in srgb, var(--tc) 9%, transparent); }
+.ach.on b { background: var(--tg); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ach .cat { color: var(--muted); }
+.ach.on .cat { color: var(--tc); }
+.ach.diamante.on { box-shadow: 0 0 14px color-mix(in srgb, var(--tc) 35%, transparent); }
+.medals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
+.medals span { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border: 1.5px solid color-mix(in srgb, var(--tc) 50%, transparent); border-radius: 12px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--tc); font-weight: 700; }
+.medals i { width: 22px; height: 22px; }
+.medals b { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; color: var(--ink, #eef3ff); }
+.endscr .end-new span { display: inline-flex; align-items: center; gap: 5px; border-color: var(--tc); color: var(--tc); }
 
 </style>
 </head>
@@ -2595,56 +2617,58 @@ if (typeof module !== 'undefined') {
 
   // Catálogo de logros: mazmorras completadas, rangos de victoria y premios (los mismos de la pantalla final)
   const ACH = [
-    { g: 'Mazmorras', id: 'win_base', name: 'Cáliz de Brasas', txt: 'Completa One Card Dungeon.' },
-    { g: 'Mazmorras', id: 'win_mguf', name: "Fin de M'Guf-yn", txt: "Completa M'Guf-yn Returns." },
-    { g: 'Mazmorras', id: 'win_peak', name: 'Rey de la cima', txt: 'Completa la Montaña Eterna.' },
-    { g: 'Mazmorras', id: 'win_harbour', name: 'Lobo de mar', txt: 'Completa Harbour Clash.' },
-    { g: 'Mazmorras', id: 'win_hell', name: 'Portero del Infierno', txt: 'Completa La Puerta del Infierno.' },
-    { g: 'Mazmorras', id: 'all', name: 'Leyenda de la mazmorra', txt: 'Completa las cinco aventuras.' },
-    { g: 'Mazmorras', id: 'multi', name: 'Multiclase', txt: 'Gana con 3 héroes distintos.' },
-    { g: 'Rangos', id: 'Intocable', name: 'Intocable', txt: 'Gana sin caer y con 10 de daño o menos.' },
-    { g: 'Rangos', id: 'Héroe de manual', name: 'Héroe de manual', txt: 'Gana sin caer ni una vez.' },
-    { g: 'Rangos', id: 'Terco con suerte', name: 'Terco con suerte', txt: 'Gana tras caer 1 o 2 veces.' },
-    { g: 'Rangos', id: 'Cucaracha inmortal', name: 'Cucaracha inmortal', txt: 'Gana tras caer 3 veces o más.' },
-    { g: 'Premios', id: 'Muro humano', name: 'Muro humano', txt: 'Gana bloqueando 8 ataques o más.' },
-    { g: 'Premios', id: 'Exterminador', name: 'Exterminador', txt: 'Gana venciendo 10 monstruos o más.' },
-    { g: 'Premios', id: 'Saqueador', name: 'Saqueador', txt: 'Gana abriendo 3 cofres o más.' },
-    { g: 'Premios', id: 'Piel de roca', name: 'Piel de roca', txt: 'Gana recibiendo 5 de daño o menos.' },
-    { g: 'Premios', id: 'Manos rápidas', name: 'Manos rápidas', txt: 'Gana dando 15 golpes o más.' },
-    { g: 'Premios', id: 'Sin pausa para morir', name: 'Sin pausa para morir', txt: 'Gana sin caer.' },
-    { g: 'Premios', id: 'Con prisa', name: 'Con prisa', txt: 'Gana en 70 turnos o menos.' },
-    { g: 'Premios', id: 'Superviviente', name: 'Superviviente', txt: 'Gana sin ningún otro premio.' },
-    { g: 'Premios consuelo', id: 'Saco de boxeo', name: 'Saco de boxeo', txt: 'Cae tras recibir 12 de daño o más.' },
-    { g: 'Premios consuelo', id: 'Pacifista involuntario', name: 'Pacifista involuntario', txt: 'Cae sin haber vencido a ningún monstruo.' },
-    { g: 'Premios consuelo', id: 'Visitante frecuente', name: 'Visitante frecuente', txt: 'Cae por tercera vez en una misma partida.' },
-    { g: 'Premios consuelo', id: 'Defensa opcional', name: 'Defensa opcional', txt: 'Cae sin haber bloqueado ningún ataque.' },
-    { g: 'Premios consuelo', id: 'Premio participación', name: 'Premio participación', txt: 'Cae sin otro premio de consuelo.' },
-    { g: 'Premios consuelo', id: 'Retirada estratégica', name: 'Retirada estratégica', txt: 'Abandona una partida.' },
-    { g: 'Premios consuelo', id: 'trip', name: 'Tropezón', txt: 'Cae en el primer nivel de una aventura.' },
-    { g: 'Premios consuelo', id: 'close', name: 'Tan cerca', txt: 'Cae en el último nivel de una aventura.' },
-    { g: 'Hazañas', id: 'nodmg', name: 'Sin un rasguño', txt: 'Gana sin recibir daño.' },
-    { g: 'Hazañas', id: 'flash', name: 'Relámpago', txt: 'Gana en 50 turnos o menos.' },
-    { g: 'Hazañas', id: 'marathon', name: 'Maratonista', txt: 'Gana una partida de 150 turnos o más.' },
-    { g: 'Hazañas', id: 'butcher', name: 'Carnicero', txt: 'Vence 20 monstruos en una sola partida.' },
-    { g: 'Hazañas', id: 'fortress', name: 'Fortaleza', txt: 'Bloquea 15 ataques en una sola partida.' },
-    { g: 'Hazañas', id: 'treasure', name: 'Cazatesoros', txt: 'Abre 6 cofres en una sola partida.' },
-    { g: 'Hazañas', id: 'edge', name: 'Al límite', txt: 'Gana con 1 de Vida.' },
-    { g: 'Hazañas', id: 'fullhp', name: 'Vida plena', txt: 'Gana con la Vida completa.' },
-    { g: 'Hazañas', id: 'max6', name: 'Al tope', txt: 'Termina una partida con una habilidad en 6.' },
-    { g: 'Hazañas', id: 'balance', name: 'Equilibrado', txt: 'Gana con Mov, Atq y Def en 4 o más.' },
-    { g: 'Hazañas', id: 'naked', name: 'Minimalista', txt: 'Gana sin objetos una aventura que los permite.' },
-    { g: 'Hazañas', id: 'phoenix', name: 'Fénix', txt: 'Gana tras caer 5 veces o más.' },
-    { g: 'Hazañas', id: 'half', name: 'A mitad de camino', txt: 'Llega a la mitad de una aventura.' },
-    { g: 'Héroes', id: 'h6', name: 'Maestro de armas', txt: 'Gana con 6 héroes distintos.' },
-    { g: 'Héroes', id: 'hall', name: 'Panteón completo', txt: 'Gana con todos los héroes.' },
-    { g: 'Héroes', id: 'loyal', name: 'Fiel compañero', txt: 'Gana 3 veces con el mismo héroe.' },
-    { g: 'Trayectoria', id: 'k100', name: 'Cien cabezas', txt: 'Vence 100 monstruos en total.' },
-    { g: 'Trayectoria', id: 'k500', name: 'Azote de la mazmorra', txt: 'Vence 500 monstruos en total.' },
-    { g: 'Trayectoria', id: 'w10', name: 'Veterano', txt: 'Gana 10 partidas.' },
-    { g: 'Trayectoria', id: 'f25', name: 'Persistente', txt: 'Cae 25 veces en total.' },
-    { g: 'Trayectoria', id: 't1000', name: 'Incansable', txt: 'Juega 1.000 turnos en total.' },
-    { g: 'Trayectoria', id: 'medals', name: 'Medallero', txt: 'Consigue 30 logros.' }
+    { t: 'bronce', g: 'Mazmorras', id: 'win_base', name: 'Cáliz de Brasas', txt: 'Completa One Card Dungeon.' },
+    { t: 'plata', g: 'Mazmorras', id: 'win_mguf', name: "Fin de M'Guf-yn", txt: "Completa M'Guf-yn Returns." },
+    { t: 'plata', g: 'Mazmorras', id: 'win_peak', name: 'Rey de la cima', txt: 'Completa la Montaña Eterna.' },
+    { t: 'plata', g: 'Mazmorras', id: 'win_harbour', name: 'Lobo de mar', txt: 'Completa Harbour Clash.' },
+    { t: 'oro', g: 'Mazmorras', id: 'win_hell', name: 'Portero del Infierno', txt: 'Completa La Puerta del Infierno.' },
+    { t: 'diamante', g: 'Mazmorras', id: 'all', name: 'Leyenda de la mazmorra', txt: 'Completa las cinco aventuras.' },
+    { t: 'plata', g: 'Mazmorras', id: 'multi', name: 'Multiclase', txt: 'Gana con 3 héroes distintos.' },
+    { t: 'diamante', g: 'Rangos', id: 'Intocable', name: 'Intocable', txt: 'Gana sin caer y con 10 de daño o menos.' },
+    { t: 'plata', g: 'Rangos', id: 'Héroe de manual', name: 'Héroe de manual', txt: 'Gana sin caer ni una vez.' },
+    { t: 'bronce', g: 'Rangos', id: 'Terco con suerte', name: 'Terco con suerte', txt: 'Gana tras caer 1 o 2 veces.' },
+    { t: 'bronce', g: 'Rangos', id: 'Cucaracha inmortal', name: 'Cucaracha inmortal', txt: 'Gana tras caer 3 veces o más.' },
+    { t: 'plata', g: 'Premios', id: 'Muro humano', name: 'Muro humano', txt: 'Gana bloqueando 8 ataques o más.' },
+    { t: 'plata', g: 'Premios', id: 'Exterminador', name: 'Exterminador', txt: 'Gana venciendo 10 monstruos o más.' },
+    { t: 'plata', g: 'Premios', id: 'Saqueador', name: 'Saqueador', txt: 'Gana abriendo 3 cofres o más.' },
+    { t: 'oro', g: 'Premios', id: 'Piel de roca', name: 'Piel de roca', txt: 'Gana recibiendo 5 de daño o menos.' },
+    { t: 'plata', g: 'Premios', id: 'Manos rápidas', name: 'Manos rápidas', txt: 'Gana dando 15 golpes o más.' },
+    { t: 'plata', g: 'Premios', id: 'Sin pausa para morir', name: 'Sin pausa para morir', txt: 'Gana sin caer.' },
+    { t: 'plata', g: 'Premios', id: 'Con prisa', name: 'Con prisa', txt: 'Gana en 70 turnos o menos.' },
+    { t: 'bronce', g: 'Premios', id: 'Superviviente', name: 'Superviviente', txt: 'Gana sin ningún otro premio.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'Saco de boxeo', name: 'Saco de boxeo', txt: 'Cae tras recibir 12 de daño o más.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'Pacifista involuntario', name: 'Pacifista involuntario', txt: 'Cae sin haber vencido a ningún monstruo.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'Visitante frecuente', name: 'Visitante frecuente', txt: 'Cae por tercera vez en una misma partida.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'Defensa opcional', name: 'Defensa opcional', txt: 'Cae sin haber bloqueado ningún ataque.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'Premio participación', name: 'Premio participación', txt: 'Cae sin otro premio de consuelo.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'Retirada estratégica', name: 'Retirada estratégica', txt: 'Abandona una partida.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'trip', name: 'Tropezón', txt: 'Cae en el primer nivel de una aventura.' },
+    { t: 'bronce', g: 'Premios consuelo', id: 'close', name: 'Tan cerca', txt: 'Cae en el último nivel de una aventura.' },
+    { t: 'diamante', g: 'Hazañas', id: 'nodmg', name: 'Sin un rasguño', txt: 'Gana sin recibir daño.' },
+    { t: 'oro', g: 'Hazañas', id: 'flash', name: 'Relámpago', txt: 'Gana en 50 turnos o menos.' },
+    { t: 'plata', g: 'Hazañas', id: 'marathon', name: 'Maratonista', txt: 'Gana una partida de 150 turnos o más.' },
+    { t: 'plata', g: 'Hazañas', id: 'butcher', name: 'Carnicero', txt: 'Vence 20 monstruos en una sola partida.' },
+    { t: 'plata', g: 'Hazañas', id: 'fortress', name: 'Fortaleza', txt: 'Bloquea 15 ataques en una sola partida.' },
+    { t: 'oro', g: 'Hazañas', id: 'treasure', name: 'Cazatesoros', txt: 'Abre 6 cofres en una sola partida.' },
+    { t: 'oro', g: 'Hazañas', id: 'edge', name: 'Al límite', txt: 'Gana con 1 de Vida.' },
+    { t: 'plata', g: 'Hazañas', id: 'fullhp', name: 'Vida plena', txt: 'Gana con la Vida completa.' },
+    { t: 'plata', g: 'Hazañas', id: 'max6', name: 'Al tope', txt: 'Termina una partida con una habilidad en 6.' },
+    { t: 'oro', g: 'Hazañas', id: 'balance', name: 'Equilibrado', txt: 'Gana con Mov, Atq y Def en 4 o más.' },
+    { t: 'oro', g: 'Hazañas', id: 'naked', name: 'Minimalista', txt: 'Gana sin objetos una aventura que los permite.' },
+    { t: 'oro', g: 'Hazañas', id: 'phoenix', name: 'Fénix', txt: 'Gana tras caer 5 veces o más.' },
+    { t: 'bronce', g: 'Hazañas', id: 'half', name: 'A mitad de camino', txt: 'Llega a la mitad de una aventura.' },
+    { t: 'oro', g: 'Héroes', id: 'h6', name: 'Maestro de armas', txt: 'Gana con 6 héroes distintos.' },
+    { t: 'diamante', g: 'Héroes', id: 'hall', name: 'Panteón completo', txt: 'Gana con todos los héroes.' },
+    { t: 'plata', g: 'Héroes', id: 'loyal', name: 'Fiel compañero', txt: 'Gana 3 veces con el mismo héroe.' },
+    { t: 'plata', g: 'Trayectoria', id: 'k100', name: 'Cien cabezas', txt: 'Vence 100 monstruos en total.' },
+    { t: 'diamante', g: 'Trayectoria', id: 'k500', name: 'Azote de la mazmorra', txt: 'Vence 500 monstruos en total.' },
+    { t: 'oro', g: 'Trayectoria', id: 'w10', name: 'Veterano', txt: 'Gana 10 partidas.' },
+    { t: 'plata', g: 'Trayectoria', id: 'f25', name: 'Persistente', txt: 'Cae 25 veces en total.' },
+    { t: 'plata', g: 'Trayectoria', id: 't1000', name: 'Incansable', txt: 'Juega 1.000 turnos en total.' },
+    { t: 'diamante', g: 'Trayectoria', id: 'medals', name: 'Medallero', txt: 'Consigue 30 logros.' }
   ];
+  const TIERS = [['diamante', 'Diamante'], ['oro', 'Oro'], ['plata', 'Plata'], ['bronce', 'Bronce']];
+  const TIER_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 18M15 3l-3 18"/></svg>';
   const RANK_ORDER = ['Cucaracha inmortal', 'Terco con suerte', 'Héroe de manual', 'Intocable'];
   const TOT_KEYS = ['kills', 'hits', 'dmgIn', 'blocks', 'chests'];
 
@@ -3266,7 +3290,7 @@ if (typeof module !== 'undefined') {
       if (ab) { rank = pick(['Desertor', 'Retirada estratégica', 'Prudente', 'Pies ligeros']); quip = pick(['Una retirada a tiempo también es una victoria. Pequeñita, pero victoria.', 'Los monstruos ya están contando la historia de cómo huiste.', 'Saliste corriendo con tanta elegancia que casi parece un plan.', `${mon.plural} celebran: ganaron sin mover un dedo.`]); awards.push('Retirada estratégica'); }
       else awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
     }
-    const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id;
+    const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id, achT = id => (ACH.find(a => a.id === id) || {}).t || 'bronce';
     const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(ab ? ['¿Ya te vas? Si recién empezábamos.', '¡Corre, corre! Nadie te sigue… por ahora.', 'Cierra la puerta al salir, que entra frío.', 'Me quedo con tu botín, gracias.', 'Huir también es un deporte. Y eres bueno.'] : TAUNTS)}»`;
     const cell = (ico, v, l, wide) => `<div class="${wide ? 'wide' : ''}"><i>${STAT_ICO[ico]}</i><b>${v}</b><span>${l}</span></div>`;
     const cells = [
@@ -3298,7 +3322,7 @@ if (typeof module !== 'undefined') {
           <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
         <div class="end-say"><span class="mico">${ICONS[mon.key] || ''}</span><q>${say}</q></div>
         <div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${awards.map(x => `<span class="award">${x}</span>`).join('')}</div>
-        ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${fresh.map(x => `<span>${achName(x)}</span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
+        ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${fresh.slice().sort((x, y) => TIERS.findIndex(t => t[0] === achT(x)) - TIERS.findIndex(t => t[0] === achT(y))).map(x => `<span class="${achT(x)}"><i>${TIER_ICON}</i>${achName(x)}</span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
           : '<p class="fine">Entra con un usuario desde el menú para guardar tus logros y estadísticas.</p>'}
         ${won || ab ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste, ahora o más tarde desde el menú.</p>`}
         <div class="menu-btns">
@@ -3486,10 +3510,16 @@ if (typeof module !== 'undefined') {
       return `<div class="pg ${x && x.wins ? 'won' : ''}"><span class="pg-n">${GAMES[g].name}</span>${st}${extra}</div>`;
     }).join('');
     const cell = (v, l) => `<div><b>${v || 0}</b><span>${l}</span></div>`;
-    const groups = [...new Set(ACH.map(a => a.g))].map(g => `<h4>${g}</h4><div class="ach-list">${ACH.filter(a => a.g === g).map(a => {
-      const h = r.ach[a.id];
-      return `<div class="ach ${h ? 'on' : ''}"><b>${a.name}</b><span>${a.txt}</span>${h ? `<small>${fmtDate(h.d)} · ${GAMES[h.g] ? GAMES[h.g].name : ''}</small>` : ''}</div>`;
-    }).join('')}</div>`).join('');
+    const groups = TIERS.map(([t, tn]) => {
+      const list = ACH.filter(a => a.t === t), n = list.filter(a => r.ach[a.id]).length;
+      // dentro de cada rareza, primero los conseguidos
+      list.sort((x, y) => (!!r.ach[y.id]) - (!!r.ach[x.id]));
+      return `<h4 class="tier-h ${t}"><i>${TIER_ICON}</i>${tn}<small>${n} de ${list.length}</small></h4><div class="ach-list">${list.map(a => {
+        const h = r.ach[a.id];
+        return `<div class="ach ${t} ${h ? 'on' : ''}"><b>${a.name}</b><span>${a.txt}</span><small class="cat">${a.g}${h ? ` · ${fmtDate(h.d)}${GAMES[h.g] ? ' · ' + GAMES[h.g].name : ''}` : ''}</small></div>`;
+      }).join('')}</div>`;
+    }).join('');
+    const medals = `<div class="medals">${TIERS.map(([t, tn]) => `<span class="${t}"><i>${TIER_ICON}</i><b>${ACH.filter(a => a.t === t && r.ach[a.id]).length}</b>${tn}</span>`).join('')}</div>`;
     const hist = r.hist.length ? r.hist.map(h => `<li class="${h.won ? 'won' : ''}"><b>${h.won ? 'Victoria' : 'Caída'}</b> · ${GAMES[h.g] ? GAMES[h.g].name : ''} · ${HEROES[h.h] ? HEROES[h.h].name : ''} · etapa ${h.st}/${h.n}${h.won ? ` · ${h.rank}` : ''}<small>${fmtDate(h.d)}</small></li>`).join('') : '<li class="dim">Todavía no hay partidas.</li>';
     const sc = showScreen(`<div class="splash wide prof">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
@@ -3498,7 +3528,7 @@ if (typeof module !== 'undefined') {
       <h3 class="pack-h">Mazmorras</h3><div class="prof-games">${games}</div>
       <h3 class="pack-h">Estadísticas</h3>
       <div class="prof-stats">${cell(t.wins, 'Victorias')}${cell(t.falls, 'Caídas')}${cell(t.kills, 'Monstruos vencidos')}${cell(t.hits, 'Golpes dados')}${cell(t.dmgIn, 'Daño recibido')}${cell(t.blocks, 'Ataques bloqueados')}${cell(t.chests, 'Cofres abiertos')}${cell(t.turns, 'Turnos jugados')}</div>
-      <h3 class="pack-h">Logros <small>${got} de ${ACH.length}</small></h3><div class="prof-ach">${groups}</div>
+      <h3 class="pack-h">Logros <small>${got} de ${ACH.length}</small></h3>${medals}<div class="prof-ach">${groups}</div>
       <h3 class="pack-h">Últimas partidas</h3><ul class="prof-hist">${hist}</ul>
       <h3 class="pack-h">Copia de seguridad</h3>
       <p class="lead">Opcional: con la nube ya no hace falta, pero puedes guardar este código como respaldo extra. Con él recuperas tu usuario desde «Recuperar con copia de seguridad».</p>
