@@ -770,3 +770,17 @@ body.tight .dice-row.moving { display: none; }
 .rslot-t small { font-size: 13px; color: var(--muted); }
 .rslot-b { grid-column: 1 / -1; display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
 .adv-tag.run { background: var(--torch); color: #1a1208; margin-left: 6px; padding: 1px 7px; border-radius: 99px; letter-spacing: .12em; }
+
+/* próximo enemigo en «Nivel superado» */
+.next-foe { display: grid; gap: 6px; padding: 10px 12px; margin: 0 0 4px; border: 1.5px solid var(--line-dim); border-radius: 12px; background: rgba(0, 0, 0, .2); }
+.next-foe small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.nf-row { display: flex; align-items: center; gap: 10px; }
+.nf-row .mico { width: 40px; height: 40px; border-radius: 50%; color: var(--foe); background: rgba(255,90,120,.1); display: grid; place-items: center; flex: none; }
+.nf-row .mico svg { width: 72%; height: 72%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.nf-row b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1.1; }
+.nf-row em { font-style: normal; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--foe); color: #12080a; }
+.nf-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.nf-stats span { display: flex; flex-direction: column; align-items: center; padding: 4px 0; border: 1px solid var(--line-dim); border-radius: 8px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.nf-stats b { font-size: 20px; color: var(--ink, inherit); letter-spacing: 0; }
+.nf-stats i { font-style: normal; font-size: 12px; color: #6fb2ff; margin-left: 2px; vertical-align: super; }
+.nf-note { margin: 0; font-size: 13px; color: #6fb2ff; }

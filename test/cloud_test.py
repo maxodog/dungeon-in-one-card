@@ -63,7 +63,7 @@ async def main():
         await pa.evaluate("s => localStorage.setItem('dioc-run-v3:u:ana maría', s)", ST)
         await pa.reload(); await pa.wait_for_timeout(500); await pa.click('#mContinue'); await pa.wait_for_timeout(500)
         await pa.locator('.tile.target').first.click(); await pa.wait_for_timeout(3500)
-        assert 'Cáliz de Brasas' in await pa.inner_text('.end-new')
+        print('errs', ea); assert 'Cáliz de Brasas' in await pa.inner_text('.end-new')
         await pa.click('#eMenu'); await pa.wait_for_timeout(1200)
         doc = json.loads(list(docs.values())[0]['fields']['data']['stringValue'])
         assert doc['rec']['games']['base']['wins'] == 1 and 'saves' in doc, doc['rec']['games']; print('nube: base ganada, logros', len(doc['rec']['ach']))

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="8bbf20c74b">
+<meta name="build" content="a04ed62bcd">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -782,6 +782,20 @@ body.tight .dice-row.moving { display: none; }
 .rslot-t small { font-size: 13px; color: var(--muted); }
 .rslot-b { grid-column: 1 / -1; display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
 .adv-tag.run { background: var(--torch); color: #1a1208; margin-left: 6px; padding: 1px 7px; border-radius: 99px; letter-spacing: .12em; }
+
+/* próximo enemigo en «Nivel superado» */
+.next-foe { display: grid; gap: 6px; padding: 10px 12px; margin: 0 0 4px; border: 1.5px solid var(--line-dim); border-radius: 12px; background: rgba(0, 0, 0, .2); }
+.next-foe small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.nf-row { display: flex; align-items: center; gap: 10px; }
+.nf-row .mico { width: 40px; height: 40px; border-radius: 50%; color: var(--foe); background: rgba(255,90,120,.1); display: grid; place-items: center; flex: none; }
+.nf-row .mico svg { width: 72%; height: 72%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.nf-row b { font-family: var(--display); font-weight: 400; font-size: 22px; line-height: 1.1; }
+.nf-row em { font-style: normal; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--foe); color: #12080a; }
+.nf-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.nf-stats span { display: flex; flex-direction: column; align-items: center; padding: 4px 0; border: 1px solid var(--line-dim); border-radius: 8px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.nf-stats b { font-size: 20px; color: var(--ink, inherit); letter-spacing: 0; }
+.nf-stats i { font-style: normal; font-size: 12px; color: #6fb2ff; margin-left: 2px; vertical-align: super; }
+.nf-note { margin: 0; font-size: 13px; color: #6fb2ff; }
 
 </style>
 </head>
@@ -2421,6 +2435,7 @@ if (typeof module !== 'undefined') {
     const seen = new Set();
     r.hist = [...(a.hist || []), ...(b.hist || [])].filter(h => { const id = h.d + '|' + h.g + '|' + h.won; if (seen.has(id)) return false; seen.add(id); return true; }).sort((p, q) => q.d - p.d).slice(0, 12);
     r.heroes = [...new Set([...(a.heroes || []), ...(b.heroes || [])])];
+    r.heroWins = {}; for (const k of new Set([...Object.keys(a.heroWins || {}), ...Object.keys(b.heroWins || {})])) r.heroWins[k] = Math.max((a.heroWins || {})[k] || 0, (b.heroWins || {})[k] || 0);
     return r;
   }
 
@@ -2604,7 +2619,31 @@ if (typeof module !== 'undefined') {
     { g: 'Premios consuelo', id: 'Visitante frecuente', name: 'Visitante frecuente', txt: 'Cae por tercera vez en una misma partida.' },
     { g: 'Premios consuelo', id: 'Defensa opcional', name: 'Defensa opcional', txt: 'Cae sin haber bloqueado ningún ataque.' },
     { g: 'Premios consuelo', id: 'Premio participación', name: 'Premio participación', txt: 'Cae sin otro premio de consuelo.' },
-    { g: 'Premios consuelo', id: 'Retirada estratégica', name: 'Retirada estratégica', txt: 'Abandona una partida.' }
+    { g: 'Premios consuelo', id: 'Retirada estratégica', name: 'Retirada estratégica', txt: 'Abandona una partida.' },
+    { g: 'Premios consuelo', id: 'trip', name: 'Tropezón', txt: 'Cae en el primer nivel de una aventura.' },
+    { g: 'Premios consuelo', id: 'close', name: 'Tan cerca', txt: 'Cae en el último nivel de una aventura.' },
+    { g: 'Hazañas', id: 'nodmg', name: 'Sin un rasguño', txt: 'Gana sin recibir daño.' },
+    { g: 'Hazañas', id: 'flash', name: 'Relámpago', txt: 'Gana en 50 turnos o menos.' },
+    { g: 'Hazañas', id: 'marathon', name: 'Maratonista', txt: 'Gana una partida de 150 turnos o más.' },
+    { g: 'Hazañas', id: 'butcher', name: 'Carnicero', txt: 'Vence 20 monstruos en una sola partida.' },
+    { g: 'Hazañas', id: 'fortress', name: 'Fortaleza', txt: 'Bloquea 15 ataques en una sola partida.' },
+    { g: 'Hazañas', id: 'treasure', name: 'Cazatesoros', txt: 'Abre 6 cofres en una sola partida.' },
+    { g: 'Hazañas', id: 'edge', name: 'Al límite', txt: 'Gana con 1 de Vida.' },
+    { g: 'Hazañas', id: 'fullhp', name: 'Vida plena', txt: 'Gana con la Vida completa.' },
+    { g: 'Hazañas', id: 'max6', name: 'Al tope', txt: 'Termina una partida con una habilidad en 6.' },
+    { g: 'Hazañas', id: 'balance', name: 'Equilibrado', txt: 'Gana con Mov, Atq y Def en 4 o más.' },
+    { g: 'Hazañas', id: 'naked', name: 'Minimalista', txt: 'Gana sin objetos una aventura que los permite.' },
+    { g: 'Hazañas', id: 'phoenix', name: 'Fénix', txt: 'Gana tras caer 5 veces o más.' },
+    { g: 'Hazañas', id: 'half', name: 'A mitad de camino', txt: 'Llega a la mitad de una aventura.' },
+    { g: 'Héroes', id: 'h6', name: 'Maestro de armas', txt: 'Gana con 6 héroes distintos.' },
+    { g: 'Héroes', id: 'hall', name: 'Panteón completo', txt: 'Gana con todos los héroes.' },
+    { g: 'Héroes', id: 'loyal', name: 'Fiel compañero', txt: 'Gana 3 veces con el mismo héroe.' },
+    { g: 'Trayectoria', id: 'k100', name: 'Cien cabezas', txt: 'Vence 100 monstruos en total.' },
+    { g: 'Trayectoria', id: 'k500', name: 'Azote de la mazmorra', txt: 'Vence 500 monstruos en total.' },
+    { g: 'Trayectoria', id: 'w10', name: 'Veterano', txt: 'Gana 10 partidas.' },
+    { g: 'Trayectoria', id: 'f25', name: 'Persistente', txt: 'Cae 25 veces en total.' },
+    { g: 'Trayectoria', id: 't1000', name: 'Incansable', txt: 'Juega 1.000 turnos en total.' },
+    { g: 'Trayectoria', id: 'medals', name: 'Medallero', txt: 'Consigue 30 logros.' }
   ];
   const RANK_ORDER = ['Cucaracha inmortal', 'Terco con suerte', 'Héroe de manual', 'Intocable'];
   const TOT_KEYS = ['kills', 'hits', 'dmgIn', 'blocks', 'chests'];
@@ -2634,11 +2673,37 @@ if (typeof module !== 'undefined') {
         unlock('win_' + game); unlock(rank);
         if (ADV_ORDER.every(g => r.games[g] && r.games[g].wins)) unlock('all');
         if (r.heroes.length >= 3) unlock('multi');
+        if (r.heroes.length >= 6) unlock('h6');
+        if (r.heroes.length >= HERO_KEYS.length) unlock('hall');
+        r.heroWins = r.heroWins || {}; r.heroWins[G.hero] = (r.heroWins[G.hero] || 0) + 1;
+        if (r.heroWins[G.hero] >= 3) unlock('loyal');
+        const a = G.adv;
+        if ((s.dmgIn || 0) === 0) unlock('nodmg');
+        if (turns <= 50) unlock('flash');
+        if (turns >= 150) unlock('marathon');
+        if (a.hp === 1) unlock('edge');
+        if (a.hp >= START_HP) unlock('fullhp');
+        if (a.spd >= 4 && a.atk >= 4 && a.def >= 4) unlock('balance');
+        if (GAMES[game].items && !(G.items || []).length) unlock('naked');
+        if ((s.deaths || 0) >= 5) unlock('phoenix');
       } else {
         gm.falls++; gm.best = Math.max(gm.best, G.levelIdx + 1);
         r.tot.falls = (r.tot.falls || 0) + 1;
+        if (G.levelIdx === 0 && !G.abandoned) unlock('trip');
+        if (G.levelIdx === N - 1 && !G.abandoned) unlock('close');
       }
+      if ((s.kills || 0) >= 20) unlock('butcher');
+      if ((s.blocks || 0) >= 15) unlock('fortress');
+      if ((s.chests || 0) >= 6) unlock('treasure');
+      if (['spd', 'atk', 'def', 'rng'].some(k => G.adv[k] >= 6)) unlock('max6');
+      if (gm.best * 2 >= N) unlock('half');
+      if ((r.tot.kills || 0) >= 100) unlock('k100');
+      if ((r.tot.kills || 0) >= 500) unlock('k500');
+      if ((r.tot.wins || 0) >= 10) unlock('w10');
+      if ((r.tot.falls || 0) >= 25) unlock('f25');
+      if ((r.tot.turns || 0) >= 1000) unlock('t1000');
       awards.forEach(unlock);
+      if (Object.keys(r.ach).length >= 30) unlock('medals');
       r.hist.unshift({ d: today, g: game, h: G.hero, won, st: won ? N : G.levelIdx + 1, n: N, rank, t: turns });
       r.hist = r.hist.slice(0, 12);
       return fresh;
@@ -3120,7 +3185,19 @@ if (typeof module !== 'undefined') {
         ? `<button type="button" class="choice" data-c="${k}" disabled><b>${LONG[k]}</b><span><em>${a[k]}</em> · máximo</span></button>`
         : `<button type="button" class="choice" data-c="${k}"><b>${LONG[k]}</b><span><em>${a[k]}</em> → <em>${a[k] + 1}</em></span></button>`).join('');
     const full = a.hp >= START_HP;
+    // lo que viene: monstruo del próximo nivel, cuántos y sus cifras, para elegir con información
+    const nx = LEVELS[G.levelIdx + 1];
+    let foe = '';
+    if (nx) {
+      const m = nx.mon, n = nx.spawns.length, B = m.bonus || {};
+      const st = k => `<span><b>${m[k]}${B[k] ? `<i>+${B[k]}</i>` : ''}</b>${{ hp: 'Vida', spd: 'Vel', atk: 'Atq', def: 'Def', rng: 'Alc' }[k]}</span>`;
+      const bon = Object.keys(B).length ? `<p class="nf-note">${m.bonusOn === 'hero' ? 'Si pisas una casilla maldita' : 'En casillas de agua'} suman ${Object.keys(B).map(k => `+${B[k]} ${NAMES[k]}`).join(', ')}.</p>` : '';
+      foe = `<div class="next-foe"><small>Próximo · ${stageLabel(nx).toLowerCase()}: ${nx.title}</small>
+        <div class="nf-row"><span class="mico">${ICONS[m.key] || ''}</span><b>${n} ${n > 1 ? m.plural : m.name}</b>${m.boss ? '<em>Jefe</em>' : ''}</div>
+        <div class="nf-stats">${['hp', 'spd', 'atk', 'def', 'rng'].map(st).join('')}</div>${bon}</div>`;
+    }
     openSheet(`<h3>Nivel superado</h3>
+      ${foe}
       <p class="lead">Descansa un momento. Elige una sola cosa. Cada habilidad llega como máximo a 6.</p>
       <div class="choices">${ch}
         <button type="button" class="choice wide" data-c="heal" ${full ? 'disabled' : ''}><b>Curarte</b><span>Vida <em>${a.hp}</em> → <em>${START_HP}</em></span></button>

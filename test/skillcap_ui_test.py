@@ -4,7 +4,7 @@ JS = """const st=E.newRun('knight','base',[]); E.setupLevel(st,1); const lv=E.LE
  const [sx,sy]=E.XY(lv.spawns[0]); st.mons=[{id:1,x:sx,y:sy,hp:1,maxHp:m0.hp,spd:m0.spd,atk:m0.atk,def:m0.def,rng:m0.rng}];
  st.adv.spd=6; st.adv.rng=6;
  E.rollTurn(st); st.turn.dice=[6,6,6]; st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st); st.turn.rng=9; st.adv.x=2; st.adv.y=4;"""
-st = subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/engine.js');"+JS+";console.log(JSON.stringify(st));"]).decode()
+st = subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+JS+";console.log(JSON.stringify(st));"]).decode()
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
