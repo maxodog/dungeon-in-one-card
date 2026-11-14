@@ -1,6 +1,6 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
-HDR = "const E=require('/home/claude/dungeon-in-one-card/engine.js');"
+HDR = "const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"
 def make_state(js):
     return subprocess.check_output(['node','-e',HDR+js+";console.log(JSON.stringify(st));"]).decode()
 MV = "E.rollTurn(st); st.turn.dice=[%s]; st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st);"
@@ -38,14 +38,11 @@ async def t_menu(p):
     print('malditas:', await page.locator('.tile.damned').count(), '| piedra:', await page.locator('.tile.stone').count(), '| ítems:', await page.locator('#items .item').count())
     print(await log(page))
     await page.screenshot(path='/tmp/h1_start.png', full_page=True)
-    # contraseña de 8
+    # pausa → menú → retomar la partida guardada de esta aventura
     await page.click('#btnPass'); await page.wait_for_timeout(300)
-    pw = await page.evaluate("[...document.querySelectorAll('.pwshow span')].map(s=>s.textContent).join('')")
-    print('contraseña:', pw, len(pw))
     await page.click('#pwMenu'); await page.wait_for_timeout(300)
-    await page.click('#mPass'); await page.wait_for_timeout(300)
-    await page.fill('#pwIn', pw); await page.click('#pwGo'); await page.wait_for_timeout(400)
-    print('tras contraseña:', await log(page))
+    await page.click('[data-res="hell"]'); await page.wait_for_timeout(400)
+    print('retomada:', await page.locator('.tile.damned').count(), 'malditas |', await page.locator('#items .item').count(), 'objetos')
     print('menu errores', errs); await b.close()
 
 async def t_stone(p):

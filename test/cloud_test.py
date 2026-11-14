@@ -66,7 +66,7 @@ async def main():
         assert 'Cáliz de Brasas' in await pa.inner_text('.end-new')
         await pa.click('#eMenu'); await pa.wait_for_timeout(1200)
         doc = json.loads(list(docs.values())[0]['fields']['data']['stringValue'])
-        assert doc['rec']['games']['base']['wins'] == 1, doc['rec']['games']; print('nube: base ganada, logros', len(doc['rec']['ach']))
+        assert doc['rec']['games']['base']['wins'] == 1 and 'saves' in doc, doc['rec']['games']; print('nube: base ganada, logros', len(doc['rec']['ach']))
         await pa.click('#mUser'); await pa.wait_for_timeout(300)
         print('perfil A:', (await pa.inner_text('.cloud-box')).replace('\n', ' '))
         await pa.screenshot(path='/tmp/c_profA.png')

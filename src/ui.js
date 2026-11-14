@@ -324,19 +324,25 @@
   function save() {
     try {
       if (!G || G.laurel) return;
-      Users.savedNow();
-      if (G.phase === 'won') { localStorage.removeItem(saveKey()); return; }
+      try { localStorage.setItem(saveKey(G.game) + ':t', String(Date.now())); } catch (e) {}
+      if (G.phase === 'won' || G.abandoned) { localStorage.removeItem(saveKey(G.game)); return; }
       let sv = G;
       if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
-      localStorage.setItem(saveKey(), JSON.stringify(sv));
+      localStorage.setItem(saveKey(G.game), JSON.stringify(sv));
     } catch (e) {}
   }
-  function loadSaved() {
+  // todas las partidas en curso (una por aventura), la más reciente primero
+  function loadSlots() {
+    const out = [];
+    for (const g of ADV_ORDER) { const s = loadSaved(g); if (s) { let t = 0; try { t = +localStorage.getItem(saveKey(g) + ':t') || 0; } catch (e) {} out.push({ game: g, g: s, t }); } }
+    return out.sort((a, b) => b.t - a.t);
+  }
+  function loadSaved(game) {
     try {
-      const raw = localStorage.getItem(saveKey());
+      const raw = localStorage.getItem(saveKey(game));
       if (!raw) return null;
       const g = JSON.parse(raw);
-      return validState(g) ? g : null;
+      return validState(g) && (!game || g.game === game) ? g : null;
     } catch (e) { return null; }
   }
   const okItems = (a, game) => Array.isArray(a) && a.length <= 3 && new Set(a).size === a.length && a.every(i => itemPool(game).includes(i)) && (GAMES[game].items || !a.length);
@@ -478,9 +484,15 @@
     }
     const salt = () => Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('');
     const emptyRec = () => ({ games: {}, tot: {}, ach: {}, hist: [], heroes: [], runs: {} });
-    const sKey = k => SAVE_KEY + ':u:' + k, tKey = k => SAVE_KEY + ':u:' + k + ':t';
-    const getS = k => { try { return localStorage.getItem(sKey(k)); } catch (e) { return null; } };
-    const getT = k => { try { return +localStorage.getItem(tKey(k)) || 0; } catch (e) { return 0; } };
+    const SLOTS = ['base', 'mguf', 'peak', 'harbour', 'hell'];   // una partida guardada por aventura
+    const sKey = (k, g) => SAVE_KEY + ':u:' + k + ':' + g, tKey = (k, g) => sKey(k, g) + ':t';
+    const getS = (k, g) => { try { return localStorage.getItem(sKey(k, g)); } catch (e) { return null; } };
+    const getT = (k, g) => { try { return +localStorage.getItem(tKey(k, g)) || 0; } catch (e) { return 0; } };
+    const allSaves = k => { const o = {}; for (const g of SLOTS) { const s = getS(k, g), t = getT(k, g); if (s || t) o[g] = { s, t }; } return o; };
+    const gameOf = s => { try { return JSON.parse(s).game || 'base'; } catch (e) { return null; } };
+    // datos antiguos de la nube (una sola partida) → por aventura
+    const remoteSaves = r => { if (!r) return {}; if (r.saves) return r.saves; const o = {}; if (r.save) { const g = gameOf(r.save); if (g) o[g] = { s: r.save, t: r.saveAt || 0 }; } return o; };
+    const putSave = (k, g, x) => { try { x.s ? localStorage.setItem(sKey(k, g), x.s) : localStorage.removeItem(sKey(k, g)); localStorage.setItem(tKey(k, g), String(x.t || 0)); } catch (e) {} };
     function checkName(name) {
       name = String(name || '').trim().replace(/\s+/g, ' ');
       if (name.length < 2 || name.length > 16) return [null, 'El nombre debe tener entre 2 y 16 caracteres.'];
@@ -495,11 +507,10 @@
       const o2 = all(), u2 = o2[k]; if (!u2) return;
       u2.cloud.refresh = u.cloud.refresh;
       u2.rec = mergeRec(u2.rec, remote && remote.rec);
-      if (remote && (remote.saveAt || 0) > getT(k)) {
-        try { remote.save ? localStorage.setItem(sKey(k), remote.save) : localStorage.removeItem(sKey(k)); localStorage.setItem(tKey(k), String(remote.saveAt)); } catch (e) {}
-      }
+      const rs = remoteSaves(remote);
+      for (const g of Object.keys(rs)) if (SLOTS.includes(g) && (rs[g].t || 0) > getT(k, g)) putSave(k, g, rs[g]);
       store(o2);
-      await Cloud.push(u2.cloud, u2.name, { v: 1, rec: u2.rec, save: getS(k), saveAt: getT(k) });
+      await Cloud.push(u2.cloud, u2.name, { v: 2, rec: u2.rec, saves: allSaves(k) });
       const o3 = all(); if (o3[k]) { o3[k].cloud = Object.assign({}, u2.cloud, { dirty: false, syncedAt: Date.now() }); store(o3); }
     }
     let pushing = null, again = false;
@@ -568,36 +579,48 @@
           catch (er) { return er.off ? 'Necesitas internet para borrar el usuario de la nube.' : er.message; }
         }
         const o2 = all(); delete o2[k]; store(o2);
-        try { localStorage.removeItem(sKey(k)); localStorage.removeItem(tKey(k)); localStorage.removeItem(BEST_KEY + ':u:' + k); } catch (e) {}
+        try { for (const g of SLOTS) { localStorage.removeItem(sKey(k, g)); localStorage.removeItem(tKey(k, g)); } localStorage.removeItem(BEST_KEY + ':u:' + k); } catch (e) {}
         if (cur === k) setCur(null); return null;
       },
       update(fn) { if (!cur) return null; const o = all(), u = o[cur]; if (!u) return null; u.rec = Object.assign(emptyRec(), u.rec); const r = fn(u.rec); store(o); sync(); return r; },
       sync, syncPending() { const u = all()[cur]; if (u && u.cloud && u.cloud.dirty) sync(); },
-      savedNow() { if (cur) try { localStorage.setItem(tKey(cur), String(Date.now())); } catch (e) {} },
+      savedNow(g) { if (cur && g) try { localStorage.setItem(tKey(cur, g), String(Date.now())); } catch (e) {} },
+      keys() { return Object.keys(all()); },
       exportCode(k) {
         const o = all(), u = o[k || cur]; if (!u) return '';
-        const json = JSON.stringify({ v: 1, k: k || cur, u: Object.assign({}, u, { cloud: undefined }), save: getS(k || cur) });
+        const json = JSON.stringify({ v: 2, k: k || cur, u: Object.assign({}, u, { cloud: undefined }), saves: allSaves(k || cur) });
         return 'DIOC1-' + btoa(unescape(encodeURIComponent(json)));
       },
       parseCode(code) {
         try {
           const s = String(code || '').replace(/\s+/g, ''); if (!s.startsWith('DIOC1-')) return null;
           const d = JSON.parse(decodeURIComponent(escape(atob(s.slice(6)))));
-          return d && d.v === 1 && d.u && d.u.name && d.u.hash && d.u.salt ? d : null;
+          return d && (d.v === 1 || d.v === 2) && d.u && d.u.name && d.u.hash && d.u.salt ? d : null;
         } catch (e) { return null; }
       },
       importData(d) {
         const o = all(), k = ukey(d.u.name), prev = o[k];
         o[k] = Object.assign({}, d.u, prev && prev.cloud ? { cloud: prev.cloud, rec: mergeRec(prev.rec, d.u.rec) } : {});
         if (!store(o)) return false;
-        try { if (d.save) localStorage.setItem(sKey(k), d.save); } catch (e) {}
+        const ds = remoteSaves(d); for (const g of Object.keys(ds)) if (SLOTS.includes(g) && ds[g].s) putSave(k, g, ds[g]);
         setCur(k); sync(k); return true;
       }
     };
     window.addEventListener('online', () => api.syncPending());
     return api;
   })();
-  function saveKey() { return Users.cur ? SAVE_KEY + ':u:' + Users.cur : SAVE_KEY; }
+  function saveKey(g) { return (Users.cur ? SAVE_KEY + ':u:' + Users.cur : SAVE_KEY) + ':' + (g || 'base'); }
+  // Partidas de versiones anteriores (una sola ranura) → la ranura de su aventura
+  function migrateSaves() {
+    for (const base of [SAVE_KEY, ...Users.keys().map(k => SAVE_KEY + ':u:' + k)]) {
+      try {
+        const raw = localStorage.getItem(base); if (!raw) continue;
+        const g = (JSON.parse(raw) || {}).game || 'base';
+        localStorage.setItem(base + ':' + g, raw); localStorage.setItem(base + ':' + g + ':t', String(Date.now()));
+        localStorage.removeItem(base); localStorage.removeItem(base + ':t');
+      } catch (e) {}
+    }
+  }
   function bestKey() { return Users.cur ? BEST_KEY + ':u:' + Users.cur : BEST_KEY; }
   const newRunId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -626,7 +649,8 @@
     { g: 'Premios consuelo', id: 'Pacifista involuntario', name: 'Pacifista involuntario', txt: 'Cae sin haber vencido a ningún monstruo.' },
     { g: 'Premios consuelo', id: 'Visitante frecuente', name: 'Visitante frecuente', txt: 'Cae por tercera vez en una misma partida.' },
     { g: 'Premios consuelo', id: 'Defensa opcional', name: 'Defensa opcional', txt: 'Cae sin haber bloqueado ningún ataque.' },
-    { g: 'Premios consuelo', id: 'Premio participación', name: 'Premio participación', txt: 'Cae sin otro premio de consuelo.' }
+    { g: 'Premios consuelo', id: 'Premio participación', name: 'Premio participación', txt: 'Cae sin otro premio de consuelo.' },
+    { g: 'Premios consuelo', id: 'Retirada estratégica', name: 'Retirada estratégica', txt: 'Abandona una partida.' }
   ];
   const RANK_ORDER = ['Cucaracha inmortal', 'Terco con suerte', 'Héroe de manual', 'Intocable'];
   const TOT_KEYS = ['kills', 'hits', 'dmgIn', 'blocks', 'chests'];
@@ -1129,8 +1153,8 @@
       <h4>Héroes</h4>
       <p>Con cualquier aventura juegas con los héroes de la original y de esa expansión; el botón <b>Héroes de otras expansiones</b> añade los demás.</p>
       <ul>${HERO_KEYS.map(k => `<li><b>${HEROES[k].name}.</b> ${HEROES[k].txt}</li>`).join('')}</ul>
-      <h4>Contraseña</h4>
-      <p>Cada nivel empieza con una contraseña (botón <b>Contraseña</b>). Anótala: desde el menú, «Continuar con contraseña» te devuelve al inicio de ese nivel con tu héroe, tu Vida, tus mejoras, tus objetos y el botín de ese momento. No guarda el turno en curso. Las de 4 y 5 letras de versiones anteriores siguen valiendo; La Puerta del Infierno usa 8.</p>
+      <h4>Partidas guardadas</h4>
+      <p>La partida se guarda sola en todo momento, una por aventura: puedes tener una en curso en cada mazmorra. Desde el menú, <b>Retomar</b> la continúa y <b>Abandonar</b> la da por perdida. Si caes, puedes reintentar el nivel tal como lo empezaste. Con un usuario, tus partidas, logros y estadísticas se guardan en la nube.</p>
       <p class="fine">Versión web no oficial del juego solitario One Card Dungeon y de sus expansiones, de Barny Skinner (Little Rocket Games). Los mapas, las cifras de los monstruos y su aparición por nivel siguen las cartas originales; las ilustraciones del juego y los textos son propios. Las portadas del menú son de Little Rocket Games. Si te gusta, apoya al autor y consigue el juego.</p>
       <button type="button" class="btn primary" id="x">Entendido</button>`, [['#x', closeSheet]], true);
   }
@@ -1182,7 +1206,7 @@
   const BOSS_LAST = ['Esto no estaba en mi contrato.', 'Voy a pedir una revisión del combate.', 'Me voy a quejar con la administración de la mazmorra.',
     '¡Pero si yo era el jefe final!', 'Llamaré a mi abogado… cuando me levante.', 'Quería ser el villano de una secuela. Qué mal.'];
   function endScreen(won) {
-    const s = G.stats || {}, a = G.adv, lv = LEVELS[G.levelIdx], lab = stageLabel(lv), pw = E.encodePassword(G);
+    const s = G.stats || {}, a = G.adv, lv = LEVELS[G.levelIdx], lab = stageLabel(lv), ab = !!G.abandoned;
     const w = WIN[G.game] || WIN.base, hasChest = G.game !== 'base', mon = lv.mon, N = LEVELS.length;
     const k = s.kills || 0, hits = s.hits || 0, dmg = s.dmgIn || 0, blk = s.blocks || 0, ch = s.chests || 0, dth = s.deaths || 0, turns = G.totalTurns || 0;
     const plural = n => n === 1 ? 'vez' : 'veces';
@@ -1208,10 +1232,11 @@
       if (G.levelIdx >= N - 2) opts.push('Tan cerca del final… y aun así tan lejos. Qué estilo para perder.');
       opts.push('Las estadísticas dicen que fue una buena pelea. Las estadísticas mienten.', 'Como héroe eres un excelente espectador de monstruos.');
       quip = pick(opts);
-      awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
+      if (ab) { rank = pick(['Desertor', 'Retirada estratégica', 'Prudente', 'Pies ligeros']); quip = pick(['Una retirada a tiempo también es una victoria. Pequeñita, pero victoria.', 'Los monstruos ya están contando la historia de cómo huiste.', 'Saliste corriendo con tanta elegancia que casi parece un plan.', `${mon.plural} celebran: ganaron sin mover un dedo.`]); awards.push('Retirada estratégica'); }
+      else awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
     }
     const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id;
-    const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(TAUNTS)}»`;
+    const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(ab ? ['¿Ya te vas? Si recién empezábamos.', '¡Corre, corre! Nadie te sigue… por ahora.', 'Cierra la puerta al salir, que entra frío.', 'Me quedo con tu botín, gracias.', 'Huir también es un deporte. Y eres bueno.'] : TAUNTS)}»`;
     const cell = (ico, v, l, wide) => `<div class="${wide ? 'wide' : ''}"><i>${STAT_ICO[ico]}</i><b>${v}</b><span>${l}</span></div>`;
     const cells = [
       cell('stage', won ? `${N}/${N}` : `${G.levelIdx + 1}/${N}`, won ? 'Etapas superadas' : 'Etapa alcanzada'),
@@ -1230,9 +1255,9 @@
       <div class="end-fx">${embers}</div>
       <div class="end-frame">
         <div class="end-badge">${won ? ICON_TROPHY : ICON_TOMB}</div>
-        <div class="end-kicker">${won ? '¡Mazmorra completada!' : 'Fin del camino'}</div>
-        <h2>${won ? w[0] : 'Has caído'}</h2>
-        <p class="lead">${won ? w[1] : `Derrotado por ${mon.name} en ${lab.toLowerCase()}: ${lv.title}.`}</p>
+        <div class="end-kicker">${won ? '¡Mazmorra completada!' : ab ? 'Partida abandonada' : 'Fin del camino'}</div>
+        <h2>${won ? w[0] : ab ? 'Te retiraste' : 'Has caído'}</h2>
+        <p class="lead">${won ? w[1] : ab ? `Abandonaste ${GAMES[G.game].name} en ${lab.toLowerCase()}: ${lv.title}.` : `Derrotado por ${mon.name} en ${lab.toLowerCase()}: ${lv.title}.`}</p>
         <div class="end-hero"><span class="ico">${HERO_ICONS[G.hero] || ICON_ADV}</span><span>${HEROES[G.hero].name} · ${GAMES[G.game].name}</span></div>
         ${won ? `<div class="end-rank"><small>Rango obtenido</small><b>${rank}</b></div>`
               : `<div class="end-epitaph"><small>${HEROES[G.hero].name} · ${rank}</small><q>${pick(EPITAFIOS)}</q></div>`}
@@ -1244,9 +1269,9 @@
         <div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${awards.map(x => `<span class="award">${x}</span>`).join('')}</div>
         ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${fresh.map(x => `<span>${achName(x)}</span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
           : '<p class="fine">Entra con un usuario desde el menú para guardar tus logros y estadísticas.</p>'}
-        ${won ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste${pw ? `: contraseña <b>${pw}</b>` : ''}.</p>`}
+        ${won || ab ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste, ahora o más tarde desde el menú.</p>`}
         <div class="menu-btns">
-          ${won ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>Reintentar ${lab.toLowerCase()}</span></button>`}
+          ${won || ab ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>Reintentar ${lab.toLowerCase()}</span></button>`}
           <button type="button" class="btn ${won ? 'primary ' : ''}menu-main" id="eMenu"><span>Ir al menú</span></button>
         </div>
       </div></div>`,
@@ -1283,19 +1308,59 @@
 
   function menuScreen() {
     G = null; busy = false; rolling = false; mode = null;
-    const sv = loadSaved();
-    const me = Users.get();
-    showScreen(`<div class="splash">${LOGO}
+    const slots = loadSlots(), me = Users.get();
+    const slotHTML = slots.length ? `<div class="rslots"><small class="rslots-h">Partidas en curso · se guardan solas</small>${slots.map((x, i) => {
+      const sv = x.g, lv = GAMES[sv.game].levels[sv.levelIdx];
+      return `<div class="rslot"><span class="ico">${HERO_ICONS[sv.hero] || ICON_ADV}</span><div class="rslot-t"><b>${GAMES[sv.game].name}</b><small>${HEROES[sv.hero].name} · ${stageLabel(lv).toLowerCase()} de ${GAMES[sv.game].levels.length} · Vida ${sv.adv.hp}</small></div>
+        <div class="rslot-b"><button type="button" class="btn primary mini" data-res="${sv.game}"${i === 0 ? ' id="mContinue"' : ''}>Retomar</button><button type="button" class="btn mini danger" data-ab="${sv.game}">Abandonar</button></div></div>`;
+    }).join('')}</div>` : '';
+    const sc = showScreen(`<div class="splash">${LOGO}
       <p class="tagline">Una carta, tres dados y una aventura por elegir.</p>
       <button type="button" class="userbar ${me ? 'in' : ''}" id="mUser">${ICON_USER}<span>${me ? `<b>${esc(me.name)}</b><small>Ver perfil, logros y estadísticas</small>` : '<b>Entrar o crear usuario</b><small>Para guardar tus logros y estadísticas</small>'}</span><i aria-hidden="true">›</i></button>
+      ${slotHTML}
       <div class="menu-btns">
-        ${sv ? `<button type="button" class="btn primary menu-main" id="mContinue"><span>Seguir en este dispositivo</span><small>${HEROES[sv.hero].name} · ${GAMES[sv.game].name} · ${stageLabel(GAMES[sv.game].levels[sv.levelIdx]).toLowerCase()} · Vida ${sv.adv.hp}</small></button>` : ''}
-        <button type="button" class="btn ${sv ? '' : 'primary'} menu-main" id="mNew"><span>Nueva partida</span></button>
-        <button type="button" class="btn menu-main" id="mPass"><span>Continuar con contraseña</span><small>4, 5, 7 u 8 letras o números</small></button>
+        <button type="button" class="btn ${slots.length ? '' : 'primary'} menu-main" id="mNew"><span>Nueva partida</span></button>
         <button type="button" class="ghost" id="mRules">Cómo se juega</button>
       </div>
       <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner. · versión ${(document.querySelector('meta[name=build]') || {}).content || '?'}</p></div>`,
-      [['#mContinue', () => resume(sv)], ['#mUser', () => (Users.cur ? profileScreen() : usersScreen())], ['#mNew', adventureScreen], ['#mPass', () => passScreen('')], ['#mRules', rulesSheet]]);
+      [['#mUser', () => (Users.cur ? profileScreen() : usersScreen())], ['#mNew', adventureScreen], ['#mRules', rulesSheet]]);
+    sc.querySelectorAll('[data-res]').forEach(b => b.addEventListener('click', () => { const x = slots.find(s => s.game === b.dataset.res); if (x) resume(x.g); }));
+    sc.querySelectorAll('[data-ab]').forEach(b => b.addEventListener('click', () => { const x = slots.find(s => s.game === b.dataset.ab); if (x) abandonSheet(x.g); }));
+  }
+
+  // Abandonar: pide confirmación y ejecuta la secuencia de derrota (grito, canción y estadísticas); la partida se borra
+  function abandonSheet(g) {
+    const sv = g || G; if (!sv) return;
+    const lv = GAMES[sv.game].levels[sv.levelIdx];
+    openSheet(`<h3>¿Abandonar la partida?</h3>
+      <p class="lead">${HEROES[sv.hero].name} en ${GAMES[sv.game].name}, ${stageLabel(lv).toLowerCase()}. Perderás todo el avance de esta aventura y contará como una derrota.</p>
+      <button type="button" class="btn danger" id="abGo">Abandonar</button>
+      <button type="button" class="btn" id="abNo">Cancelar</button>`,
+      [['#abNo', closeSheet], ['#abGo', () => { closeSheet(); abandonRun(sv); }]], true);
+  }
+  async function abandonRun(sv) {
+    if (!G || G !== sv) resume(sv);
+    closeSheet(); mode = null; busy = true;
+    G.abandoned = true; G.phase = 'dead';
+    try { localStorage.removeItem(saveKey(G.game)); localStorage.setItem(saveKey(G.game) + ':t', String(Date.now())); } catch (e) {}
+    render(); say('Te retiras de la mazmorra…');
+    sfxDie(); Music.stop(); noteBest();
+    await sleep(1700);
+    if (G && G.abandoned) endScreen(false);
+    Users.sync();
+  }
+
+  // Pausa (antes, la contraseña): la partida ya está guardada; se puede seguir, ir al menú o abandonar
+  function pauseSheet() {
+    if (busy || rolling || !G) return;
+    const lv = LEVELS[G.levelIdx];
+    return openSheet(`<h3>Pausa</h3>
+      <p class="lead">${HEROES[G.hero].name} · ${GAMES[G.game].name} · ${stageLabel(lv).toLowerCase()}: ${lv.title}.</p>
+      <p class="fine">Tu partida se guarda sola en todo momento${Users.cur ? ' y se sincroniza con tu usuario' : ''}. Desde el menú puedes retomarla cuando quieras.</p>
+      <button type="button" class="btn primary" id="pwClose">Seguir jugando</button>
+      <button type="button" class="btn" id="pwMenu">Ir al menú</button>
+      <button type="button" class="btn danger" id="pwAb">Abandonar partida</button>`,
+      [['#pwClose', closeSheet], ['#pwMenu', goMenu], ['#pwAb', () => abandonSheet()]], true);
   }
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1455,15 +1520,26 @@
   const ADV_ORDER = ['base', 'mguf', 'peak', 'harbour', 'hell'];
 
   function adventureScreen() {
+    const slots = loadSlots();
     const sc = showScreen(`<div class="splash wide">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <h2 class="screen-h">Elige la aventura</h2>
       <div class="adv-list">${ADV_ORDER.map(k => `<button type="button" class="adv-card" data-game="${k}">
         <img src="${ADV_INFO[k].img}" alt="${ADV_INFO[k].alt}" width="440" height="614" loading="eager" decoding="async">
-        <span class="adv-tag">${ADV_INFO[k].tag}</span><b>${GAMES[k].name}</b><p>${ADV_INFO[k].txt}</p></button>`).join('')}</div>
+        <span class="adv-tag">${ADV_INFO[k].tag}</span>${slots.some(s => s.game === k) ? '<span class="adv-tag run">En curso</span>' : ''}<b>${GAMES[k].name}</b><p>${ADV_INFO[k].txt}</p></button>`).join('')}</div>
       <p class="fine">Portadas © Little Rocket Games. One Card Dungeon es de Barny Skinner.</p></div>`,
       [['#back', menuScreen]]);
-    sc.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => heroScreen(b.dataset.game, false)));
+    sc.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => {
+      const x = slots.find(s => s.game === b.dataset.game);
+      if (!x) return heroScreen(b.dataset.game, false);
+      const lv = GAMES[x.game].levels[x.g.levelIdx];
+      openSheet(`<h3>${GAMES[x.game].name}: partida en curso</h3>
+        <p class="lead">Tienes una partida aquí con ${HEROES[x.g.hero].name}, ${stageLabel(lv).toLowerCase()}. Si empiezas otra, esa se pierde.</p>
+        <button type="button" class="btn primary" id="axRes">Retomar</button>
+        <button type="button" class="btn" id="axNew">Empezar de nuevo</button>
+        <button type="button" class="btn" id="axNo">Cancelar</button>`,
+        [['#axRes', () => { closeSheet(); resume(x.g); }], ['#axNew', () => { closeSheet(); heroScreen(x.game, false); }], ['#axNo', closeSheet]], true);
+    }));
   }
 
   // Héroes de la caja original y de la aventura elegida; un botón añade los de las demás expansiones
@@ -1534,36 +1610,6 @@
     refresh();
   }
 
-  function passScreen(err) {
-    const sc = showScreen(`<div class="splash">
-      <button type="button" class="ghost back" id="back">‹ Atrás</button>
-      <h2 class="screen-h">Contraseña</h2>
-      <p class="lead">Escribe la contraseña que te dio el juego al empezar un nivel: 7 u 8 letras o números ahora (8 en La Puerta del Infierno), o las de 4 o 5 de versiones anteriores.</p>
-      <input id="pwIn" class="pw" type="text" maxlength="8" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="••••••••" aria-label="Contraseña de 4, 5, 7 u 8 caracteres">
-      <p class="err" id="pwErr" role="alert">${err || ''}</p>
-      <button type="button" class="btn primary" id="pwGo" disabled>Continuar</button>
-      <p class="fine">Las contraseñas no usan 0, 1, I ni O, para que no se confundan.</p></div>`,
-      [['#back', menuScreen], ['#pwGo', submitPass]]);
-    const inp = sc.querySelector('#pwIn'), go = sc.querySelector('#pwGo');
-    inp.addEventListener('input', () => {
-      inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-      go.disabled = ![4, 5, 7, 8].includes(inp.value.length);
-      $('#pwErr').textContent = '';
-    });
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') submitPass(); });
-    if (err) inp.value = '', go.disabled = true;
-    setTimeout(() => inp.focus({ preventScroll: true }), 50);
-  }
-
-  function submitPass() {
-    const inp = $('#pwIn'); if (!inp || ![4, 5, 7, 8].includes(inp.value.length)) return;
-    const g = E.decodePassword(inp.value);
-    if (!g) { $('#pwErr').textContent = 'Esa contraseña no es válida. Revisa las letras y números.'; return; }
-    G = g; G.totalTurns = 0; G.runId = newRunId(); lastHp = G.adv.hp; builtLevel = -1;
-    hideScreen(); render();
-    say(`<b>Contraseña aceptada.</b> ${GAMES[G.game].name}: ${HEROES[G.hero].name}, ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()} (${LEVELS[G.levelIdx].title}) con ${G.adv.hp} de Vida${G.items.length ? ' y ' + G.items.length + ' objeto' + (G.items.length > 1 ? 's' : '') : ''}${G.loot ? ` y ${G.loot} de botín` : ''}. Tira los dados.`);
-  }
-
   const START_MSG = {
     base: 'Una carta, doce niveles.',
     mguf: "M'Guf-yn Returns: abre cofres para ganar puntos extra y derrota a los comandantes.",
@@ -1596,24 +1642,7 @@
     say(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`);
   }
 
-  function passwordSheet() {
-    if (busy || rolling || !G) return;
-    const pw = E.encodePassword(G) || '----';
-    const veil = openSheet(`<h3>Contraseña: ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}</h3>
-      <div class="pwshow" role="img" aria-label="Contraseña ${pw.split('').join(' ')}">${[...pw].map(c => `<span>${c}</span>`).join('')}</div>
-      <p class="lead">Anótala o cópiala. En el menú, «Continuar con contraseña» te devuelve al inicio de este nivel como ${HEROES[G.hero].name}, con la Vida, las mejoras, los objetos y el botín que tenías al empezarlo. No guarda el turno en curso.</p>
-      <p class="fine" id="pwMsg" aria-live="polite"></p>
-      <div class="actions"><button type="button" class="btn mini" id="pwCopy">Copiar</button><button type="button" class="btn mini" id="pwMenu">Ir al menú</button></div>
-      <button type="button" class="btn primary" id="pwClose">Seguir jugando</button>`,
-      [['#pwClose', closeSheet], ['#pwMenu', goMenu], ['#pwCopy', () => {
-        const m = $('#pwMsg');
-        let p = null;
-        try { p = navigator.clipboard && navigator.clipboard.writeText(pw); } catch (e) { p = null; }
-        if (p && p.then) p.then(() => { m.textContent = 'Copiada.'; }, () => { m.textContent = 'No se pudo copiar. Anótala a mano.'; });
-        else m.textContent = 'No se pudo copiar. Anótala a mano.';
-      }]], true);
-    return veil;
-  }
+
 
   function keepSheet() {
     const ks = ['spd', 'atk', 'def'].filter(k => G.prev && G.prev[k] != null);
@@ -1648,7 +1677,7 @@
     Sfx.play('lvl');
     const msg = c === 'heal' ? 'Te curas hasta 6 de Vida.' : `${LONG[c]} sube a ${G.adv[c]}.`;
     noteBest();
-    await flipTo(() => { E.nextLevel(G); builtLevel = -1; busy = false; render(); const pw = E.encodePassword(G); say(`<b>${msg}</b> ${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}.${pw ? ` Contraseña: <b>${pw}</b>` : ''}`); });
+    await flipTo(() => { E.nextLevel(G); builtLevel = -1; busy = false; render(); say(`<b>${msg}</b> ${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}. Partida guardada.`); });
   }
 
   async function animateRoll(msg) {
@@ -2125,7 +2154,7 @@
     $('#items').addEventListener('click', e => { const b = e.target.closest('[data-item]'); if (b) itemSheet(b.dataset.item); });
     $('#loot').addEventListener('click', e => { if (e.target.closest('#btnLoot') && G && G.phase === 'energy' && G.turn.dice && !rolling) lootSheet(); });
     $('#btnRules').addEventListener('click', rulesSheet);
-    $('#btnPass').addEventListener('click', passwordSheet);
+    $('#btnPass').addEventListener('click', pauseSheet);
     $('#btnSnd').addEventListener('click', soundSheet); Sfx.paint();
     if (window.ResizeObserver) new ResizeObserver(() => { const w = $('#boxBoard').clientWidth; if (w !== lastW) { lastW = w; fitSoon(); } }).observe($('#boxBoard'));
     window.addEventListener('resize', fitSoon);
@@ -2134,7 +2163,7 @@
     if (DESK.addEventListener) DESK.addEventListener('change', fitSoon);
     $('#sysBox').addEventListener('click', e => {
       const b = e.target.closest('[data-act]'); if (!b || !G) return;
-      if (b.dataset.act === 'snd') soundSheet(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') passwordSheet(); else if (b.dataset.act === 'menu') goMenu(); else if (b.dataset.act === 'classic') toggleClassic();
+      if (b.dataset.act === 'snd') soundSheet(); else if (b.dataset.act === 'rules') rulesSheet(); else if (b.dataset.act === 'pass') pauseSheet(); else if (b.dataset.act === 'menu') goMenu(); else if (b.dataset.act === 'classic') toggleClassic();
     });
     fit();
   }
@@ -2156,6 +2185,7 @@
     }).catch(() => {});
   }
   function start(data) {
+    migrateSaves();
     loadBest();
     checkUpdate();
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkUpdate(); Users.syncPending(); } else Users.sync(); });

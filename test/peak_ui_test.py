@@ -2,7 +2,7 @@ import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
 def make_state(js):
-    code = "const E=require('/home/claude/dungeon-in-one-card/engine.js');" + js + ";console.log(JSON.stringify(st));"
+    code = "const E=require('/home/claude/dungeon-in-one-card/src/engine.js');" + js + ";console.log(JSON.stringify(st));"
     return subprocess.check_output(['node','-e',code]).decode()
 
 async def new_page(p, state=None):
@@ -36,11 +36,10 @@ async def main():
         print('objetos en panel:', await page.locator('#items .item').count(), await page.locator('#items').inner_text())
         await page.screenshot(path='/tmp/p2_game.png', full_page=True)
         await page.click('#btnPass'); await page.wait_for_timeout(300)
-        pw = ''.join(await page.locator('.pwshow span').all_inner_texts()); print('contraseña:', pw, len(pw))
-        await page.screenshot(path='/tmp/p3_pw.png')
         await page.click('#pwMenu'); await page.wait_for_timeout(300)
-        await page.click('#mPass'); await page.fill('#pwIn', pw); await page.click('#pwGo'); await page.wait_for_timeout(400)
-        print('cargada:', await page.inner_text('#log'), await page.locator('#items .item').count(), 'objetos')
+        await page.screenshot(path='/tmp/p3_menu_slot.png')
+        await page.click('[data-res="peak"]'); await page.wait_for_timeout(400)
+        print('retomada:', await page.inner_text('#lvlName'), await page.locator('#items .item').count(), 'objetos')
         print('errores', errs); await b.close()
 
         # ---- Sherpa + ventisca (nivel 1: ventiscas en fila 0 y otras)

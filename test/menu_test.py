@@ -1,7 +1,7 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
-def node(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/engine.js');"+js]).decode().strip()
+def node(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+js]).decode().strip()
 
 async def main():
     async with async_playwright() as p:
@@ -11,7 +11,7 @@ async def main():
         page.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))
         await page.goto('file:///home/claude/dungeon-in-one-card/index.html'); await page.wait_for_timeout(500)
         vis = lambda sel: page.locator(sel).is_visible()
-        print('menú: app oculta', not await vis('.app'), '| nueva', await vis('#mNew'), '| contraseña', await vis('#mPass'), '| seguir', await vis('#mContinue'))
+        print('menú: app oculta', not await vis('.app'), '| nueva', await vis('#mNew'), '| seguir', await vis('#mContinue'))
         await page.screenshot(path='/tmp/m1_menu.png')
         await page.click('#mNew'); await page.wait_for_timeout(300)
         print('aventuras:', await page.locator('.adv-card').count(), '| portadas cargadas:', await page.evaluate("[...document.querySelectorAll('.adv-card img')].every(i=>i.complete&&i.naturalWidth>0)"))
@@ -21,13 +21,10 @@ async def main():
         await page.screenshot(path='/tmp/m2_heroes.png', full_page=True)
         await page.click('[data-hero="mage"]'); await page.wait_for_timeout(200); await page.click('#itGo'); await page.wait_for_timeout(400)
         print('juego:', await vis('.app'), await page.inner_text('#heroTag'), await page.inner_text('#hpnum'), await page.inner_text('#lvlNum'))
-        # contraseña del nivel 1
+        # pausa (reemplaza a la contraseña)
         await page.click('#btnPass'); await page.wait_for_timeout(300)
-        pw = ''.join(await page.locator('.pwshow span').all_inner_texts())
-        print('contraseña N1:', pw)
-        await page.screenshot(path='/tmp/m3_pwsheet.png')
-        r = json.loads(node(f"const g=E.decodePassword('{pw}');console.log(JSON.stringify({{h:g.hero,l:g.levelIdx,hp:g.adv.hp}}))"))
-        print('decodifica:', r)
+        assert await vis('#pwAb') and await vis('#pwMenu'); print('pausa:', (await page.inner_text('#veil h3')))
+        await page.screenshot(path='/tmp/m3_pause.png')
         # mago: tirar y volver a tirar
         await page.click('#pwClose'); await page.click('#btnRoll'); await page.wait_for_timeout(1000)
         print('hab mago:', await page.inner_text('#btnAbil'))
@@ -36,16 +33,14 @@ async def main():
         print('tras repetir: dados', before, await page.locator('#diceRow .die').count(), '| botón hab:', await page.locator('#btnAbil').count())
         # menú: seguir en este dispositivo
         await page.click('#btnPass'); await page.click('#pwMenu'); await page.wait_for_timeout(300)
-        print('menú de nuevo: seguir', await vis('#mContinue'), '|', (await page.inner_text('#mContinue')).replace('\n',' · '))
-        # contraseña inválida
-        await page.click('#mPass'); await page.fill('#pwIn','0o0!'); await page.wait_for_timeout(100)
-        print('valor filtrado:', await page.input_value('#pwIn'), '| botón deshabilitado', await page.locator('#pwGo').is_disabled())
-        await page.fill('#pwIn','0000'); await page.click('#pwGo'); await page.wait_for_timeout(200)
-        print('error:', await page.inner_text('#pwErr'))
-        # contraseña válida: ranger, nivel 5, vida 3, mejoras
-        pw5 = node("const st=E.newRun('ranger');st.adv.hp=3;st.adv.atk=3;st.adv.rng=3;st.adv.def=2;E.setupLevel(st,4);console.log(E.encodePassword(st))")
-        await page.fill('#pwIn', pw5.lower()); await page.click('#pwGo'); await page.wait_for_timeout(500)
-        print('cargado', pw5, '→', await page.inner_text('#heroTag'), await page.inner_text('#lvlNum'), await page.inner_text('#hpnum'), '|', await page.inner_text('#log'))
+        print('menú de nuevo: retomar', await vis('#mContinue'), '|', (await page.inner_text('.rslot')).replace('\n',' · '))
+        async def load(js):
+            st = node(js + ";console.log(JSON.stringify(st))")
+            await page.evaluate("s => localStorage.setItem('dioc-run-v3:base', s)", st); await page.reload(); await page.wait_for_timeout(400)
+            await page.click('[data-res="base"]'); await page.wait_for_timeout(500)
+        # partida guardada: ranger, nivel 5, vida 3, mejoras
+        await load("const st=E.newRun('ranger');st.adv.hp=3;st.adv.atk=3;st.adv.rng=3;st.adv.def=2;E.setupLevel(st,4)")
+        print('cargado →', await page.inner_text('#heroTag'), await page.inner_text('#lvlNum'), await page.inner_text('#hpnum'), '|', await page.inner_text('#log'))
         chips = await page.locator('#chips .chip .val').all_inner_texts(); print('base Mov/Atq/Def/Alc:', chips)
         # Ranger: habilidad
         await page.click('#btnRoll'); await page.wait_for_timeout(1000)
@@ -60,9 +55,8 @@ async def main():
         print('chips turno (Mov/Atq/Def/Alc):', await page.locator('#chips .chip .val').all_inner_texts(), '|', await page.inner_text('#log'))
         await page.screenshot(path='/tmp/m5_ranger_move.png', full_page=True)
         # Paladín: conservar dado en el segundo turno
-        pwP = node("const st=E.newRun('paladin');console.log(E.encodePassword(st))")
         await page.click('#btnPass'); await page.click('#pwMenu'); await page.wait_for_timeout(200)
-        await page.click('#mPass'); await page.fill('#pwIn', pwP); await page.click('#pwGo'); await page.wait_for_timeout(300)
+        await load("const st=E.newRun('paladin');E.setupLevel(st,0)")
         print('paladín turno 1 botón hab:', await page.locator('#btnAbil').count())
         await page.click('#btnRoll'); await page.wait_for_timeout(1000)
         d=[int(x) for x in await page.locator('#diceRow .die').evaluate_all("els=>els.map(e=>e.getAttribute('aria-label').split(' ')[1])")]

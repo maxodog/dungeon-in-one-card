@@ -758,3 +758,15 @@ body.tight .dice-row.moving { display: none; }
 .cloud-box.up b { display: block; color: inherit; font-size: 16px; }
 .user-btn .loc { margin-left: auto; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .btn.wait { opacity: .6; }
+
+/* partidas en curso (una por aventura) */
+.rslots { display: grid; gap: 8px; }
+.rslots-h { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.rslot { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 12px; padding: 10px 12px; border: 1.5px solid var(--line-dim); border-radius: 14px; }
+.rslot .ico { width: 40px; height: 40px; color: var(--torch); display: grid; place-items: center; }
+.rslot .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rslot-t { display: flex; flex-direction: column; min-width: 0; }
+.rslot-t b { font-family: var(--display); font-weight: 400; font-size: 21px; line-height: 1.1; }
+.rslot-t small { font-size: 13px; color: var(--muted); }
+.rslot-b { grid-column: 1 / -1; display: grid; grid-template-columns: 2fr 1fr; gap: 8px; }
+.adv-tag.run { background: var(--torch); color: #1a1208; margin-left: 6px; padding: 1px 7px; border-radius: 99px; letter-spacing: .12em; }
