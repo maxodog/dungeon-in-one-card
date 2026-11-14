@@ -149,7 +149,24 @@
       if (!unlocked) { unlocked = true; setup(); if (!primed) { primed = true; slots.forEach(s => { try { s.el.src = MUSIC_SILENCE; const p = s.el.play(); if (p && p.then) p.then(() => s.el.pause(), () => {}); } catch (e) {} }); } }
       if (on && want && !cur) next();
     }
-    ['pointerdown', 'touchend', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true, capture: true }));
+    // Intento de arranque nada más abrir el juego. Si el navegador permite audio sin gesto (o el sitio ya tiene confianza),
+    // la música parte sola; si lo bloquea, queda a la espera del primer toque y se avisa con un letrero discreto.
+    function auto() {
+      if (!on || !T.length || unlocked) return;
+      setup();
+      const go = () => { if (unlocked) return; unlocked = true; if (want && !cur) next(); };
+      if (!ctx) { go(); return; }
+      if (ctx.state === 'running') go(); else { try { ctx.resume().then(() => { if (ctx.state === 'running') go(); }, () => {}); } catch (e) {} }
+    }
+    function hint() {
+      if (!on || !T.length || unlocked || !document.body.classList.contains('menu')) return;
+      let h = $('#musicHint'); if (h) return;
+      h = document.createElement('div'); h.id = 'musicHint'; h.textContent = '♪ Toca para activar la música'; document.body.appendChild(h);
+      const gone = () => { h.classList.add('off'); setTimeout(() => h.remove(), 600); };
+      const iv = setInterval(() => { if (unlocked || !document.body.classList.contains('menu')) { clearInterval(iv); gone(); } }, 200);
+    }
+    setTimeout(hint, 900);
     document.addEventListener('visibilitychange', () => {
       if (!slots) return;
       if (document.hidden) { slots.forEach(s => { try { s.el.pause(); } catch (e) {} }); if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {}); }
@@ -157,6 +174,7 @@
     });
     function setOn(v) { on = !!v; save(); if (!on) { seq++; fadeOut(cur); cur = null; } else if (want) { unlocked = true; setup(); Sfx.unlock(); next(); } Sfx.paint(); }
     function setVol(v) { vol = Math.max(0, Math.min(1, v)); save(); if (out && ctx) out.gain.value = vol; else if (cur && cur.kind === 'el') { try { cur.slot.el.volume = (cur.lvl || 1) * vol; } catch (e) {} } }
+    auto();
     return { floor, menu, stop, setOn, setVol, get on() { return on; }, get vol() { return vol; }, get has() { return T.length > 0; } };
   })();
   const bossFloor = () => {

@@ -687,3 +687,8 @@ body.tight .dice-row.moving { display: none; }
 .pack-h:first-child { margin-top: 0; }
 .pack-h small { font-family: var(--body); font-size: 11px; white-space: nowrap; letter-spacing: .14em; text-transform: uppercase; color: var(--torch); font-weight: 700; }
 .stepper .stl { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+/* aviso mientras el navegador no deja sonar la música sin un toque */
+#musicHint { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; padding: 6px 14px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(20, 16, 12, .82); color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; white-space: nowrap; pointer-events: none; animation: hintPulse 2.2s ease-in-out infinite; transition: opacity .5s; }
+#musicHint.off { opacity: 0; animation: none; }
+@keyframes hintPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }

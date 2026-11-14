@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="cd23da389e">
+<meta name="build" content="a957a2581c">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -699,6 +699,11 @@ body.tight .dice-row.moving { display: none; }
 .pack-h:first-child { margin-top: 0; }
 .pack-h small { font-family: var(--body); font-size: 11px; white-space: nowrap; letter-spacing: .14em; text-transform: uppercase; color: var(--torch); font-weight: 700; }
 .stepper .stl { font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+/* aviso mientras el navegador no deja sonar la música sin un toque */
+#musicHint { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; padding: 6px 14px; border: 1px solid var(--line-dim); border-radius: 999px; background: rgba(20, 16, 12, .82); color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; white-space: nowrap; pointer-events: none; animation: hintPulse 2.2s ease-in-out infinite; transition: opacity .5s; }
+#musicHint.off { opacity: 0; animation: none; }
+@keyframes hintPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 
 </style>
 </head>
@@ -2007,7 +2012,24 @@ if (typeof module !== 'undefined') {
       if (!unlocked) { unlocked = true; setup(); if (!primed) { primed = true; slots.forEach(s => { try { s.el.src = MUSIC_SILENCE; const p = s.el.play(); if (p && p.then) p.then(() => s.el.pause(), () => {}); } catch (e) {} }); } }
       if (on && want && !cur) next();
     }
-    ['pointerdown', 'touchend', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true, capture: true }));
+    // Intento de arranque nada más abrir el juego. Si el navegador permite audio sin gesto (o el sitio ya tiene confianza),
+    // la música parte sola; si lo bloquea, queda a la espera del primer toque y se avisa con un letrero discreto.
+    function auto() {
+      if (!on || !T.length || unlocked) return;
+      setup();
+      const go = () => { if (unlocked) return; unlocked = true; if (want && !cur) next(); };
+      if (!ctx) { go(); return; }
+      if (ctx.state === 'running') go(); else { try { ctx.resume().then(() => { if (ctx.state === 'running') go(); }, () => {}); } catch (e) {} }
+    }
+    function hint() {
+      if (!on || !T.length || unlocked || !document.body.classList.contains('menu')) return;
+      let h = $('#musicHint'); if (h) return;
+      h = document.createElement('div'); h.id = 'musicHint'; h.textContent = '♪ Toca para activar la música'; document.body.appendChild(h);
+      const gone = () => { h.classList.add('off'); setTimeout(() => h.remove(), 600); };
+      const iv = setInterval(() => { if (unlocked || !document.body.classList.contains('menu')) { clearInterval(iv); gone(); } }, 200);
+    }
+    setTimeout(hint, 900);
     document.addEventListener('visibilitychange', () => {
       if (!slots) return;
       if (document.hidden) { slots.forEach(s => { try { s.el.pause(); } catch (e) {} }); if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {}); }
@@ -2015,6 +2037,7 @@ if (typeof module !== 'undefined') {
     });
     function setOn(v) { on = !!v; save(); if (!on) { seq++; fadeOut(cur); cur = null; } else if (want) { unlocked = true; setup(); Sfx.unlock(); next(); } Sfx.paint(); }
     function setVol(v) { vol = Math.max(0, Math.min(1, v)); save(); if (out && ctx) out.gain.value = vol; else if (cur && cur.kind === 'el') { try { cur.slot.el.volume = (cur.lvl || 1) * vol; } catch (e) {} } }
+    auto();
     return { floor, menu, stop, setOn, setVol, get on() { return on; }, get vol() { return vol; }, get has() { return T.length > 0; } };
   })();
   const bossFloor = () => {
