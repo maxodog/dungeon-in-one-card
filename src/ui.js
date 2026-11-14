@@ -324,6 +324,7 @@
   function save() {
     try {
       if (!G || G.laurel) return;
+      Users.savedNow();
       if (G.phase === 'won') { localStorage.removeItem(saveKey()); return; }
       let sv = G;
       if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
@@ -382,7 +383,88 @@
   // La contraseña se guarda resumida (SHA-256 con sal), nunca en claro. Todo vive en el navegador de este dispositivo;
   // la copia de seguridad es un código que permite recuperarlo en otro navegador o dispositivo.
   const USERS_KEY = 'dioc-users-v1', CUR_KEY = 'dioc-user';
-  const ukey = n => String(n || '').trim().toLowerCase();
+  const ukey = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  // ---- Nube (Firebase, por su API REST: sin librerías). El usuario entra con nombre y contraseña: por dentro el
+  // nombre se convierte en un correo interno que nunca recibe mensajes, así que no hay validación por correo.
+  const FB = { key: 'AIzaSyCls47aZSnrwdSZSxDDpaCEfFW6zJftGY4', project: 'dungeon-in-one-card' };
+  const Cloud = (() => {
+    const ID = 'https://identitytoolkit.googleapis.com/v1/accounts:';
+    const DOC = uid => `https://firestore.googleapis.com/v1/projects/${FB.project}/databases/(default)/documents/users/${uid}`;
+    const toks = {};
+    const MSG = {
+      EMAIL_EXISTS: 'Ese nombre de usuario ya existe. Elige otro o entra con él.',
+      EMAIL_NOT_FOUND: 'Usuario o contraseña incorrectos.', INVALID_PASSWORD: 'Usuario o contraseña incorrectos.',
+      INVALID_LOGIN_CREDENTIALS: 'Usuario o contraseña incorrectos.', INVALID_EMAIL: 'Ese nombre no se puede usar. Prueba con letras y números.',
+      USER_DISABLED: 'Este usuario está deshabilitado.', TOO_MANY_ATTEMPTS_TRY_LATER: 'Demasiados intentos. Espera unos minutos.',
+      OPERATION_NOT_ALLOWED: 'Falta activar «Correo electrónico/contraseña» en Firebase (Authentication).',
+      CONFIGURATION_NOT_FOUND: 'Falta activar Authentication en Firebase.',
+      PERMISSION_DENIED: 'La base de datos rechazó el acceso: revisa las reglas de Firestore.',
+      NOT_FOUND: 'Falta crear la base de datos Firestore en Firebase.'
+    };
+    const msg = c => { c = String(c || ''); const k = Object.keys(MSG).find(x => c.startsWith(x)); return k ? MSG[k] : c.startsWith('WEAK_PASSWORD') ? 'La contraseña debe tener al menos 6 caracteres.' : 'No se pudo conectar con la nube (' + (c || 'error') + ').'; };
+    async function call(url, opt, okMissing) {
+      let r;
+      try { r = await fetch(url, opt); } catch (e) { const er = new Error('Sin conexión a internet.'); er.off = true; throw er; }
+      if (okMissing && r.status === 404) return null;
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { const er = new Error(msg(j.error && (j.error.status === 'PERMISSION_DENIED' || j.error.status === 'NOT_FOUND' ? j.error.status : j.error.message))); er.code = j.error && (j.error.message || j.error.status); throw er; }
+      return j;
+    }
+    const post = (url, body) => call(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    // nombre → correo interno válido: letras y números tal cual; lo demás, en hexadecimal
+    function emailOf(name) {
+      const b = new TextEncoder().encode(ukey(name)); let s = '';
+      for (const c of b) s += (c >= 97 && c <= 122) || (c >= 48 && c <= 57) ? String.fromCharCode(c) : '_' + c.toString(16).padStart(2, '0');
+      return s + '@usuarios.dioc.juego';
+    }
+    const auth = (j) => { toks[j.localId] = { id: j.idToken, exp: Date.now() + (+j.expiresIn || 3600) * 1000 - 60000 }; return { uid: j.localId, refresh: j.refreshToken }; };
+    async function token(c) {
+      const t = toks[c.uid]; if (t && t.exp > Date.now()) return t.id;
+      const j = await call('https://securetoken.googleapis.com/v1/token?key=' + FB.key, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(c.refresh) });
+      toks[c.uid] = { id: j.id_token, exp: Date.now() + (+j.expires_in || 3600) * 1000 - 60000 }; c.refresh = j.refresh_token || c.refresh;
+      return j.id_token;
+    }
+    return {
+      emailOf,
+      signUp: async (name, pw) => auth(await post(ID + 'signUp?key=' + FB.key, { email: emailOf(name), password: pw, returnSecureToken: true })),
+      signIn: async (name, pw) => auth(await post(ID + 'signInWithPassword?key=' + FB.key, { email: emailOf(name), password: pw, returnSecureToken: true })),
+      async pull(c) {
+        const j = await call(DOC(c.uid), { headers: { Authorization: 'Bearer ' + await token(c) } }, true);
+        if (!j || !j.fields || !j.fields.data) return null;
+        try { return JSON.parse(j.fields.data.stringValue); } catch (e) { return null; }
+      },
+      async push(c, name, data) {
+        await call(DOC(c.uid), { method: 'PATCH', headers: { Authorization: 'Bearer ' + await token(c), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: { name: { stringValue: name }, data: { stringValue: JSON.stringify(data) }, updated: { integerValue: String(Date.now()) } } }) });
+      },
+      async remove(c) {
+        const t = await token(c);
+        await call(DOC(c.uid), { method: 'DELETE', headers: { Authorization: 'Bearer ' + t } }, true);
+        await post(ID + 'delete?key=' + FB.key, { idToken: t });
+      }
+    };
+  })();
+
+  // Une dos historiales (el de este dispositivo y el de la nube) sin perder logros ni récords
+  function mergeRec(a, b) {
+    a = a || {}; b = b || {};
+    const r = { games: {}, tot: {}, ach: {}, hist: [], heroes: [], runs: Object.assign({}, b.runs, a.runs) };
+    for (const g of new Set([...Object.keys(a.games || {}), ...Object.keys(b.games || {})])) {
+      const x = (a.games || {})[g] || {}, y = (b.games || {})[g] || {};
+      const fast = [x.fastest, y.fastest].filter(v => v != null);
+      r.games[g] = { wins: Math.max(x.wins || 0, y.wins || 0), falls: Math.max(x.falls || 0, y.falls || 0), best: Math.max(x.best || 0, y.best || 0),
+        bestRank: RANK_ORDER.indexOf(x.bestRank) >= RANK_ORDER.indexOf(y.bestRank) ? (x.bestRank || null) : y.bestRank, fastest: fast.length ? Math.min(...fast) : null };
+    }
+    for (const k of new Set([...Object.keys(a.tot || {}), ...Object.keys(b.tot || {})])) r.tot[k] = Math.max((a.tot || {})[k] || 0, (b.tot || {})[k] || 0);
+    for (const k of new Set([...Object.keys(a.ach || {}), ...Object.keys(b.ach || {})])) { const x = (a.ach || {})[k], y = (b.ach || {})[k]; r.ach[k] = !x ? y : !y ? x : (x.d <= y.d ? x : y); }
+    const seen = new Set();
+    r.hist = [...(a.hist || []), ...(b.hist || [])].filter(h => { const id = h.d + '|' + h.g + '|' + h.won; if (seen.has(id)) return false; seen.add(id); return true; }).sort((p, q) => q.d - p.d).slice(0, 12);
+    r.heroes = [...new Set([...(a.heroes || []), ...(b.heroes || [])])];
+    return r;
+  }
+
+  // ---- Usuarios: la nube es la fuente principal; este dispositivo guarda una copia para jugar sin internet
   const Users = (() => {
     const all = () => { try { const o = JSON.parse(localStorage.getItem(USERS_KEY)); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } };
     const store = o => { try { localStorage.setItem(USERS_KEY, JSON.stringify(o)); return true; } catch (e) { return false; } };
@@ -396,35 +478,105 @@
     }
     const salt = () => Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('');
     const emptyRec = () => ({ games: {}, tot: {}, ach: {}, hist: [], heroes: [], runs: {} });
-    return {
+    const sKey = k => SAVE_KEY + ':u:' + k, tKey = k => SAVE_KEY + ':u:' + k + ':t';
+    const getS = k => { try { return localStorage.getItem(sKey(k)); } catch (e) { return null; } };
+    const getT = k => { try { return +localStorage.getItem(tKey(k)) || 0; } catch (e) { return 0; } };
+    function checkName(name) {
+      name = String(name || '').trim().replace(/\s+/g, ' ');
+      if (name.length < 2 || name.length > 16) return [null, 'El nombre debe tener entre 2 y 16 caracteres.'];
+      if (!/^[\p{L}\p{N} ._-]+$/u.test(name)) return [null, 'Usa solo letras, números, espacios, puntos o guiones.'];
+      if (Cloud.emailOf(name).split('@')[0].length > 64) return [null, 'Ese nombre es demasiado largo. Prueba uno más corto.'];
+      return [name, null];
+    }
+    // trae lo de la nube y lo une con lo de este dispositivo; luego sube el resultado
+    async function syncNow(k) {
+      const o = all(), u = o[k]; if (!u || !u.cloud) return;
+      const remote = await Cloud.pull(u.cloud);
+      const o2 = all(), u2 = o2[k]; if (!u2) return;
+      u2.cloud.refresh = u.cloud.refresh;
+      u2.rec = mergeRec(u2.rec, remote && remote.rec);
+      if (remote && (remote.saveAt || 0) > getT(k)) {
+        try { remote.save ? localStorage.setItem(sKey(k), remote.save) : localStorage.removeItem(sKey(k)); localStorage.setItem(tKey(k), String(remote.saveAt)); } catch (e) {}
+      }
+      store(o2);
+      await Cloud.push(u2.cloud, u2.name, { v: 1, rec: u2.rec, save: getS(k), saveAt: getT(k) });
+      const o3 = all(); if (o3[k]) { o3[k].cloud = Object.assign({}, u2.cloud, { dirty: false, syncedAt: Date.now() }); store(o3); }
+    }
+    let pushing = null, again = false;
+    async function sync(k) {
+      k = k || cur; if (!k || !(all()[k] || {}).cloud) return;
+      const o = all(); o[k].cloud.dirty = true; store(o);
+      if (pushing) { again = true; return pushing; }
+      pushing = (async () => { try { do { again = false; await syncNow(k); } while (again); } catch (e) { /* queda pendiente: se reintenta luego */ } finally { pushing = null; } })();
+      return pushing;
+    }
+    const api = {
       get cur() { return cur; },
-      list() { const o = all(); return Object.keys(o).map(k => ({ k, name: o[k].name })).sort((a, b) => a.name.localeCompare(b.name)); },
+      list() { const o = all(); return Object.keys(o).map(k => ({ k, name: o[k].name, cloud: !!o[k].cloud })).sort((a, b) => a.name.localeCompare(b.name)); },
       get(k) { return all()[k || cur] || null; },
+      exists: k => !!all()[k],
+      // crear usuario nuevo en la nube
       async create(name, pw) {
-        name = String(name || '').trim().replace(/\s+/g, ' ');
-        if (name.length < 2 || name.length > 16) return 'El nombre debe tener entre 2 y 16 caracteres.';
-        if ((pw || '').length < 4) return 'La contraseña debe tener al menos 4 caracteres.';
-        const o = all(), k = ukey(name);
-        if (o[k]) return 'Ya existe un usuario con ese nombre en este dispositivo.';
-        const s = salt();
-        o[k] = { name, salt: s, hash: await hash(pw, s), created: Date.now(), rec: emptyRec() };
-        if (!store(o)) return 'No se pudo guardar. Revisa que el navegador permita guardar datos.';
-        setCur(k); return null;
+        let e; [name, e] = checkName(name); if (e) return e;
+        if ((pw || '').length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+        const k = ukey(name);
+        if (all()[k]) return 'Ya existe un usuario con ese nombre en este dispositivo.';
+        let c; try { c = await Cloud.signUp(name, pw); } catch (er) { return er.off ? 'Necesitas internet para crear el usuario.' : er.message; }
+        const o = all(), s = salt();
+        o[k] = { name, salt: s, hash: await hash(pw, s), created: Date.now(), rec: emptyRec(), cloud: c };
+        if (!store(o)) return 'No se pudo guardar en este navegador.';
+        setCur(k); sync(k); return null;
       },
-      async login(k, pw) { const u = all()[k]; if (!u) return 'Ese usuario no existe.'; if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.'; setCur(k); return null; },
+      // entrar: con internet se comprueba en la nube; sin internet basta la copia de este dispositivo
+      async login(name, pw) {
+        const k = ukey(name), o = all(), u = o[k];
+        if (u && !u.cloud) { if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.'; setCur(k); return null; }
+        let c;
+        try { c = await Cloud.signIn(u ? u.name : name, pw); }
+        catch (er) {
+          if (er.off && u && await hash(pw, u.salt) === u.hash) { setCur(k); return null; }
+          return er.off ? 'Necesitas internet para entrar con un usuario que no está en este dispositivo.' : er.message;
+        }
+        const o2 = all(), s = salt();
+        o2[k] = Object.assign(o2[k] || { name: String(name).trim(), created: Date.now(), rec: emptyRec() }, { salt: s, hash: await hash(pw, s), cloud: c });
+        store(o2); setCur(k);
+        try { await syncNow(k); } catch (er) { const o3 = all(); if (o3[k]) { o3[k].cloud.dirty = true; store(o3); } }
+        return null;
+      },
+      // pasar a la nube un usuario que se creó solo en este dispositivo
+      async upload(pw) {
+        const o = all(), u = o[cur]; if (!u) return 'No hay usuario.';
+        if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.';
+        if (pw.length < 6) return 'short';
+        let c; try { c = await Cloud.signUp(u.name, pw); } catch (er) { return er.off ? 'Necesitas internet para subir el usuario a la nube.' : er.message; }
+        const o2 = all(); o2[cur].cloud = c; store(o2);
+        try { await syncNow(cur); } catch (er) { return null; }
+        return null;
+      },
+      async setPassword(oldPw, newPw) {   // para usuarios locales con contraseña corta, antes de subirlos
+        const o = all(), u = o[cur]; if (!u) return 'No hay usuario.';
+        if (await hash(oldPw, u.salt) !== u.hash) return 'Contraseña incorrecta.';
+        if ((newPw || '').length < 6) return 'La contraseña nueva debe tener al menos 6 caracteres.';
+        u.salt = salt(); u.hash = await hash(newPw, u.salt); store(o); return null;
+      },
       logout() { setCur(null); },
       async remove(k, pw) {
         const o = all(), u = o[k]; if (!u) return null;
         if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.';
-        delete o[k]; store(o);
-        try { localStorage.removeItem(SAVE_KEY + ':u:' + k); localStorage.removeItem(BEST_KEY + ':u:' + k); } catch (e) {}
+        if (u.cloud) {
+          try { await Cloud.signIn(u.name, pw).then(c => { u.cloud = c; }); await Cloud.remove(u.cloud); }
+          catch (er) { return er.off ? 'Necesitas internet para borrar el usuario de la nube.' : er.message; }
+        }
+        const o2 = all(); delete o2[k]; store(o2);
+        try { localStorage.removeItem(sKey(k)); localStorage.removeItem(tKey(k)); localStorage.removeItem(BEST_KEY + ':u:' + k); } catch (e) {}
         if (cur === k) setCur(null); return null;
       },
-      update(fn) { if (!cur) return null; const o = all(), u = o[cur]; if (!u) return null; u.rec = Object.assign(emptyRec(), u.rec); const r = fn(u.rec); store(o); return r; },
+      update(fn) { if (!cur) return null; const o = all(), u = o[cur]; if (!u) return null; u.rec = Object.assign(emptyRec(), u.rec); const r = fn(u.rec); store(o); sync(); return r; },
+      sync, syncPending() { const u = all()[cur]; if (u && u.cloud && u.cloud.dirty) sync(); },
+      savedNow() { if (cur) try { localStorage.setItem(tKey(cur), String(Date.now())); } catch (e) {} },
       exportCode(k) {
         const o = all(), u = o[k || cur]; if (!u) return '';
-        let save = null; try { save = localStorage.getItem(SAVE_KEY + ':u:' + (k || cur)); } catch (e) {}
-        const json = JSON.stringify({ v: 1, k: k || cur, u, save });
+        const json = JSON.stringify({ v: 1, k: k || cur, u: Object.assign({}, u, { cloud: undefined }), save: getS(k || cur) });
         return 'DIOC1-' + btoa(unescape(encodeURIComponent(json)));
       },
       parseCode(code) {
@@ -435,12 +587,15 @@
         } catch (e) { return null; }
       },
       importData(d) {
-        const o = all(), k = ukey(d.u.name); o[k] = d.u; if (!store(o)) return false;
-        try { if (d.save) localStorage.setItem(SAVE_KEY + ':u:' + k, d.save); } catch (e) {}
-        setCur(k); return true;
-      },
-      exists: k => !!all()[k]
+        const o = all(), k = ukey(d.u.name), prev = o[k];
+        o[k] = Object.assign({}, d.u, prev && prev.cloud ? { cloud: prev.cloud, rec: mergeRec(prev.rec, d.u.rec) } : {});
+        if (!store(o)) return false;
+        try { if (d.save) localStorage.setItem(sKey(k), d.save); } catch (e) {}
+        setCur(k); sync(k); return true;
+      }
     };
+    window.addEventListener('online', () => api.syncPending());
+    return api;
   })();
   function saveKey() { return Users.cur ? SAVE_KEY + ':u:' + Users.cur : SAVE_KEY; }
   function bestKey() { return Users.cur ? BEST_KEY + ':u:' + Users.cur : BEST_KEY; }
@@ -1146,29 +1301,35 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const ICON_USER = '<svg class="uico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/></svg>';
   const fmtDate = t => { try { return new Date(t).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } };
-  const USERS_NOTE = '<p class="fine">Los usuarios se guardan solo en este navegador y dispositivo. Si borras los datos de sitios del navegador se pierden: usa la copia de seguridad del perfil para no perderlos.</p>';
+  const USERS_NOTE = '<p class="fine">Tu usuario se guarda en la nube: entra con el mismo nombre y contraseña desde cualquier dispositivo. Este dispositivo guarda además una copia para jugar sin internet.</p>';
 
   // Entrar, crear usuario o recuperar uno con un código de copia
   function usersScreen(view, arg, err) {
     const list = Users.list();
-    view = view || (list.length ? 'pick' : 'new');
+    view = view || 'pick';
     let body = '';
     if (view === 'pick') body = `<h2 class="screen-h">Usuarios</h2>
-      <p class="lead">Elige tu usuario en este dispositivo.</p>
-      <div class="user-list">${list.map(x => `<button type="button" class="btn user-btn" data-uk="${esc(x.k)}">${ICON_USER}<span>${esc(x.name)}</span></button>`).join('')}</div>
-      <div class="menu-btns"><button type="button" class="btn" id="uNew">Crear usuario nuevo</button><button type="button" class="ghost" id="uImp">Recuperar con copia de seguridad</button></div>`;
+      ${list.length ? `<p class="lead">Usuarios en este dispositivo:</p>
+      <div class="user-list">${list.map(x => `<button type="button" class="btn user-btn" data-uk="${esc(x.k)}">${ICON_USER}<span>${esc(x.name)}</span>${x.cloud ? '' : '<small class="loc">solo aquí</small>'}</button>`).join('')}</div>` : '<p class="lead">Entra con tu usuario o crea uno nuevo.</p>'}
+      <div class="menu-btns"><button type="button" class="btn ${list.length ? '' : 'primary'}" id="uRem">Entrar con mi usuario</button><button type="button" class="btn" id="uNew">Crear usuario nuevo</button><button type="button" class="ghost" id="uImp">Recuperar con copia de seguridad</button></div>`;
     else if (view === 'login') body = `<h2 class="screen-h">${esc((Users.get(arg) || {}).name)}</h2>
       <p class="lead">Escribe tu contraseña.</p>
       <input id="uPw" class="field" type="password" autocomplete="current-password" aria-label="Contraseña">
       <p class="err" id="uErr" role="alert">${err || ''}</p>
       <button type="button" class="btn primary" id="uGo">Entrar</button>`;
+    else if (view === 'remote') body = `<h2 class="screen-h">Entrar</h2>
+      <p class="lead">Escribe tu nombre de usuario y tu contraseña.</p>
+      <label class="flabel">Nombre<input id="uName" class="field" type="text" maxlength="16" autocomplete="username" autocapitalize="off"></label>
+      <label class="flabel">Contraseña<input id="uPw" class="field" type="password" autocomplete="current-password"></label>
+      <p class="err" id="uErr" role="alert">${err || ''}</p>
+      <button type="button" class="btn primary" id="uGo">Entrar</button>`;
     else if (view === 'new') body = `<h2 class="screen-h">Crear usuario</h2>
       <label class="flabel">Nombre<input id="uName" class="field" type="text" maxlength="16" autocomplete="username" autocapitalize="words"></label>
-      <label class="flabel">Contraseña <small>(mínimo 4 caracteres)</small><input id="uPw" class="field" type="password" autocomplete="new-password"></label>
+      <label class="flabel">Contraseña <small>(mínimo 6 caracteres)</small><input id="uPw" class="field" type="password" autocomplete="new-password"></label>
       <label class="flabel">Repite la contraseña<input id="uPw2" class="field" type="password" autocomplete="new-password"></label>
       <p class="err" id="uErr" role="alert">${err || ''}</p>
-      <button type="button" class="btn primary" id="uGo">Crear y entrar</button>
-      ${list.length ? '' : '<button type="button" class="ghost" id="uImp">Recuperar con copia de seguridad</button>'}`;
+      <p class="fine">No se pide correo: solo nombre y contraseña. Anótala, porque no hay forma automática de recuperarla.</p>
+      <button type="button" class="btn primary" id="uGo">Crear y entrar</button>`;
     else if (view === 'import') body = `<h2 class="screen-h">Recuperar usuario</h2>
       <p class="lead">Pega el código de copia de seguridad que guardaste desde tu perfil.</p>
       <textarea id="uCode" class="field code" rows="5" spellcheck="false" autocomplete="off" placeholder="DIOC1-…"></textarea>
@@ -1176,15 +1337,16 @@
       <button type="button" class="btn primary" id="uGo">Recuperar</button>`;
     const sc = showScreen(`<div class="splash users">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>${body}${USERS_NOTE}</div>`,
-      [['#back', () => (view === 'pick' || (view === 'new' && !list.length) ? menuScreen() : usersScreen())], ['#uNew', () => usersScreen('new')], ['#uImp', () => usersScreen('import')]]);
+      [['#back', () => (view === 'pick' ? menuScreen() : usersScreen())], ['#uNew', () => usersScreen('new')], ['#uRem', () => usersScreen('remote')], ['#uImp', () => usersScreen('import')]]);
     sc.querySelectorAll('[data-uk]').forEach(b => b.addEventListener('click', () => usersScreen('login', b.dataset.uk)));
     const go = sc.querySelector('#uGo'), errEl = sc.querySelector('#uErr');
     if (!go) return;
-    const fail = m => { errEl.textContent = m; go.disabled = false; };
+    const fail = m => { errEl.textContent = m; go.disabled = false; go.classList.remove('wait'); };
     const done = () => { loadBest(); menuScreen(); };
     const act = async () => {
-      go.disabled = true;
-      if (view === 'login') { const e = await Users.login(arg, sc.querySelector('#uPw').value); return e ? fail(e) : done(); }
+      go.disabled = true; go.classList.add('wait'); errEl.textContent = view === 'import' ? '' : 'Conectando…';
+      if (view === 'login') { const e = await Users.login((Users.get(arg) || {}).name, sc.querySelector('#uPw').value); return e ? fail(e) : done(); }
+      if (view === 'remote') { const e = await Users.login(sc.querySelector('#uName').value, sc.querySelector('#uPw').value); return e ? fail(e) : done(); }
       if (view === 'new') {
         const pw = sc.querySelector('#uPw').value;
         if (pw !== sc.querySelector('#uPw2').value) return fail('Las contraseñas no coinciden.');
@@ -1201,6 +1363,19 @@
     go.addEventListener('click', act);
     sc.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') act(); }));
     const f = sc.querySelector('input,textarea'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 50);
+  }
+
+  function cloudBox(me, panel) {
+    const c = me.cloud;
+    if (c) {
+      const st = c.dirty ? 'Hay cambios por subir (se suben solos cuando haya internet).' : c.syncedAt ? `Guardado en la nube · ${fmtDate(c.syncedAt)} ${new Date(c.syncedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}` : 'Conectado a la nube.';
+      return `<div class="cloud-box ok"><span>☁</span><p>${st}</p><button type="button" class="btn mini" id="cSync">Sincronizar</button></div>`;
+    }
+    if (panel === 'upload' || panel === 'upload-new') return `<div class="cloud-box up"><p><b>Subir a la nube</b> Así podrás entrar con este usuario desde cualquier dispositivo.</p>
+      <input id="upPw" class="field" type="password" placeholder="Tu contraseña actual" autocomplete="current-password">
+      ${panel === 'upload-new' ? '<p class="fine">En la nube la contraseña debe tener al menos 6 caracteres. Elige una nueva:</p><input id="upNew" class="field" type="password" placeholder="Contraseña nueva (mínimo 6)" autocomplete="new-password">' : ''}
+      <p class="err" id="upErr" role="alert"></p><button type="button" class="btn primary" id="upGo">Subir a la nube</button></div>`;
+    return `<div class="cloud-box"><span>⚠</span><p>Este usuario está <b>solo en este dispositivo</b>.</p><button type="button" class="btn mini" id="cUp">Subir a la nube</button></div>`;
   }
 
   // Perfil: mazmorras, estadísticas, logros, últimas partidas y copia de seguridad
@@ -1223,13 +1398,14 @@
     const sc = showScreen(`<div class="splash wide prof">
       <button type="button" class="ghost back" id="back">‹ Atrás</button>
       <div class="prof-head">${ICON_USER}<div><h2 class="screen-h">${esc(me.name)}</h2><small>Usuario desde ${fmtDate(me.created)} · ${got}/${ACH.length} logros</small></div></div>
+      ${cloudBox(me, panel)}
       <h3 class="pack-h">Mazmorras</h3><div class="prof-games">${games}</div>
       <h3 class="pack-h">Estadísticas</h3>
       <div class="prof-stats">${cell(t.wins, 'Victorias')}${cell(t.falls, 'Caídas')}${cell(t.kills, 'Monstruos vencidos')}${cell(t.hits, 'Golpes dados')}${cell(t.dmgIn, 'Daño recibido')}${cell(t.blocks, 'Ataques bloqueados')}${cell(t.chests, 'Cofres abiertos')}${cell(t.turns, 'Turnos jugados')}</div>
       <h3 class="pack-h">Logros <small>${got} de ${ACH.length}</small></h3><div class="prof-ach">${groups}</div>
       <h3 class="pack-h">Últimas partidas</h3><ul class="prof-hist">${hist}</ul>
       <h3 class="pack-h">Copia de seguridad</h3>
-      <p class="lead">Guarda este código en una nota o envíatelo. Con él recuperas tu usuario (logros, estadísticas y partida en curso) en este u otro dispositivo, desde «Recuperar con copia de seguridad». Si cambias de contraseña o sumas logros, genera una copia nueva.</p>
+      <p class="lead">Opcional: con la nube ya no hace falta, pero puedes guardar este código como respaldo extra. Con él recuperas tu usuario desde «Recuperar con copia de seguridad».</p>
       <div id="bkBox">${panel === 'backup' ? `<textarea class="field code" rows="5" readonly id="bkCode">${Users.exportCode()}</textarea><p class="fine" id="bkMsg" aria-live="polite"></p><button type="button" class="btn" id="bkCopy">Copiar código</button>` : '<button type="button" class="btn" id="bkShow">Crear copia de seguridad</button>'}</div>
       <div class="menu-btns prof-acts">
         <button type="button" class="btn primary" id="pMenu">Ir al menú</button>
@@ -1237,7 +1413,18 @@
         <button type="button" class="ghost danger" id="pDel">Borrar este usuario</button>
       </div>
       <div id="delBox"></div>${USERS_NOTE}</div>`,
-      [['#back', menuScreen], ['#pMenu', menuScreen], ['#pOut', () => { Users.logout(); loadBest(); menuScreen(); }], ['#bkShow', () => { profileScreen('backup'); setTimeout(() => { const b = $('#bkBox'); if (b) b.scrollIntoView({ block: 'center' }); }, 30); }]]);
+      [['#back', menuScreen], ['#pMenu', menuScreen], ['#cSync', async () => { const b = $('#cSync'); b.disabled = true; b.textContent = 'Sincronizando…'; await Users.sync(); profileScreen(); }],
+       ['#cUp', () => profileScreen('upload')], ['#pOut', () => { Users.logout(); loadBest(); menuScreen(); }], ['#bkShow', () => { profileScreen('backup'); setTimeout(() => { const b = $('#bkBox'); if (b) b.scrollIntoView({ block: 'center' }); }, 30); }]]);
+    const up = sc.querySelector('#upGo');
+    if (up) up.addEventListener('click', async () => {
+      const er = sc.querySelector('#upErr'), pw = sc.querySelector('#upPw').value, np = sc.querySelector('#upNew');
+      up.disabled = true; er.textContent = 'Conectando…';
+      if (np) { const e1 = await Users.setPassword(pw, np.value); if (e1) { er.textContent = e1; up.disabled = false; return; } }
+      const e = await Users.upload(np ? np.value : pw);
+      if (e === 'short') { profileScreen('upload-new'); return; }
+      if (e) { er.textContent = e; up.disabled = false; return; }
+      profileScreen();
+    });
     const cp = sc.querySelector('#bkCopy');
     if (cp) cp.addEventListener('click', () => {
       const code = sc.querySelector('#bkCode'), m = sc.querySelector('#bkMsg');
@@ -1400,7 +1587,7 @@
     else say(G.levelIdx === 0 && G.turnNo === 1 && !G.turn.dice ? `Una carta, ${LEVELS.length} etapas. Tira los dados para empezar.` : `${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}.`);
   }
 
-  function goMenu() { if (busy) return; closeSheet(); menuScreen(); }
+  function goMenu() { if (busy) return; closeSheet(); menuScreen(); Users.sync(); }
 
   function retry() {
     const t = G.totalTurns, stt = G.stats, rid = G.runId;
@@ -1971,7 +2158,8 @@
   function start(data) {
     loadBest();
     checkUpdate();
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkUpdate(); Users.syncPending(); } else Users.sync(); });
+    Users.syncPending();
     setInterval(checkUpdate, 600000);
     wire();
     if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => (G ? JSON.parse(JSON.stringify(G)) : null));
