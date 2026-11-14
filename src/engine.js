@@ -730,93 +730,88 @@ function attackMon(st, m) {
 }
 
 /* ---------- Fase de los monstruos ---------- */
-function walkToward(D, me, target, spd, others) {
-  const path = [];
-  for (let c = target; c !== -1; c = D.prev[c]) path.push(c);
-  path.reverse();
-  let last = 0;
-  for (let k = 1; k < path.length; k++) { if (D.dist[path[k]] <= spd) last = k; else break; }
-  while (last > 0 && others.includes(path[last])) last--;
-  return path[last];
-}
-
+// Movimiento de un monstruo (reglas: "se mueve para quedar lo más cerca posible de su Alcance máximo respecto al
+// aventurero"; "prioriza estar a Alcance y con visión por sobre estar a Alcance máximo").
+//  A) Si este turno alcanza alguna casilla desde la que puede atacar (a Alcance y con visión), va a la de mayor
+//     distancia de Alcance, sin pasarse de su Alcance. Puede alejarse si está más pegado de lo necesario.
+//     Empate: la que menos movimiento le cuesta (si ya está en la mejor, no se mueve).
+//  B) Si este turno no puede quedar en posición de ataque, elige como destino la casilla de ataque a la que llegue
+//     en menos turnos reales (así no da rodeos largos); empate: mayor Alcance, luego la más cercana. Avanza hacia ella.
+//  C) Si no existe ninguna casilla de ataque alcanzable, se acerca al aventurero todo lo posible.
 function chooseMove(lv, st, m) {
   const advI = idx(st.adv.x, st.adv.y), me = idx(m.x, m.y);
   const others = st.mons.filter(o => o !== m).map(o => idx(o.x, o.y));
   const blocked = new Array(N).fill(false);
   blocked[advI] = true;
   const D = dijkstra(lv, me, blocked, blocked);
-  const free = i => !lv.walls[i] && i !== advI && !others.includes(i) && D.dist[i] < Infinity;
+  const spd = Math.max(0, m.spd);
+  // casilla donde puede terminar: libre (sin muro, aventurero ni otro monstruo) y con camino; la propia también vale
+  const stand = i => i === me || (!lv.walls[i] && i !== advI && !others.includes(i) && D.dist[i] < Infinity);
   const R = i => m.rng + (monBonus(st, m, i).rng || 0);   // el Alcance depende de la casilla (agua)
-  let target = -1, bestCost = Infinity;
-  // 1) casilla a Alcance máximo, con visión, la más cercana al monstruo
+  const canHit = i => rangeDist(lv, i, advI) <= R(i) && hasLOS(lv, i, advI, others);
+
+  // A) posición de ataque alcanzable este turno
+  let best = -1, bRd = -1, bC = Infinity;
   for (let i = 0; i < N; i++) {
-    if (free(i) && rangeDist(lv, i, advI) === R(i) && D.dist[i] < bestCost && hasLOS(lv, i, advI, others)) {
-      bestCost = D.dist[i]; target = i;
-    }
+    if (!stand(i) || D.dist[i] > spd || !canHit(i)) continue;
+    const rd = rangeDist(lv, i, advI);
+    if (rd > bRd || (rd === bRd && D.dist[i] < bC)) { best = i; bRd = rd; bC = D.dist[i]; }
   }
-  // 1b) Si llegar a esa casilla exige más turnos de camino que llegar a otra desde la que ya puede atacar
-  //     (por ejemplo, rodeando un muro o un pasillo cerrado), no da el rodeo: va a la que antes pueda atacar.
-  //     Con el mismo número de turnos se mantiene la preferencia por el Alcance máximo.
-  if (target >= 0) {
-    const turns = c => Math.ceil(c / Math.max(1, m.spd));
-    if (turns(bestCost) > 1) {
-      let a = -1, aT = Infinity, aRd = -1, aC = Infinity;
-      for (let i = 0; i < N; i++) {
-        if (!free(i)) continue;
-        const rd = rangeDist(lv, i, advI);
-        if (rd > R(i) || !hasLOS(lv, i, advI, others)) continue;
-        const tn = turns(D.dist[i]);
-        if (tn < aT || (tn === aT && (rd > aRd || (rd === aRd && D.dist[i] < aC)))) { a = i; aT = tn; aRd = rd; aC = D.dist[i]; }
-      }
-      if (a >= 0 && aT < turns(bestCost)) { target = a; bestCost = aC; }
+  if (best >= 0) return best;
+
+  // B) destino de ataque para los próximos turnos. Los turnos se cuentan de verdad, turno a turno: en cada uno el
+  //    monstruo puede terminar en cualquier casilla libre a la que le alcance la velocidad (con Velocidad 3 un turno
+  //    es un solo paso, recto o diagonal; con 5, dos pasos rectos o uno recto y uno diagonal, etc.).
+  const fromD = [];
+  const dOf = u => fromD[u] || (fromD[u] = u === me ? D.dist : dijkstra(lv, u, blocked, blocked).dist);
+  const turnsFrom = s => {
+    const tn = new Array(N).fill(Infinity); tn[s] = 0; let front = [s];
+    for (let k = 1; front.length; k++) {
+      const nx = [];
+      for (const u of front) { const du = dOf(u); for (let w = 0; w < N; w++) if (tn[w] === Infinity && stand(w) && du[w] <= spd) { tn[w] = k; nx.push(w); } }
+      front = nx;
     }
-  }
-  // 2) si no hay, la de mayor Alcance posible con visión
-  if (target < 0) {
-    let bestRd = -1; bestCost = Infinity;
-    for (let i = 0; i < N; i++) {
-      if (!free(i)) continue;
-      const rd = rangeDist(lv, i, advI);
-      if (rd > R(i) || !hasLOS(lv, i, advI, others)) continue;
-      if (rd > bestRd || (rd === bestRd && D.dist[i] < bestCost)) { bestRd = rd; bestCost = D.dist[i]; target = i; }
-    }
+    return tn;
+  };
+  const TM = turnsFrom(me);
+  let target = -1, tT = Infinity, tRd = -1, tC = Infinity;
+  for (let i = 0; i < N; i++) {
+    if (!stand(i) || TM[i] === Infinity || !canHit(i)) continue;
+    const tn = TM[i], rd = rangeDist(lv, i, advI);
+    if (tn < tT || (tn === tT && (rd > tRd || (rd === tRd && D.dist[i] < tC)))) { target = i; tT = tn; tRd = rd; tC = D.dist[i]; }
   }
   if (target >= 0) {
-    if (D.dist[target] <= m.spd) return target;          // llega este turno
-    // No llega: gasta toda su velocidad acercándose al máximo al destino. Se elige entre todas las
-    // casillas alcanzables, no solo a lo largo de un camino, para no desperdiciar puntos de velocidad.
-    // Si desde alguna casilla alcanzable ya puede atacar, nunca se queda fuera de alcance: elige la de mayor Alcance
-    let atk = -1, atkRd = -1, atkC = Infinity;
+    // entre las casillas que alcanza ahora, la que deja menos turnos hasta el destino;
+    // empate: menos camino hasta él, luego la más cercana al aventurero y luego la que menos le cuesta
+    const TT = turnsFrom(target), T = dOf(target);
+    let b = me, bTT = TT[me], bT = T[me], bR = rangeDist(lv, me, advI), c0 = 0;
     for (let i = 0; i < N; i++) {
-      if (!free(i) && i !== me) continue;
-      if (D.dist[i] > m.spd) continue;
-      const rd = rangeDist(lv, i, advI);
-      if (rd > R(i) || !hasLOS(lv, i, advI, others)) continue;
-      if (rd > atkRd || (rd === atkRd && D.dist[i] < atkC)) { atk = i; atkRd = rd; atkC = D.dist[i]; }
-    }
-    if (atk >= 0) return atk;
-    const T = dijkstra(lv, target, blocked, blocked).dist;
-    let best = me, bestT = T[me], bestR = rangeDist(lv, me, advI), bestC = 0;
-    for (let i = 0; i < N; i++) {
-      if (!free(i) || D.dist[i] > m.spd) continue;
+      if (!stand(i) || D.dist[i] > spd) continue;
       const r = rangeDist(lv, i, advI);
-      if (T[i] < bestT || (T[i] === bestT && (r < bestR || (r === bestR && D.dist[i] < bestC)))) {
-        best = i; bestT = T[i]; bestR = r; bestC = D.dist[i];
-      }
+      if (TT[i] < bTT || (TT[i] === bTT && (T[i] < bT || (T[i] === bT && (r < bR || (r === bR && D.dist[i] < c0)))))) { b = i; bTT = TT[i]; bT = T[i]; bR = r; c0 = D.dist[i]; }
     }
-    return best;
+    return b;
   }
-  // 3) acercarse todo lo posible
-  let best = me, bestD = rangeDist(lv, me, advI), bestC = 0;
+
+  // C) acercarse todo lo posible
+  let b = me, bD = rangeDist(lv, me, advI), c0 = 0;
   for (let i = 0; i < N; i++) {
-    if (!free(i) || D.dist[i] > m.spd) continue;
+    if (!stand(i) || D.dist[i] > spd) continue;
     const d = rangeDist(lv, i, advI);
-    if (d < bestD || (d === bestD && D.dist[i] < bestC)) { best = i; bestD = d; bestC = D.dist[i]; }
+    if (d < bD || (d === bD && D.dist[i] < c0)) { b = i; bD = d; c0 = D.dist[i]; }
   }
-  return best;
+  return b;
 }
 
+const _dbg = {   // ayudas para las pruebas (no afectan al juego)
+  lv: st => lvOf(st),
+  rd: (st, a, b) => rangeDist(lvOf(st), a, b),
+  reach(st, m) { const lv = lvOf(st), advI = idx(st.adv.x, st.adv.y), me = idx(m.x, m.y), bl = new Array(N).fill(false); bl[advI] = true;
+    const D = dijkstra(lv, me, bl, bl), oth = st.mons.filter(o => o !== m).map(o => idx(o.x, o.y)), out = [];
+    for (let i = 0; i < N; i++) if (i === me || (!lv.walls[i] && i !== advI && !oth.includes(i) && D.dist[i] <= m.spd)) out.push(i); return out; },
+  canHit(st, m, i) { const lv = lvOf(st), advI = idx(st.adv.x, st.adv.y), oth = st.mons.filter(o => o !== m).map(o => idx(o.x, o.y));
+    return rangeDist(lv, i, advI) <= m.rng + (monBonus(st, m, i).rng || 0) && hasLOS(lv, i, advI, oth); }
+};
 function attackers(st) {
   const lv = lvOf(st), advI = idx(st.adv.x, st.adv.y);
   return st.mons.filter(m => {
@@ -1102,6 +1097,6 @@ if (typeof module !== 'undefined') {
     necroInfo, necroStrike, demonReach, demonMove, chestInfo, openChest, stoneInfo, breakStone, reviveIfDead, resolveAttack,
     laurelStart, laurelMon, laurelReach, laurelMove, laurelAttackInfo, laurelAttack, laurelEnd, ORIENTS_HELL, LEVEL_DEFS_HELL, BOSS_DEFS_HELL,
     itemUsable, useItem, useFlame, useEye, resolveDamage, blizzPen, atkAvail, heroDef,
-    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, PW7_GAMES, PW8_GAME, pw7Total, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
+    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, PW7_GAMES, PW8_GAME, pw7Total, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo, _dbg,
     playMonsters, endTurnCleanup, levelCleared, afterClear, applyBreak, SKILL_MAX, nextLevel, attackers, freshTurn, chooseMove };
 }
