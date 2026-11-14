@@ -814,7 +814,7 @@
       <h4>2 · Tu turno</h4>
       <ul>
         <li>Mueve y ataca en el orden que quieras. No tienes que gastar todo.</li>
-        <li>Un paso recto cuesta <b>2</b> de Mov; uno en diagonal, <b>3</b>. No puedes pisar muros ni monstruos.</li>
+        <li>Un paso recto cuesta <b>2</b> de Mov; uno en diagonal, <b>3</b>. No puedes pisar muros ni monstruos, ni colarte en diagonal entre dos de ellos (muro o monstruo) que se tocan por la esquina.</li>
         <li>Para atacar, el monstruo debe estar a tu <b>Alcance</b> y a la vista. La distancia se mide en coste de movimiento: pegado en recto es 2, en diagonal 3.</li>
         <li>Cada golpe cuesta tantos puntos de Atq como la <b>Defensa</b> del monstruo y le quita 1 de Vida.</li>
         <li>Ver o no ver: una línea recta desde cualquier esquina de tu casilla hasta cualquier esquina de la suya, sin cruzar muros ni otros monstruos.</li>

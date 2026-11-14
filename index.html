@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="b6cea0259a">
+<meta name="build" content="69a719bf2b">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1255,11 +1255,12 @@ function reachFromAdv(st) {
   }
   if (st.sherpaOn) {
     // Sherpa: los muros cuentan como casillas normales al moverse, pero no se puede terminar en uno
-    const R = dijkstra({ walls: lv.voids }, src, blocked);
+    const R = dijkstra({ walls: lv.voids }, src, blocked, blocked);
     for (let i = 0; i < N; i++) if (lv.walls[i]) R.dist[i] = Infinity;
     return R;
   }
-  return dijkstra(lv, src, blocked);
+  // Una diagonal queda cerrada si las dos casillas contiguas están ocupadas (muros o monstruos): no se cuela entre ellos
+  return dijkstra(lv, src, blocked, blocked);
 }
 
 // Ventisca: con el aventurero sobre una casilla de ventisca, -1 al Ataque y a la Defensa base
@@ -2694,7 +2695,7 @@ if (typeof module !== 'undefined') {
       <h4>2 · Tu turno</h4>
       <ul>
         <li>Mueve y ataca en el orden que quieras. No tienes que gastar todo.</li>
-        <li>Un paso recto cuesta <b>2</b> de Mov; uno en diagonal, <b>3</b>. No puedes pisar muros ni monstruos.</li>
+        <li>Un paso recto cuesta <b>2</b> de Mov; uno en diagonal, <b>3</b>. No puedes pisar muros ni monstruos, ni colarte en diagonal entre dos de ellos (muro o monstruo) que se tocan por la esquina.</li>
         <li>Para atacar, el monstruo debe estar a tu <b>Alcance</b> y a la vista. La distancia se mide en coste de movimiento: pegado en recto es 2, en diagonal 3.</li>
         <li>Cada golpe cuesta tantos puntos de Atq como la <b>Defensa</b> del monstruo y le quita 1 de Vida.</li>
         <li>Ver o no ver: una línea recta desde cualquier esquina de tu casilla hasta cualquier esquina de la suya, sin cruzar muros ni otros monstruos.</li>

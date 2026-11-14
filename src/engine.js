@@ -484,11 +484,12 @@ function reachFromAdv(st) {
   }
   if (st.sherpaOn) {
     // Sherpa: los muros cuentan como casillas normales al moverse, pero no se puede terminar en uno
-    const R = dijkstra({ walls: lv.voids }, src, blocked);
+    const R = dijkstra({ walls: lv.voids }, src, blocked, blocked);
     for (let i = 0; i < N; i++) if (lv.walls[i]) R.dist[i] = Infinity;
     return R;
   }
-  return dijkstra(lv, src, blocked);
+  // Una diagonal queda cerrada si las dos casillas contiguas están ocupadas (muros o monstruos): no se cuela entre ellos
+  return dijkstra(lv, src, blocked, blocked);
 }
 
 // Ventisca: con el aventurero sobre una casilla de ventisca, -1 al Ataque y a la Defensa base
