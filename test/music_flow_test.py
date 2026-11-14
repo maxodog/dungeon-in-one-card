@@ -21,7 +21,10 @@ async def main():
     async with async_playwright() as p:
         b,page,reqs,errs=await open_(p,'base',3)
         print('bucle (duración, loop):', await page.evaluate("window.__bs"), reqs, errs); await b.close()
-        b,page,reqs,errs=await open_(p,'base',0)
+        for _ in range(8):   # la canción del piso es al azar: aquí hace falta una que no sea bucle (suena por <audio>)
+            b,page,reqs,errs=await open_(p,'base',0)
+            if await page.evaluate("!!window.__els.find(e=>/core_game/.test(e.src))"): break
+            await b.close()
         first=[r for r in reqs]
         # saltar casi al final de la canción para que termine y entre otra
         await page.evaluate("window.__els.find(e=>/core_game/.test(e.src)).dispatchEvent(new Event('ended'))"); await page.wait_for_timeout(4000)

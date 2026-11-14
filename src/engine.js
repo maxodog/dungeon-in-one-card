@@ -754,6 +754,23 @@ function chooseMove(lv, st, m) {
       bestCost = D.dist[i]; target = i;
     }
   }
+  // 1b) Si llegar a esa casilla exige más turnos de camino que llegar a otra desde la que ya puede atacar
+  //     (por ejemplo, rodeando un muro o un pasillo cerrado), no da el rodeo: va a la que antes pueda atacar.
+  //     Con el mismo número de turnos se mantiene la preferencia por el Alcance máximo.
+  if (target >= 0) {
+    const turns = c => Math.ceil(c / Math.max(1, m.spd));
+    if (turns(bestCost) > 1) {
+      let a = -1, aT = Infinity, aRd = -1, aC = Infinity;
+      for (let i = 0; i < N; i++) {
+        if (!free(i)) continue;
+        const rd = rangeDist(lv, i, advI);
+        if (rd > R(i) || !hasLOS(lv, i, advI, others)) continue;
+        const tn = turns(D.dist[i]);
+        if (tn < aT || (tn === aT && (rd > aRd || (rd === aRd && D.dist[i] < aC)))) { a = i; aT = tn; aRd = rd; aC = D.dist[i]; }
+      }
+      if (a >= 0 && aT < turns(bestCost)) { target = a; bestCost = aC; }
+    }
+  }
   // 2) si no hay, la de mayor Alcance posible con visión
   if (target < 0) {
     let bestRd = -1; bestCost = Infinity;
