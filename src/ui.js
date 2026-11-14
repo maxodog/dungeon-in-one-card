@@ -2,7 +2,7 @@
 (function () {
   const $ = s => document.querySelector(s);
   const NO_SKILLS = () => ({ spd: -1, atk: -1, def: -1, rng: -1 });
-  const E = { newRun, rollTurn, assignComplete, confirmEnergy, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo, playMonsters, endTurnCleanup, levelCleared, applyBreak, nextLevel,
+  const E = { newRun, rollTurn, assignComplete, confirmEnergy, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo, playMonsters, endTurnCleanup, levelCleared, applyBreak, SKILL_MAX, nextLevel,
     rerollDice, useReroll, rollWithKeep, toggleRanger, toggleKnight, useRogue, toggleCorsair, abilityInfo, encodePassword, decodePassword, retryLevel,
     toggleSherpa, itemUsable, useItem, useFlame, useEye, resolveDamage, blizzPen, atkAvail, heroDef, useGame, afterClear, lvOf, mStat, itemPool,
     chestInfo, openChest, setLoot, necroInfo, necroStrike, demonReach, demonMove,
@@ -830,10 +830,12 @@
   function breakSheet() {
     const a = G.adv;
     const ch = ['spd', 'atk', 'def', 'rng'].map(k =>
-      `<button type="button" class="choice" data-c="${k}"><b>${LONG[k]}</b><span><em>${a[k]}</em> → <em>${a[k] + 1}</em></span></button>`).join('');
+      a[k] >= E.SKILL_MAX
+        ? `<button type="button" class="choice" data-c="${k}" disabled><b>${LONG[k]}</b><span><em>${a[k]}</em> · máximo</span></button>`
+        : `<button type="button" class="choice" data-c="${k}"><b>${LONG[k]}</b><span><em>${a[k]}</em> → <em>${a[k] + 1}</em></span></button>`).join('');
     const full = a.hp >= START_HP;
     openSheet(`<h3>Nivel superado</h3>
-      <p class="lead">Descansa un momento. Elige una sola cosa.</p>
+      <p class="lead">Descansa un momento. Elige una sola cosa. Cada habilidad llega como máximo a 6.</p>
       <div class="choices">${ch}
         <button type="button" class="choice wide" data-c="heal" ${full ? 'disabled' : ''}><b>Curarte</b><span>Vida <em>${a.hp}</em> → <em>${START_HP}</em></span></button>
       </div>`, [], false);

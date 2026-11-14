@@ -887,8 +887,13 @@ function afterClear(st) {
   if (!next) return 'won';
   return next.boss && !LEVELS[st.levelIdx].boss ? 'boss' : 'break';
 }
+// Cada habilidad se lleva con un dado en la carta del aventurero: no puede pasar de 6 al subir de nivel
+// (solo el botín del cofre suma por encima, y solo durante el turno)
+const SKILL_MAX = 6;
 function applyBreak(st, choice) { // 'spd' | 'atk' | 'def' | 'rng' | 'heal'
-  if (choice === 'heal') st.adv.hp = START_HP; else st.adv[choice] += 1;
+  if (choice === 'heal') { st.adv.hp = START_HP; return true; }
+  if (!(choice in st.adv) || st.adv[choice] >= SKILL_MAX) return false;
+  st.adv[choice] += 1; return true;
 }
 function nextLevel(st) {
   useGame(st.game || 'base');
@@ -1080,5 +1085,5 @@ if (typeof module !== 'undefined') {
     laurelStart, laurelMon, laurelReach, laurelMove, laurelAttackInfo, laurelAttack, laurelEnd, ORIENTS_HELL, LEVEL_DEFS_HELL, BOSS_DEFS_HELL,
     itemUsable, useItem, useFlame, useEye, resolveDamage, blizzPen, atkAvail, heroDef,
     encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, PW7_GAMES, PW8_GAME, pw7Total, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo,
-    playMonsters, endTurnCleanup, levelCleared, afterClear, applyBreak, nextLevel, attackers, freshTurn, chooseMove };
+    playMonsters, endTurnCleanup, levelCleared, afterClear, applyBreak, SKILL_MAX, nextLevel, attackers, freshTurn, chooseMove };
 }
