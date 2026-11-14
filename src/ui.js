@@ -324,15 +324,15 @@
   function save() {
     try {
       if (!G || G.laurel) return;
-      if (G.phase === 'won') { localStorage.removeItem(SAVE_KEY); return; }
+      if (G.phase === 'won') { localStorage.removeItem(saveKey()); return; }
       let sv = G;
-      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
-      localStorage.setItem(SAVE_KEY, JSON.stringify(sv));
+      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
+      localStorage.setItem(saveKey(), JSON.stringify(sv));
     } catch (e) {}
   }
   function loadSaved() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(saveKey());
       if (!raw) return null;
       const g = JSON.parse(raw);
       return validState(g) ? g : null;
@@ -371,10 +371,145 @@
     const inGrid = o => Number.isInteger(o.x) && Number.isInteger(o.y) && o.x >= 0 && o.y >= 0 && o.x < COLS && o.y < ROWS;
     return inGrid(g.adv) && g.mons.every(m => inGrid(m) && m.def === m0.def && m.atk === m0.atk && m.spd === m0.spd && m.rng === m0.rng && m.maxHp === m0.hp);
   }
-  function loadBest() { try { bestLevel = +localStorage.getItem(BEST_KEY) || 0; } catch (e) {} }
+  function loadBest() { bestLevel = 0; try { bestLevel = +localStorage.getItem(bestKey()) || 0; } catch (e) {} }
   function noteBest() {
     const n = G.levelIdx + 1;
-    if (n > bestLevel) { bestLevel = n; try { localStorage.setItem(BEST_KEY, String(n)); } catch (e) {} }
+    if (n > bestLevel) { bestLevel = n; try { localStorage.setItem(bestKey(), String(n)); } catch (e) {} }
+  }
+
+  /* ---------- usuarios locales (en este dispositivo) ---------- */
+  // Cada usuario tiene su partida en curso, su mejor etapa y su historial: mazmorras, estadísticas y logros.
+  // La contraseña se guarda resumida (SHA-256 con sal), nunca en claro. Todo vive en el navegador de este dispositivo;
+  // la copia de seguridad es un código que permite recuperarlo en otro navegador o dispositivo.
+  const USERS_KEY = 'dioc-users-v1', CUR_KEY = 'dioc-user';
+  const ukey = n => String(n || '').trim().toLowerCase();
+  const Users = (() => {
+    const all = () => { try { const o = JSON.parse(localStorage.getItem(USERS_KEY)); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } };
+    const store = o => { try { localStorage.setItem(USERS_KEY, JSON.stringify(o)); return true; } catch (e) { return false; } };
+    let cur = null; try { cur = localStorage.getItem(CUR_KEY) || null; } catch (e) {}
+    if (cur && !all()[cur]) cur = null;
+    const setCur = k => { cur = k; try { k ? localStorage.setItem(CUR_KEY, k) : localStorage.removeItem(CUR_KEY); } catch (e) {} };
+    async function hash(pw, salt) {
+      const data = new TextEncoder().encode(salt + '|' + pw);
+      try { const h = await crypto.subtle.digest('SHA-256', data); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join(''); }
+      catch (e) { let a = 5381, b = 52711; for (const c of data) { a = ((a * 33) ^ c) >>> 0; b = ((b * 31) + c) >>> 0; } return 'x' + a.toString(16) + b.toString(16); }
+    }
+    const salt = () => Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('');
+    const emptyRec = () => ({ games: {}, tot: {}, ach: {}, hist: [], heroes: [], runs: {} });
+    return {
+      get cur() { return cur; },
+      list() { const o = all(); return Object.keys(o).map(k => ({ k, name: o[k].name })).sort((a, b) => a.name.localeCompare(b.name)); },
+      get(k) { return all()[k || cur] || null; },
+      async create(name, pw) {
+        name = String(name || '').trim().replace(/\s+/g, ' ');
+        if (name.length < 2 || name.length > 16) return 'El nombre debe tener entre 2 y 16 caracteres.';
+        if ((pw || '').length < 4) return 'La contraseña debe tener al menos 4 caracteres.';
+        const o = all(), k = ukey(name);
+        if (o[k]) return 'Ya existe un usuario con ese nombre en este dispositivo.';
+        const s = salt();
+        o[k] = { name, salt: s, hash: await hash(pw, s), created: Date.now(), rec: emptyRec() };
+        if (!store(o)) return 'No se pudo guardar. Revisa que el navegador permita guardar datos.';
+        setCur(k); return null;
+      },
+      async login(k, pw) { const u = all()[k]; if (!u) return 'Ese usuario no existe.'; if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.'; setCur(k); return null; },
+      logout() { setCur(null); },
+      async remove(k, pw) {
+        const o = all(), u = o[k]; if (!u) return null;
+        if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.';
+        delete o[k]; store(o);
+        try { localStorage.removeItem(SAVE_KEY + ':u:' + k); localStorage.removeItem(BEST_KEY + ':u:' + k); } catch (e) {}
+        if (cur === k) setCur(null); return null;
+      },
+      update(fn) { if (!cur) return null; const o = all(), u = o[cur]; if (!u) return null; u.rec = Object.assign(emptyRec(), u.rec); const r = fn(u.rec); store(o); return r; },
+      exportCode(k) {
+        const o = all(), u = o[k || cur]; if (!u) return '';
+        let save = null; try { save = localStorage.getItem(SAVE_KEY + ':u:' + (k || cur)); } catch (e) {}
+        const json = JSON.stringify({ v: 1, k: k || cur, u, save });
+        return 'DIOC1-' + btoa(unescape(encodeURIComponent(json)));
+      },
+      parseCode(code) {
+        try {
+          const s = String(code || '').replace(/\s+/g, ''); if (!s.startsWith('DIOC1-')) return null;
+          const d = JSON.parse(decodeURIComponent(escape(atob(s.slice(6)))));
+          return d && d.v === 1 && d.u && d.u.name && d.u.hash && d.u.salt ? d : null;
+        } catch (e) { return null; }
+      },
+      importData(d) {
+        const o = all(), k = ukey(d.u.name); o[k] = d.u; if (!store(o)) return false;
+        try { if (d.save) localStorage.setItem(SAVE_KEY + ':u:' + k, d.save); } catch (e) {}
+        setCur(k); return true;
+      },
+      exists: k => !!all()[k]
+    };
+  })();
+  function saveKey() { return Users.cur ? SAVE_KEY + ':u:' + Users.cur : SAVE_KEY; }
+  function bestKey() { return Users.cur ? BEST_KEY + ':u:' + Users.cur : BEST_KEY; }
+  const newRunId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  // Catálogo de logros: mazmorras completadas, rangos de victoria y premios (los mismos de la pantalla final)
+  const ACH = [
+    { g: 'Mazmorras', id: 'win_base', name: 'Cáliz de Brasas', txt: 'Completa One Card Dungeon.' },
+    { g: 'Mazmorras', id: 'win_mguf', name: "Fin de M'Guf-yn", txt: "Completa M'Guf-yn Returns." },
+    { g: 'Mazmorras', id: 'win_peak', name: 'Rey de la cima', txt: 'Completa la Montaña Eterna.' },
+    { g: 'Mazmorras', id: 'win_harbour', name: 'Lobo de mar', txt: 'Completa Harbour Clash.' },
+    { g: 'Mazmorras', id: 'win_hell', name: 'Portero del Infierno', txt: 'Completa La Puerta del Infierno.' },
+    { g: 'Mazmorras', id: 'all', name: 'Leyenda de la mazmorra', txt: 'Completa las cinco aventuras.' },
+    { g: 'Mazmorras', id: 'multi', name: 'Multiclase', txt: 'Gana con 3 héroes distintos.' },
+    { g: 'Rangos', id: 'Intocable', name: 'Intocable', txt: 'Gana sin caer y con 10 de daño o menos.' },
+    { g: 'Rangos', id: 'Héroe de manual', name: 'Héroe de manual', txt: 'Gana sin caer ni una vez.' },
+    { g: 'Rangos', id: 'Terco con suerte', name: 'Terco con suerte', txt: 'Gana tras caer 1 o 2 veces.' },
+    { g: 'Rangos', id: 'Cucaracha inmortal', name: 'Cucaracha inmortal', txt: 'Gana tras caer 3 veces o más.' },
+    { g: 'Premios', id: 'Muro humano', name: 'Muro humano', txt: 'Gana bloqueando 8 ataques o más.' },
+    { g: 'Premios', id: 'Exterminador', name: 'Exterminador', txt: 'Gana venciendo 10 monstruos o más.' },
+    { g: 'Premios', id: 'Saqueador', name: 'Saqueador', txt: 'Gana abriendo 3 cofres o más.' },
+    { g: 'Premios', id: 'Piel de roca', name: 'Piel de roca', txt: 'Gana recibiendo 5 de daño o menos.' },
+    { g: 'Premios', id: 'Manos rápidas', name: 'Manos rápidas', txt: 'Gana dando 15 golpes o más.' },
+    { g: 'Premios', id: 'Sin pausa para morir', name: 'Sin pausa para morir', txt: 'Gana sin caer.' },
+    { g: 'Premios', id: 'Con prisa', name: 'Con prisa', txt: 'Gana en 70 turnos o menos.' },
+    { g: 'Premios', id: 'Superviviente', name: 'Superviviente', txt: 'Gana sin ningún otro premio.' },
+    { g: 'Premios consuelo', id: 'Saco de boxeo', name: 'Saco de boxeo', txt: 'Cae tras recibir 12 de daño o más.' },
+    { g: 'Premios consuelo', id: 'Pacifista involuntario', name: 'Pacifista involuntario', txt: 'Cae sin haber vencido a ningún monstruo.' },
+    { g: 'Premios consuelo', id: 'Visitante frecuente', name: 'Visitante frecuente', txt: 'Cae por tercera vez en una misma partida.' },
+    { g: 'Premios consuelo', id: 'Defensa opcional', name: 'Defensa opcional', txt: 'Cae sin haber bloqueado ningún ataque.' },
+    { g: 'Premios consuelo', id: 'Premio participación', name: 'Premio participación', txt: 'Cae sin otro premio de consuelo.' }
+  ];
+  const RANK_ORDER = ['Cucaracha inmortal', 'Terco con suerte', 'Héroe de manual', 'Intocable'];
+  const TOT_KEYS = ['kills', 'hits', 'dmgIn', 'blocks', 'chests'];
+
+  // Anota el final de una partida (victoria) o una caída en el historial del usuario. Devuelve los logros nuevos.
+  function recordEnd(won, rank, awards) {
+    if (!Users.cur || !G) return [];
+    if (!G.runId) G.runId = newRunId();
+    const s = G.stats || {}, N = LEVELS.length, game = G.game, turns = G.totalTurns || 0, today = Date.now();
+    return Users.update(r => {
+      // totales: solo lo nuevo desde la última vez que se anotó esta partida (las caídas y reintentos acumulan)
+      const prev = r.runs[G.runId] || {};
+      for (const k of TOT_KEYS) r.tot[k] = (r.tot[k] || 0) + Math.max(0, (s[k] || 0) - (prev[k] || 0));
+      r.tot.turns = (r.tot.turns || 0) + Math.max(0, turns - (prev.turns || 0));
+      const snap = { turns }; for (const k of TOT_KEYS) snap[k] = s[k] || 0;
+      delete r.runs[G.runId]; r.runs[G.runId] = snap;
+      const ids = Object.keys(r.runs); while (ids.length > 15) delete r.runs[ids.shift()];
+      const gm = r.games[game] = Object.assign({ wins: 0, falls: 0, best: 0, bestRank: null, fastest: null }, r.games[game]);
+      const fresh = [];
+      const unlock = id => { if (!r.ach[id] && ACH.some(a => a.id === id)) { r.ach[id] = { d: today, g: game }; fresh.push(id); } };
+      if (won) {
+        gm.wins++; gm.best = N;
+        if (gm.fastest == null || turns < gm.fastest) gm.fastest = turns;
+        if (RANK_ORDER.indexOf(rank) > RANK_ORDER.indexOf(gm.bestRank)) gm.bestRank = rank;
+        if (!r.heroes.includes(G.hero)) r.heroes.push(G.hero);
+        r.tot.wins = (r.tot.wins || 0) + 1;
+        unlock('win_' + game); unlock(rank);
+        if (ADV_ORDER.every(g => r.games[g] && r.games[g].wins)) unlock('all');
+        if (r.heroes.length >= 3) unlock('multi');
+      } else {
+        gm.falls++; gm.best = Math.max(gm.best, G.levelIdx + 1);
+        r.tot.falls = (r.tot.falls || 0) + 1;
+      }
+      awards.forEach(unlock);
+      r.hist.unshift({ d: today, g: game, h: G.hero, won, st: won ? N : G.levelIdx + 1, n: N, rank, t: turns });
+      r.hist = r.hist.slice(0, 12);
+      return fresh;
+    }) || [];
   }
 
   /* ---------- tablero ---------- */
@@ -920,6 +1055,7 @@
       quip = pick(opts);
       awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
     }
+    const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id;
     const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(TAUNTS)}»`;
     const cell = (ico, v, l, wide) => `<div class="${wide ? 'wide' : ''}"><i>${STAT_ICO[ico]}</i><b>${v}</b><span>${l}</span></div>`;
     const cells = [
@@ -951,6 +1087,8 @@
           <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
         <div class="end-say"><span class="mico">${ICONS[mon.key] || ''}</span><q>${say}</q></div>
         <div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${awards.map(x => `<span class="award">${x}</span>`).join('')}</div>
+        ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${fresh.map(x => `<span>${achName(x)}</span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
+          : '<p class="fine">Entra con un usuario desde el menú para guardar tus logros y estadísticas.</p>'}
         ${won ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste${pw ? `: contraseña <b>${pw}</b>` : ''}.</p>`}
         <div class="menu-btns">
           ${won ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>Reintentar ${lab.toLowerCase()}</span></button>`}
@@ -991,8 +1129,10 @@
   function menuScreen() {
     G = null; busy = false; rolling = false; mode = null;
     const sv = loadSaved();
+    const me = Users.get();
     showScreen(`<div class="splash">${LOGO}
       <p class="tagline">Una carta, tres dados y una aventura por elegir.</p>
+      <button type="button" class="userbar ${me ? 'in' : ''}" id="mUser">${ICON_USER}<span>${me ? `<b>${esc(me.name)}</b><small>Ver perfil, logros y estadísticas</small>` : '<b>Entrar o crear usuario</b><small>Para guardar tus logros y estadísticas</small>'}</span><i aria-hidden="true">›</i></button>
       <div class="menu-btns">
         ${sv ? `<button type="button" class="btn primary menu-main" id="mContinue"><span>Seguir en este dispositivo</span><small>${HEROES[sv.hero].name} · ${GAMES[sv.game].name} · ${stageLabel(GAMES[sv.game].levels[sv.levelIdx]).toLowerCase()} · Vida ${sv.adv.hp}</small></button>` : ''}
         <button type="button" class="btn ${sv ? '' : 'primary'} menu-main" id="mNew"><span>Nueva partida</span></button>
@@ -1000,7 +1140,122 @@
         <button type="button" class="ghost" id="mRules">Cómo se juega</button>
       </div>
       <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner. · versión ${(document.querySelector('meta[name=build]') || {}).content || '?'}</p></div>`,
-      [['#mContinue', () => resume(sv)], ['#mNew', adventureScreen], ['#mPass', () => passScreen('')], ['#mRules', rulesSheet]]);
+      [['#mContinue', () => resume(sv)], ['#mUser', () => (Users.cur ? profileScreen() : usersScreen())], ['#mNew', adventureScreen], ['#mPass', () => passScreen('')], ['#mRules', rulesSheet]]);
+  }
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const ICON_USER = '<svg class="uico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/></svg>';
+  const fmtDate = t => { try { return new Date(t).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } };
+  const USERS_NOTE = '<p class="fine">Los usuarios se guardan solo en este navegador y dispositivo. Si borras los datos de sitios del navegador se pierden: usa la copia de seguridad del perfil para no perderlos.</p>';
+
+  // Entrar, crear usuario o recuperar uno con un código de copia
+  function usersScreen(view, arg, err) {
+    const list = Users.list();
+    view = view || (list.length ? 'pick' : 'new');
+    let body = '';
+    if (view === 'pick') body = `<h2 class="screen-h">Usuarios</h2>
+      <p class="lead">Elige tu usuario en este dispositivo.</p>
+      <div class="user-list">${list.map(x => `<button type="button" class="btn user-btn" data-uk="${esc(x.k)}">${ICON_USER}<span>${esc(x.name)}</span></button>`).join('')}</div>
+      <div class="menu-btns"><button type="button" class="btn" id="uNew">Crear usuario nuevo</button><button type="button" class="ghost" id="uImp">Recuperar con copia de seguridad</button></div>`;
+    else if (view === 'login') body = `<h2 class="screen-h">${esc((Users.get(arg) || {}).name)}</h2>
+      <p class="lead">Escribe tu contraseña.</p>
+      <input id="uPw" class="field" type="password" autocomplete="current-password" aria-label="Contraseña">
+      <p class="err" id="uErr" role="alert">${err || ''}</p>
+      <button type="button" class="btn primary" id="uGo">Entrar</button>`;
+    else if (view === 'new') body = `<h2 class="screen-h">Crear usuario</h2>
+      <label class="flabel">Nombre<input id="uName" class="field" type="text" maxlength="16" autocomplete="username" autocapitalize="words"></label>
+      <label class="flabel">Contraseña <small>(mínimo 4 caracteres)</small><input id="uPw" class="field" type="password" autocomplete="new-password"></label>
+      <label class="flabel">Repite la contraseña<input id="uPw2" class="field" type="password" autocomplete="new-password"></label>
+      <p class="err" id="uErr" role="alert">${err || ''}</p>
+      <button type="button" class="btn primary" id="uGo">Crear y entrar</button>
+      ${list.length ? '' : '<button type="button" class="ghost" id="uImp">Recuperar con copia de seguridad</button>'}`;
+    else if (view === 'import') body = `<h2 class="screen-h">Recuperar usuario</h2>
+      <p class="lead">Pega el código de copia de seguridad que guardaste desde tu perfil.</p>
+      <textarea id="uCode" class="field code" rows="5" spellcheck="false" autocomplete="off" placeholder="DIOC1-…"></textarea>
+      <p class="err" id="uErr" role="alert">${err || ''}</p>
+      <button type="button" class="btn primary" id="uGo">Recuperar</button>`;
+    const sc = showScreen(`<div class="splash users">
+      <button type="button" class="ghost back" id="back">‹ Atrás</button>${body}${USERS_NOTE}</div>`,
+      [['#back', () => (view === 'pick' || (view === 'new' && !list.length) ? menuScreen() : usersScreen())], ['#uNew', () => usersScreen('new')], ['#uImp', () => usersScreen('import')]]);
+    sc.querySelectorAll('[data-uk]').forEach(b => b.addEventListener('click', () => usersScreen('login', b.dataset.uk)));
+    const go = sc.querySelector('#uGo'), errEl = sc.querySelector('#uErr');
+    if (!go) return;
+    const fail = m => { errEl.textContent = m; go.disabled = false; };
+    const done = () => { loadBest(); menuScreen(); };
+    const act = async () => {
+      go.disabled = true;
+      if (view === 'login') { const e = await Users.login(arg, sc.querySelector('#uPw').value); return e ? fail(e) : done(); }
+      if (view === 'new') {
+        const pw = sc.querySelector('#uPw').value;
+        if (pw !== sc.querySelector('#uPw2').value) return fail('Las contraseñas no coinciden.');
+        const e = await Users.create(sc.querySelector('#uName').value, pw); return e ? fail(e) : done();
+      }
+      if (view === 'import') {
+        const d = Users.parseCode(sc.querySelector('#uCode').value);
+        if (!d) return fail('Ese código no es válido. Cópialo completo, desde «DIOC1-».');
+        const k = ukey(d.u.name);
+        if (Users.exists(k) && go.dataset.ok !== '1') { go.dataset.ok = '1'; go.textContent = `Reemplazar a ${d.u.name}`; return fail(`Ya existe ${d.u.name} en este dispositivo. Si recuperas la copia, se reemplaza por la del código.`); }
+        return Users.importData(d) ? done() : fail('No se pudo guardar en este navegador.');
+      }
+    };
+    go.addEventListener('click', act);
+    sc.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') act(); }));
+    const f = sc.querySelector('input,textarea'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 50);
+  }
+
+  // Perfil: mazmorras, estadísticas, logros, últimas partidas y copia de seguridad
+  function profileScreen(panel) {
+    const me = Users.get(); if (!me) return usersScreen();
+    const r = Object.assign({ games: {}, tot: {}, ach: {}, hist: [], heroes: [] }, me.rec), t = r.tot;
+    const got = ACH.filter(a => r.ach[a.id]).length;
+    const games = ADV_ORDER.map(g => {
+      const x = r.games[g], n = GAMES[g].levels.length;
+      const st = !x ? '<span class="dim">Sin jugar</span>' : x.wins ? `<b class="ok">Completada${x.wins > 1 ? ` ×${x.wins}` : ''}</b>` : `<span>Mejor etapa <b>${x.best}/${n}</b></span>`;
+      const extra = x && x.wins ? `<small>${x.bestRank ? `Rango: ${x.bestRank} · ` : ''}Récord: ${x.fastest} turnos</small>` : x ? `<small>${x.falls} caída${x.falls === 1 ? '' : 's'}</small>` : '';
+      return `<div class="pg ${x && x.wins ? 'won' : ''}"><span class="pg-n">${GAMES[g].name}</span>${st}${extra}</div>`;
+    }).join('');
+    const cell = (v, l) => `<div><b>${v || 0}</b><span>${l}</span></div>`;
+    const groups = [...new Set(ACH.map(a => a.g))].map(g => `<h4>${g}</h4><div class="ach-list">${ACH.filter(a => a.g === g).map(a => {
+      const h = r.ach[a.id];
+      return `<div class="ach ${h ? 'on' : ''}"><b>${a.name}</b><span>${a.txt}</span>${h ? `<small>${fmtDate(h.d)} · ${GAMES[h.g] ? GAMES[h.g].name : ''}</small>` : ''}</div>`;
+    }).join('')}</div>`).join('');
+    const hist = r.hist.length ? r.hist.map(h => `<li class="${h.won ? 'won' : ''}"><b>${h.won ? 'Victoria' : 'Caída'}</b> · ${GAMES[h.g] ? GAMES[h.g].name : ''} · ${HEROES[h.h] ? HEROES[h.h].name : ''} · etapa ${h.st}/${h.n}${h.won ? ` · ${h.rank}` : ''}<small>${fmtDate(h.d)}</small></li>`).join('') : '<li class="dim">Todavía no hay partidas.</li>';
+    const sc = showScreen(`<div class="splash wide prof">
+      <button type="button" class="ghost back" id="back">‹ Atrás</button>
+      <div class="prof-head">${ICON_USER}<div><h2 class="screen-h">${esc(me.name)}</h2><small>Usuario desde ${fmtDate(me.created)} · ${got}/${ACH.length} logros</small></div></div>
+      <h3 class="pack-h">Mazmorras</h3><div class="prof-games">${games}</div>
+      <h3 class="pack-h">Estadísticas</h3>
+      <div class="prof-stats">${cell(t.wins, 'Victorias')}${cell(t.falls, 'Caídas')}${cell(t.kills, 'Monstruos vencidos')}${cell(t.hits, 'Golpes dados')}${cell(t.dmgIn, 'Daño recibido')}${cell(t.blocks, 'Ataques bloqueados')}${cell(t.chests, 'Cofres abiertos')}${cell(t.turns, 'Turnos jugados')}</div>
+      <h3 class="pack-h">Logros <small>${got} de ${ACH.length}</small></h3><div class="prof-ach">${groups}</div>
+      <h3 class="pack-h">Últimas partidas</h3><ul class="prof-hist">${hist}</ul>
+      <h3 class="pack-h">Copia de seguridad</h3>
+      <p class="lead">Guarda este código en una nota o envíatelo. Con él recuperas tu usuario (logros, estadísticas y partida en curso) en este u otro dispositivo, desde «Recuperar con copia de seguridad». Si cambias de contraseña o sumas logros, genera una copia nueva.</p>
+      <div id="bkBox">${panel === 'backup' ? `<textarea class="field code" rows="5" readonly id="bkCode">${Users.exportCode()}</textarea><p class="fine" id="bkMsg" aria-live="polite"></p><button type="button" class="btn" id="bkCopy">Copiar código</button>` : '<button type="button" class="btn" id="bkShow">Crear copia de seguridad</button>'}</div>
+      <div class="menu-btns prof-acts">
+        <button type="button" class="btn primary" id="pMenu">Ir al menú</button>
+        <button type="button" class="btn" id="pOut">Cerrar sesión</button>
+        <button type="button" class="ghost danger" id="pDel">Borrar este usuario</button>
+      </div>
+      <div id="delBox"></div>${USERS_NOTE}</div>`,
+      [['#back', menuScreen], ['#pMenu', menuScreen], ['#pOut', () => { Users.logout(); loadBest(); menuScreen(); }], ['#bkShow', () => { profileScreen('backup'); setTimeout(() => { const b = $('#bkBox'); if (b) b.scrollIntoView({ block: 'center' }); }, 30); }]]);
+    const cp = sc.querySelector('#bkCopy');
+    if (cp) cp.addEventListener('click', () => {
+      const code = sc.querySelector('#bkCode'), m = sc.querySelector('#bkMsg');
+      let p = null; try { p = navigator.clipboard && navigator.clipboard.writeText(code.value); } catch (e) {}
+      if (p && p.then) p.then(() => { m.textContent = 'Copiado. Pégalo en una nota o en un mensaje para ti.'; }, () => { code.select(); m.textContent = 'Selecciona el texto y cópialo a mano.'; });
+      else { code.select(); m.textContent = 'Selecciona el texto y cópialo a mano.'; }
+    });
+    sc.querySelector('#pDel').addEventListener('click', () => {
+      const box = sc.querySelector('#delBox');
+      box.innerHTML = `<div class="del-box"><p class="lead">Se borrarán el usuario, sus logros y su partida en curso de este dispositivo. Escribe tu contraseña para confirmar.</p>
+        <input id="dPw" class="field" type="password" autocomplete="current-password" aria-label="Contraseña"><p class="err" id="dErr" role="alert"></p>
+        <button type="button" class="btn danger" id="dGo">Borrar definitivamente</button></div>`;
+      box.querySelector('#dGo').addEventListener('click', async () => {
+        const e = await Users.remove(Users.cur, box.querySelector('#dPw').value);
+        if (e) box.querySelector('#dErr').textContent = e; else { loadBest(); menuScreen(); }
+      });
+      box.scrollIntoView({ block: 'center' }); setTimeout(() => box.querySelector('#dPw').focus({ preventScroll: true }), 50);
+    });
   }
 
   const ADV_INFO = {
@@ -1117,7 +1372,7 @@
     const inp = $('#pwIn'); if (!inp || ![4, 5, 7, 8].includes(inp.value.length)) return;
     const g = E.decodePassword(inp.value);
     if (!g) { $('#pwErr').textContent = 'Esa contraseña no es válida. Revisa las letras y números.'; return; }
-    G = g; G.totalTurns = 0; lastHp = G.adv.hp; builtLevel = -1;
+    G = g; G.totalTurns = 0; G.runId = newRunId(); lastHp = G.adv.hp; builtLevel = -1;
     hideScreen(); render();
     say(`<b>Contraseña aceptada.</b> ${GAMES[G.game].name}: ${HEROES[G.hero].name}, ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()} (${LEVELS[G.levelIdx].title}) con ${G.adv.hp} de Vida${G.items.length ? ' y ' + G.items.length + ' objeto' + (G.items.length > 1 ? 's' : '') : ''}${G.loot ? ` y ${G.loot} de botín` : ''}. Tira los dados.`);
   }
@@ -1130,7 +1385,7 @@
     hell: 'La Puerta del Infierno: si pisas una casilla maldita, los monstruos se fortalecen. La Piedra de la Perdición se rompe a costa de tu Vida.'
   };
   function startGame(hero, game, items) {
-    G = E.newRun(hero, game, items); G.totalTurns = 0; lastHp = START_HP; builtLevel = -1;
+    G = E.newRun(hero, game, items); G.totalTurns = 0; G.runId = newRunId(); lastHp = START_HP; builtLevel = -1;
     hideScreen(); render();
     say(`<b>${HEROES[hero].name}.</b> ${START_MSG[game]} Tira los dados para empezar.`);
   }
@@ -1148,8 +1403,8 @@
   function goMenu() { if (busy) return; closeSheet(); menuScreen(); }
 
   function retry() {
-    const t = G.totalTurns, stt = G.stats;
-    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
+    const t = G.totalTurns, stt = G.stats, rid = G.runId;
+    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; G.runId = rid; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
     closeSheet(); hideScreen(); render();
     say(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`);
   }
