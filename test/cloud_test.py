@@ -5,7 +5,7 @@ from playwright.async_api import async_playwright
 ENG = '/home/claude/dungeon-in-one-card/src/engine.js'; URL = 'file:///home/claude/dungeon-in-one-card/index.html'
 JS = """const st=E.newRun('knight','base',[]); E.setupLevel(st,11); const lv=E.LEVELS[11]; const m0=lv.mon; let sx,sy;
  for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) { const x=st.adv.x+dx,y=st.adv.y+dy; if (x>=0&&y>=0&&x<5&&y<5&&!lv.walls[E.idx(x,y)]) { sx=x; sy=y; break; } }
- st.mons=[{id:1,x:sx,y:sy,hp:1,maxHp:m0.hp,spd:m0.spd,atk:m0.atk,def:m0.def,rng:m0.rng}]; st.stats={kills:11,hits:20,dmgIn:4,blocks:9,chests:0}; st.totalTurns=60;
+ st.mons=[{id:1,x:sx,y:sy,hp:1,maxHp:m0.hp,spd:m0.spd,atk:m0.atk,def:m0.def,rng:m0.rng}]; st.stats={kills:11,hits:20,dmgIn:4,blocks:9,chests:0}; st.totalTurns=60; st.trackAbil=true; st.abilEver=false;
  E.rollTurn(st); st.turn.dice=[6,6,6]; st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st); st.turn.atkLeft=99; st.turn.rng=99;"""
 ST = subprocess.check_output(['node','-e',f"const E=require('{ENG}');"+JS+";console.log(JSON.stringify(st));"]).decode().strip()
 accounts, docs, tokens = {}, {}, {}
@@ -63,7 +63,7 @@ async def main():
         await pa.evaluate("s => localStorage.setItem('dioc-run-v3:u:ana maría', s)", ST)
         await pa.reload(); await pa.wait_for_timeout(500); await pa.click('#mContinue'); await pa.wait_for_timeout(500)
         await pa.locator('.tile.target').first.click(); await pa.wait_for_timeout(3500)
-        print('errs', ea); assert 'Cáliz de Brasas' in await pa.inner_text('.end-new')
+        t_new = await pa.inner_text('.end-new'); assert 'Cáliz de Brasas' in t_new and 'Sin trucos' in t_new, t_new
         await pa.click('#eMenu'); await pa.wait_for_timeout(1200)
         doc = json.loads(list(docs.values())[0]['fields']['data']['stringValue'])
         assert doc['rec']['games']['base']['wins'] == 1 and 'saves' in doc, doc['rec']['games']; print('nube: base ganada, logros', len(doc['rec']['ach']))

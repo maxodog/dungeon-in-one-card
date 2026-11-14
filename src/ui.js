@@ -28,7 +28,7 @@
       }
     }
     const unlock = () => { init(); if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} } };
-    ['pointerdown', 'touchstart', 'keydown', 'click'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
+    ['pointerdown', 'touchstart', 'touchend', 'keydown', 'click'].forEach(ev => window.addEventListener(ev, unlock, { passive: true }));
     // pools: nombre de grupo o lista de grupos; vol: volumen 0–1
     function play(pools, vol) {
       if (!on || !ctx || document.hidden || typeof SND_POOLS === 'undefined') return;
@@ -107,7 +107,7 @@
       const my = ++seq, old = cur; lastF = tr.f; fadeOut(old);
       const url = 'musica/' + tr.f;
       if (tr.l && ctx) {     // bucle sin cortes: se decodifica entera (son canciones cortas)
-        const node = { tr, kind: 'buf', g: ctx.createGain() }; node.g.gain.value = 0; node.g.connect(out); cur = node;
+        const node = { tr, kind: 'buf', g: ctx.createGain(), t0: Date.now() }; node.g.gain.value = 0; node.g.connect(out); cur = node;
         fetch(url).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); })
           .then(ab => new Promise((ok, bad) => { const p = ctx.decodeAudioData(ab, ok, bad); if (p && p.then) p.then(ok, bad); }))
           .then(buf => { if (my !== seq) return; const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(node.g); s.start(0); node.s = s; ramp(node, 1, FADE); })
@@ -124,8 +124,23 @@
       const ok = () => { if (my === seq) ramp(slot.g && ctx ? slot : node, 1, FADE); };
       if (p && p.then) p.then(ok, () => { if (my === seq) cur = null; }); else ok();
       el.onended = () => { if (cur === node && !tr.l) next(); };
+      el.onerror = () => { if (cur === node) setTimeout(() => { if (cur === node) next(); }, 800); };
     }
     function next() { const tr = choose(); if (tr) begin(tr); }
+    // Vigilante: si la música debería sonar y no suena (el navegador la pausó, falló la carga, el audio quedó
+    // suspendido al volver de otra app…), la reanuda o pasa a otra canción. Corre en cada toque y cada 3 s.
+    function kick() {
+      if (!on || !T.length || document.hidden) return;
+      if (ctx && ctx.state !== 'running') { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+      if (!unlocked || !want) return;
+      if (!cur) { next(); return; }
+      if (cur.kind === 'el') {
+        const el = cur.slot.el;
+        if (el.error || (el.ended && !el.loop)) { next(); return; }
+        if (el.paused) { try { const p = el.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+      } else if (!cur.s && Date.now() - (cur.t0 || 0) > 12000) next();   // la canción en bucle no terminó de cargar
+    }
+    setInterval(kick, 3000);
 
     // al entrar a un piso: se mantiene la canción si sirve para este piso y no es un bucle
     function floor(game, boss) {
@@ -146,8 +161,8 @@
     function stop() { seq++; fadeOut(cur); cur = null; floorId = null; want = null; }
     function unlock() {
       if (!T.length) return;
-      if (!unlocked) { unlocked = true; setup(); if (!primed) { primed = true; slots.forEach(s => { try { s.el.src = MUSIC_SILENCE; const p = s.el.play(); if (p && p.then) p.then(() => s.el.pause(), () => {}); } catch (e) {} }); } }
-      if (on && want && !cur) next();
+      if (!unlocked) { unlocked = true; setup(); if (!primed) { primed = true; slots.forEach(s => { try { s.el.src = MUSIC_SILENCE; const p = s.el.play(); if (p && p.then) p.then(() => { if (s.el.src === MUSIC_SILENCE) s.el.pause(); }, () => {}); } catch (e) {} }); } }
+      kick();
     }
     ['pointerdown', 'pointerup', 'mousedown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, unlock, { passive: true, capture: true }));
     // Intento de arranque nada más abrir el juego. Si el navegador permite audio sin gesto (o el sitio ya tiene confianza),
@@ -327,7 +342,7 @@
       try { localStorage.setItem(saveKey(G.game) + ':t', String(Date.now())); } catch (e) {}
       if (G.phase === 'won' || G.abandoned) { localStorage.removeItem(saveKey(G.game)); return; }
       let sv = G;
-      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
+      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.trackAbil = G.trackAbil; sv.abilEver = G.abilEver; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
       localStorage.setItem(saveKey(G.game), JSON.stringify(sv));
     } catch (e) {}
   }
@@ -665,6 +680,8 @@
     { t: 'plata', g: 'Hazañas', id: 'max6', name: 'Al tope', txt: 'Termina una partida con una habilidad en 6.' },
     { t: 'oro', g: 'Hazañas', id: 'balance', name: 'Equilibrado', txt: 'Gana con Mov, Atq y Def en 4 o más.' },
     { t: 'oro', g: 'Hazañas', id: 'naked', name: 'Minimalista', txt: 'Gana sin objetos una aventura que los permite.' },
+    { t: 'oro', g: 'Hazañas', id: 'notrick', name: 'Sin trucos', txt: 'Gana sin usar nunca la habilidad del héroe (no vale el Clérigo).' },
+    { t: 'diamante', g: 'Hazañas', id: 'purist', name: 'Purista', txt: 'Gana sin objetos y sin usar la habilidad del héroe, en una aventura con objetos.' },
     { t: 'oro', g: 'Hazañas', id: 'phoenix', name: 'Fénix', txt: 'Gana tras caer 5 veces o más.' },
     { t: 'bronce', g: 'Hazañas', id: 'half', name: 'A mitad de camino', txt: 'Llega a la mitad de una aventura.' },
     { t: 'oro', g: 'Héroes', id: 'h6', name: 'Maestro de armas', txt: 'Gana con 6 héroes distintos.' },
@@ -720,6 +737,9 @@
         if (a.spd >= 4 && a.atk >= 4 && a.def >= 4) unlock('balance');
         if (GAMES[game].items && !(G.items || []).length) unlock('naked');
         if ((s.deaths || 0) >= 5) unlock('phoenix');
+        const noAbil = G.trackAbil && !G.abilEver && G.hero !== 'cleric';
+        if (noAbil) unlock('notrick');
+        if (noAbil && GAMES[game].items && !(G.items || []).length) unlock('purist');
       } else {
         gm.falls++; gm.best = Math.max(gm.best, G.levelIdx + 1);
         r.tot.falls = (r.tot.falls || 0) + 1;
@@ -1689,7 +1709,7 @@
     hell: 'La Puerta del Infierno: si pisas una casilla maldita, los monstruos se fortalecen. La Piedra de la Perdición se rompe a costa de tu Vida.'
   };
   function startGame(hero, game, items) {
-    G = E.newRun(hero, game, items); G.totalTurns = 0; G.runId = newRunId(); lastHp = START_HP; builtLevel = -1;
+    G = E.newRun(hero, game, items); G.totalTurns = 0; G.runId = newRunId(); G.trackAbil = true; G.abilEver = false; lastHp = START_HP; builtLevel = -1;
     hideScreen(); render();
     say(`<b>${HEROES[hero].name}.</b> ${START_MSG[game]} Tira los dados para empezar.`);
   }
@@ -1707,8 +1727,8 @@
   function goMenu() { if (busy) return; closeSheet(); menuScreen(); Users.sync(); }
 
   function retry() {
-    const t = G.totalTurns, stt = G.stats, rid = G.runId;
-    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; G.runId = rid; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
+    const t = G.totalTurns, stt = G.stats, rid = G.runId, tr = G.trackAbil, ae = G.abilEver;
+    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; G.runId = rid; G.trackAbil = tr; G.abilEver = ae; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
     closeSheet(); hideScreen(); render();
     say(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`);
   }

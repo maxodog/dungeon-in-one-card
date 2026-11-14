@@ -427,31 +427,31 @@ function rerollDice(st) {
   t.assign = NO_SKILLS(); t.assign2 = NO_SKILLS(); t.loot = { k: null, n: 0 };
   t.sel = -1; t.lock = -1; t.ranger = false; t.knight = false;
 }
-function useReroll(st) { if (st.hero === 'mage') st.abil = true; else st.turn.rerolled = true; rerollDice(st); }
+function useReroll(st) { st.abilEver = true; if (st.hero === 'mage') st.abil = true; else st.turn.rerolled = true; rerollDice(st); }
 function rollWithKeep(st, k) { // Paladín: conserva el dado que tenía la ranura k el turno anterior
   const t = st.turn;
-  t.dice = rollDice(); t.d12 = [!!(st.prevD12 && st.prevD12[k]), false, false]; t.dice[0] = st.prev[k]; t.assign[k] = 0; t.lock = k; st.abil = true;
+  t.dice = rollDice(); t.d12 = [!!(st.prevD12 && st.prevD12[k]), false, false]; t.dice[0] = st.prev[k]; t.assign[k] = 0; t.lock = k; st.abil = st.abilEver = true;
 }
 function toggleRanger(st) {
   const t = st.turn;
-  if (!t.ranger) { t.ranger = true; st.abil = true; t.assign.spd = -1; }
+  if (!t.ranger) { t.ranger = true; st.abil = st.abilEver = true; t.assign.spd = -1; }
   else { t.ranger = false; st.abil = false; t.assign.rng = -1; }
 }
 function toggleKnight(st) {   // Caballero: dos dados a una misma habilidad
   const t = st.turn;
-  if (!t.knight) { t.knight = true; st.abil = true; }
+  if (!t.knight) { t.knight = true; st.abil = st.abilEver = true; }
   else { t.knight = false; st.abil = false; t.assign2 = NO_SKILLS(); }
 }
 function useRogue(st) {       // Pícaro: +1 a todos los dados
   const t = st.turn;
   t.dice = t.dice.map(v => (v < 6 ? v + 1 : v));
-  st.abil = true;
+  st.abil = st.abilEver = true;
 }
 function toggleSherpa(st) {
-  if (st.sherpaOn) { st.sherpaOn = false; st.abil = false; } else { st.sherpaOn = true; st.abil = true; }
+  if (st.sherpaOn) { st.sherpaOn = false; st.abil = false; } else { st.sherpaOn = true; st.abil = st.abilEver = true; }
 }
 function toggleCorsair(st) {  // Corsario: a cualquier casilla libre, sin gastar Movimiento
-  if (st.corsairOn) { st.corsairOn = false; st.abil = false; } else { st.corsairOn = true; st.abil = true; }
+  if (st.corsairOn) { st.corsairOn = false; st.abil = false; } else { st.corsairOn = true; st.abil = st.abilEver = true; }
 }
 function abilityInfo(st) {
   const t = st.turn, h = st.hero;
@@ -632,7 +632,7 @@ function necroInfo(st, m) {
 }
 function necroStrike(st, m) {
   pushUndo(st);
-  st.adv.hp -= 1; m.hp -= 1; st.abil = true;
+  st.adv.hp -= 1; m.hp -= 1; st.abil = st.abilEver = true;
   if (m.hp <= 0) { st.mons = st.mons.filter(o => o !== m); return true; }
   return false;
 }
@@ -652,7 +652,7 @@ function demonMove(st, m, i) {
   const R = demonReach(st, m), path = [];
   for (let c = i; c !== -1; c = R.prev[c]) path.push(c);
   path.reverse();
-  const [x, y] = XY(i); m.x = x; m.y = y; st.abil = true;
+  const [x, y] = XY(i); m.x = x; m.y = y; st.abil = st.abilEver = true;
   return path;
 }
 
