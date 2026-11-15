@@ -4,7 +4,7 @@ from playwright.async_api import async_playwright
 def win_state(game, hero, items):
     js = f"""E.useGame('{game}'); const st=E.newRun('{hero}','{game}',{json.dumps(items)}); const L=E.LEVELS.length-1; E.setupLevel(st,L); const lv=E.LEVELS[L]; const m0=lv.mon; let sx,sy;
  for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {{ const x=st.adv.x+dx,y=st.adv.y+dy; if (x>=0&&y>=0&&x<5&&y<5&&!lv.walls[E.idx(x,y)]&&!(lv.chestAt===E.idx(x,y))) {{ sx=x; sy=y; break; }} }}
- st.mons=[{{id:1,x:sx,y:sy,hp:1,maxHp:m0.hp,spd:m0.spd,atk:m0.atk,def:m0.def,rng:m0.rng}}]; st.chest=null; st.stone=null; st.totalTurns=40;
+ st.mons=[{{id:1,x:sx,y:sy,hp:1,maxHp:m0.hp,spd:m0.spd,atk:m0.atk,def:m0.def,rng:m0.rng}}]; st.chest=null; st.stone=null; st.totalTurns=40; st.startItems=st.items.slice(); st.items=[];
  E.rollTurn(st); st.turn.dice=[6,6,6]; st.turn.assign={{spd:0,atk:1,def:2,rng:-1}}; E.confirmEnergy(st); st.turn.atkLeft=99; st.turn.rng=99;"""
     return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+js+";console.log(JSON.stringify(st))"]).decode().strip()
 async def win(pg, game, hero, items=[]):

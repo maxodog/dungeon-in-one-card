@@ -344,7 +344,7 @@
       try { localStorage.setItem(saveKey(G.game) + ':t', String(Date.now())); } catch (e) {}
       if (G.phase === 'won' || G.abandoned) { localStorage.removeItem(saveKey(G.game)); return; }
       let sv = G;
-      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.trackAbil = G.trackAbil; sv.abilEver = G.abilEver; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
+      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.trackAbil = G.trackAbil; sv.abilEver = G.abilEver; sv.startItems = G.startItems; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
       localStorage.setItem(saveKey(G.game), JSON.stringify(sv));
     } catch (e) {}
   }
@@ -470,7 +470,7 @@
   })();
 
   // logros que una versión anterior otorgó por error (sin objetos en una aventura donde son opcionales)
-  function fixRec(r) { for (const k of ['naked', 'purist']) if (r.ach && r.ach[k] && !['peak', 'harbour', 'hell'].includes(r.ach[k].g)) delete r.ach[k]; return r; }
+  function fixRec(r) { for (const k of ['naked', 'purist']) if (r.ach && r.ach[k] && (!['peak', 'harbour', 'hell'].includes(r.ach[k].g) || r.ach[k].d < 1794777359144)) delete r.ach[k]; return r; }
   // Une dos historiales (el de este dispositivo y el de la nube) sin perder logros ni récords
   function mergeRec(a, b) {
     a = a || {}; b = b || {};
@@ -726,7 +726,7 @@
       if (won) {
         gm.wins++; gm.best = N;
         gm.heroes = gm.heroes || []; if (!gm.heroes.includes(G.hero)) gm.heroes.push(G.hero);
-        gm.pure = gm.pure || []; if (pureRun(game, G.items) && !gm.pure.includes(G.hero)) gm.pure.push(G.hero);
+        gm.pure = gm.pure || []; if (pureRun(game, G.startItems) && !gm.pure.includes(G.hero)) gm.pure.push(G.hero);
         if (gm.fastest == null || turns < gm.fastest) gm.fastest = turns;
         if (RANK_ORDER.indexOf(rank) > RANK_ORDER.indexOf(gm.bestRank)) gm.bestRank = rank;
         if (!r.heroes.includes(G.hero)) r.heroes.push(G.hero);
@@ -745,11 +745,11 @@
         if (a.hp === 1) unlock('edge');
         if (a.hp >= START_HP) unlock('fullhp');
         if (a.spd >= 4 && a.atk >= 4 && a.def >= 4) unlock('balance');
-        if (ITEM_GAMES.includes(game) && !(G.items || []).length) unlock('naked');
+        if (ITEM_GAMES.includes(game) && G.startItems && !G.startItems.length) unlock('naked');
         if ((s.deaths || 0) >= 5) unlock('phoenix');
         const noAbil = G.trackAbil && !G.abilEver && G.hero !== 'cleric';
         if (noAbil) unlock('notrick');
-        if (noAbil && ITEM_GAMES.includes(game) && !(G.items || []).length) unlock('purist');
+        if (noAbil && ITEM_GAMES.includes(game) && G.startItems && !G.startItems.length) unlock('purist');
       } else {
         gm.falls++; gm.best = Math.max(gm.best, G.levelIdx + 1);
         r.tot.falls = (r.tot.falls || 0) + 1;
@@ -788,7 +788,7 @@
   const GUEST_KEY = 'dioc-guest-prog-v1';
   const unlockAll = () => { try { return localStorage.getItem('dioc-unlock-all') === '1'; } catch (e) { return false; } };   // para pruebas
   const guestProg = () => { try { return JSON.parse(localStorage.getItem(GUEST_KEY)) || {}; } catch (e) { return {}; } };
-  const pureRun = (game, items) => !PACK_OF_GAME[game] || (items || []).every(i => ITEM_PACK[i] === PACK_OF_GAME[game]);
+  const pureRun = (game, items) => !PACK_OF_GAME[game] || (!!items && items.every(i => ITEM_PACK[i] === PACK_OF_GAME[game]));
   // héroes con los que se completó una aventura (todos) y los que lo hicieron solo con objetos de esa aventura
   function progOf(g) {
     const me = Users.get();
@@ -823,7 +823,7 @@
     if (Users.cur || !G) return;
     const o = guestProg(), x = o[G.game] = Object.assign({ heroes: [], pure: [], played: true }, o[G.game]);
     x.played = true;
-    if (won) { if (!x.heroes.includes(G.hero)) x.heroes.push(G.hero); if (pureRun(G.game, G.items) && !x.pure.includes(G.hero)) x.pure.push(G.hero); }
+    if (won) { if (!x.heroes.includes(G.hero)) x.heroes.push(G.hero); if (pureRun(G.game, G.startItems) && !x.pure.includes(G.hero)) x.pure.push(G.hero); }
     try { localStorage.setItem(GUEST_KEY, JSON.stringify(o)); } catch (e) {}
   }
 
@@ -1795,7 +1795,7 @@
     hell: 'La Puerta del Infierno: si pisas una casilla maldita, los monstruos se fortalecen. La Piedra de la Perdición se rompe a costa de tu Vida.'
   };
   function startGame(hero, game, items) {
-    G = E.newRun(hero, game, items); G.totalTurns = 0; G.runId = newRunId(); G.trackAbil = true; G.abilEver = false; lastHp = START_HP; builtLevel = -1;
+    G = E.newRun(hero, game, items); G.totalTurns = 0; G.runId = newRunId(); G.trackAbil = true; G.abilEver = false; G.startItems = (items || []).slice(); lastHp = START_HP; builtLevel = -1;
     hideScreen(); render();
     say(`<b>${HEROES[hero].name}.</b> ${START_MSG[game]} Tira los dados para empezar.`);
   }
@@ -1813,8 +1813,8 @@
   function goMenu() { if (busy) return; closeSheet(); menuScreen(); Users.sync(); }
 
   function retry() {
-    const t = G.totalTurns, stt = G.stats, rid = G.runId, tr = G.trackAbil, ae = G.abilEver;
-    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; G.runId = rid; G.trackAbil = tr; G.abilEver = ae; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
+    const t = G.totalTurns, stt = G.stats, rid = G.runId, tr = G.trackAbil, ae = G.abilEver, si = G.startItems;
+    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; G.runId = rid; G.trackAbil = tr; G.abilEver = ae; G.startItems = si; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
     closeSheet(); hideScreen(); render();
     say(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`);
   }
