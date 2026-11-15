@@ -1,12 +1,13 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
-def node(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/engine.js');"+js]).decode().strip()
+def node(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+js]).decode().strip()
 
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
         ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        await ctx.add_init_script("localStorage.setItem('dioc-unlock-all','1')")
         page = await ctx.new_page(); errs=[]
         page.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))
         page.on('console', lambda m: errs.append('CONSOLE '+m.text) if m.type=='error' else None)

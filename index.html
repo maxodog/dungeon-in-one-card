@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="a6d5b24f30">
+<meta name="build" content="05c7d476d7">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -827,6 +827,21 @@ body.tight .dice-row.moving { display: none; }
 .endscr .end-new span i { grid-row: 1 / 3; }
 .endscr .end-new span b { font-size: 15px; }
 .endscr .end-new span em { font-style: normal; font-weight: 500; font-size: 12px; color: var(--muted); }
+
+/* aventuras, héroes y objetos bloqueados */
+.adv-card.locked img { filter: grayscale(1) brightness(.45); }
+.adv-card.locked { border-style: dashed; }
+.adv-card { position: relative; }
+.adv-lock { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, .7); color: var(--torch); }
+.lk { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+.adv-card .req { font-style: normal; color: var(--torch); font-size: 13px; }
+.hero-card.locked { opacity: .5; border-style: dashed; cursor: not-allowed; }
+.hero-card.locked .ico { color: var(--muted); }
+.end-unlock { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid #7fe7ff; border-radius: 14px; background: rgba(127, 231, 255, .08); text-align: left; }
+.end-unlock > .lk { width: 34px; height: 34px; color: #7fe7ff; flex: none; }
+.end-unlock small { display: block; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #7fe7ff; font-weight: 700; }
+.end-unlock b { display: block; font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1.15; }
+.end-unlock span { font-size: 13px; color: var(--muted); }
 
 </style>
 </head>
@@ -2322,6 +2337,8 @@ if (typeof module !== 'undefined') {
   const ITEM_PACK = { cloak: 'Montaña Eterna', axe: 'Montaña Eterna', herbs: 'Montaña Eterna', wyrm: 'Montaña Eterna', flame: 'Montaña Eterna',
     hourglass: 'Harbour Clash', eye: 'Harbour Clash', powder: 'Harbour Clash', sands: 'Harbour Clash', gorgon: 'Harbour Clash',
     pendant: 'Puerta del Infierno', holy: 'Puerta del Infierno', laurel: 'Puerta del Infierno', fist: 'Puerta del Infierno', mail: 'Puerta del Infierno' };
+  const ICON_LOCK = '<svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+  const ICON_LOCK_OPEN = '<svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>';
   const ICON_STAIR = svg(`<path d="M4 26h7v-6h6v-6h6v-6h5"/>`);
 
   const NAMES = { spd: 'Mov', atk: 'Atq', def: 'Def', rng: 'Alc' };
@@ -2476,7 +2493,8 @@ if (typeof module !== 'undefined') {
       const x = (a.games || {})[g] || {}, y = (b.games || {})[g] || {};
       const fast = [x.fastest, y.fastest].filter(v => v != null);
       r.games[g] = { wins: Math.max(x.wins || 0, y.wins || 0), falls: Math.max(x.falls || 0, y.falls || 0), best: Math.max(x.best || 0, y.best || 0),
-        bestRank: RANK_ORDER.indexOf(x.bestRank) >= RANK_ORDER.indexOf(y.bestRank) ? (x.bestRank || null) : y.bestRank, fastest: fast.length ? Math.min(...fast) : null };
+        bestRank: RANK_ORDER.indexOf(x.bestRank) >= RANK_ORDER.indexOf(y.bestRank) ? (x.bestRank || null) : y.bestRank, fastest: fast.length ? Math.min(...fast) : null,
+        heroes: [...new Set([...(x.heroes || []), ...(y.heroes || [])])], pure: [...new Set([...(x.pure || []), ...(y.pure || [])])] };
     }
     for (const k of new Set([...Object.keys(a.tot || {}), ...Object.keys(b.tot || {})])) r.tot[k] = Math.max((a.tot || {})[k] || 0, (b.tot || {})[k] || 0);
     for (const k of new Set([...Object.keys(a.ach || {}), ...Object.keys(b.ach || {})])) { const x = (a.ach || {})[k], y = (b.ach || {})[k]; r.ach[k] = !x ? y : !y ? x : (x.d <= y.d ? x : y); }
@@ -2716,11 +2734,13 @@ if (typeof module !== 'undefined') {
       const snap = { turns }; for (const k of TOT_KEYS) snap[k] = s[k] || 0;
       delete r.runs[G.runId]; r.runs[G.runId] = snap;
       const ids = Object.keys(r.runs); while (ids.length > 15) delete r.runs[ids.shift()];
-      const gm = r.games[game] = Object.assign({ wins: 0, falls: 0, best: 0, bestRank: null, fastest: null }, r.games[game]);
+      const gm = r.games[game] = Object.assign({ wins: 0, falls: 0, best: 0, bestRank: null, fastest: null, heroes: [], pure: [] }, r.games[game]);
       const fresh = [];
       const unlock = id => { if (!r.ach[id] && ACH.some(a => a.id === id)) { r.ach[id] = { d: today, g: game }; fresh.push(id); } };
       if (won) {
         gm.wins++; gm.best = N;
+        gm.heroes = gm.heroes || []; if (!gm.heroes.includes(G.hero)) gm.heroes.push(G.hero);
+        gm.pure = gm.pure || []; if (pureRun(game, G.items) && !gm.pure.includes(G.hero)) gm.pure.push(G.hero);
         if (gm.fastest == null || turns < gm.fastest) gm.fastest = turns;
         if (RANK_ORDER.indexOf(rank) > RANK_ORDER.indexOf(gm.bestRank)) gm.bestRank = rank;
         if (!r.heroes.includes(G.hero)) r.heroes.push(G.hero);
@@ -2766,6 +2786,59 @@ if (typeof module !== 'undefined') {
       r.hist = r.hist.slice(0, 12);
       return fresh;
     }) || [];
+  }
+
+  /* ---------- desbloqueo de aventuras ----------
+     Se empieza con la original. Cada aventura se abre completando la anterior con 2 héroes distintos; desde la
+     tercera, uno de ellos debe ser de la expansión anterior, y si la anterior usa objetos, solo con objetos suyos.
+     Lo ya jugado nunca se cierra. Los héroes y objetos de una expansión se desbloquean junto con su aventura. */
+  const PACK_OF_GAME = { peak: 'Montaña Eterna', harbour: 'Harbour Clash', hell: 'Puerta del Infierno' };
+  const UNLOCK = {
+    mguf: { from: 'base', pack: null, own: false },
+    peak: { from: 'mguf', pack: 'mguf', own: false },
+    harbour: { from: 'peak', pack: 'peak', own: true },
+    hell: { from: 'harbour', pack: 'harbour', own: true }
+  };
+  const GUEST_KEY = 'dioc-guest-prog-v1';
+  const unlockAll = () => { try { return localStorage.getItem('dioc-unlock-all') === '1'; } catch (e) { return false; } };   // para pruebas
+  const guestProg = () => { try { return JSON.parse(localStorage.getItem(GUEST_KEY)) || {}; } catch (e) { return {}; } };
+  const pureRun = (game, items) => !PACK_OF_GAME[game] || (items || []).every(i => ITEM_PACK[i] === PACK_OF_GAME[game]);
+  // héroes con los que se completó una aventura (todos) y los que lo hicieron solo con objetos de esa aventura
+  function progOf(g) {
+    const me = Users.get();
+    if (me) {
+      const x = (me.rec && me.rec.games && me.rec.games[g]) || {};
+      const hs = new Set(x.heroes || []);
+      for (const h of (me.rec && me.rec.hist) || []) if (h.won && h.g === g && h.h) hs.add(h.h);   // victorias anteriores a este registro
+      return { heroes: [...hs], pure: x.pure || [], played: !!(x.wins || x.falls) };
+    }
+    const x = guestProg()[g] || {};
+    return { heroes: x.heroes || [], pure: x.pure || [], played: !!x.played };
+  }
+  function unlockState(g) {
+    if (g === 'base' || !UNLOCK[g] || unlockAll()) return { ok: true, have: [], req: '' };
+    const u = UNLOCK[g], p = progOf(u.from), list = u.own ? p.pure : p.heroes;
+    const fromPack = !u.pack || list.some(h => HEROES[h].pack === u.pack);
+    const done = list.length >= 2 && fromPack;
+    let saved = false; try { saved = !!localStorage.getItem(saveKey(g)); } catch (e) {}
+    const played = progOf(g).played || saved;
+    const packNames = u.pack ? heroesOf(u.pack).map(h => HEROES[h].name) : [];
+    const req = `Completa ${GAMES[u.from].name} con 2 héroes distintos`
+      + (u.pack ? (packNames.length === 1 ? `, uno de ellos el ${packNames[0]}` : `, al menos uno de ${GAMES[u.pack].name} (${packNames.join(', ')})`) : '')
+      + (u.own ? `, usando solo objetos de ${GAMES[u.from].name}` : '') + '.';
+    return { ok: done || played, req, have: list, fromPack, from: u.from };
+  }
+  const heroOpen = k => HEROES[k].pack === 'base' || unlockState(HEROES[k].pack).ok;
+  const GAME_OF_PACK = { 'Montaña Eterna': 'peak', 'Harbour Clash': 'harbour', 'Puerta del Infierno': 'hell' };
+  const itemOpen = k => !GAME_OF_PACK[ITEM_PACK[k]] || unlockState(GAME_OF_PACK[ITEM_PACK[k]]).ok;
+  const openPool = game => E.itemPool(game).filter(itemOpen);
+  // anota el progreso de quien juega sin usuario (con usuario se guarda en su historial)
+  function noteGuest(won) {
+    if (Users.cur || !G) return;
+    const o = guestProg(), x = o[G.game] = Object.assign({ heroes: [], pure: [], played: true }, o[G.game]);
+    x.played = true;
+    if (won) { if (!x.heroes.includes(G.hero)) x.heroes.push(G.hero); if (pureRun(G.game, G.items) && !x.pure.includes(G.hero)) x.pure.push(G.hero); }
+    try { localStorage.setItem(GUEST_KEY, JSON.stringify(o)); } catch (e) {}
   }
 
   /* ---------- tablero ---------- */
@@ -3230,6 +3303,8 @@ if (typeof module !== 'undefined') {
       <h4>Héroes</h4>
       <p>Con cualquier aventura juegas con los héroes de la original y de esa expansión; el botón <b>Héroes de otras expansiones</b> añade los demás.</p>
       <ul>${HERO_KEYS.map(k => `<li><b>${HEROES[k].name}.</b> ${HEROES[k].txt}</li>`).join('')}</ul>
+      <h4>Aventuras por desbloquear</h4>
+      <p>Empiezas con la original. Cada aventura se abre al completar la anterior con 2 héroes distintos; desde Montaña Eterna, uno debe ser de la expansión anterior y, si esa aventura usa objetos, solo con objetos suyos. Sus héroes y objetos se abren con ella. En «Nueva partida» verás qué te falta.</p>
       <h4>Partidas guardadas</h4>
       <p>La partida se guarda sola en todo momento, una por aventura: puedes tener una en curso en cada mazmorra. Desde el menú, <b>Retomar</b> la continúa y <b>Abandonar</b> la da por perdida. Si caes, puedes reintentar el nivel tal como lo empezaste. Con un usuario, tus partidas, logros y estadísticas se guardan en la nube.</p>
       <p class="fine">Versión web no oficial del juego solitario One Card Dungeon y de sus expansiones, de Barny Skinner (Little Rocket Games). Los mapas, las cifras de los monstruos y su aparición por nivel siguen las cartas originales; las ilustraciones del juego y los textos son propios. Las portadas del menú son de Little Rocket Games. Si te gusta, apoya al autor y consigue el juego.</p>
@@ -3324,6 +3399,8 @@ if (typeof module !== 'undefined') {
       if (ab) { rank = pick(['Desertor', 'Retirada estratégica', 'Prudente', 'Pies ligeros']); quip = pick(['Una retirada a tiempo también es una victoria. Pequeñita, pero victoria.', 'Los monstruos ya están contando la historia de cómo huiste.', 'Saliste corriendo con tanta elegancia que casi parece un plan.', `${mon.plural} celebran: ganaron sin mover un dedo.`]); awards.push('Retirada estratégica'); }
       else awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
     }
+    const openBefore = ADV_ORDER.filter(g => unlockState(g).ok);
+    noteGuest(won);
     const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id, achT = id => (ACH.find(a => a.id === id) || {}).t || 'bronce', achTxt = id => (ACH.find(a => a.id === id) || {}).txt || '';
     const byTier = l => l.slice().sort((x, y) => TIERS.findIndex(t => t[0] === achT(x)) - TIERS.findIndex(t => t[0] === achT(y)));
     const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(ab ? ['¿Ya te vas? Si recién empezábamos.', '¡Corre, corre! Nadie te sigue… por ahora.', 'Cierra la puerta al salir, que entra frío.', 'Me quedo con tu botín, gracias.', 'Huir también es un deporte. Y eres bueno.'] : TAUNTS)}»`;
@@ -3357,6 +3434,7 @@ if (typeof module !== 'undefined') {
           <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
         <div class="end-say"><span class="mico">${ICONS[mon.key] || ''}</span><q>${say}</q></div>
         ${awards.some(x => !fresh.includes(x)) ? `<div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${byTier(awards.filter(x => !fresh.includes(x))).map(x => `<span class="award">${x}<em>${achTxt(x)}</em></span>`).join('')}</div>` : ''}
+        ${(() => { const nu = ADV_ORDER.filter(g => !openBefore.includes(g) && unlockState(g).ok); return nu.length ? `<div class="end-unlock">${ICON_LOCK_OPEN}<div><small>¡Aventura desbloqueada!</small><b>${nu.map(g => GAMES[g].name).join(' y ')}</b><span>Ya puedes jugarla desde «Nueva partida»${heroesOf(nu[0]).length ? `, con ${heroesOf(nu[0]).map(h => HEROES[h].name).join(', ')}` : ''}.</span></div></div>` : ''; })()}
         ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${byTier(fresh).map(x => `<span class="${achT(x)}"><i>${TIER_ICON}</i><b>${achName(x)}</b><em>${TIERS.find(t => t[0] === achT(x))[1]} · ${achTxt(x)}</em></span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
           : '<p class="fine">Entra con un usuario desde el menú para guardar tus logros y estadísticas.</p>'}
         ${won || ab ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste, ahora o más tarde desde el menú.</p>`}
@@ -3615,6 +3693,18 @@ if (typeof module !== 'undefined') {
   };
   const ADV_ORDER = ['base', 'mguf', 'peak', 'harbour', 'hell'];
 
+  function lockedSheet(g) {
+    const us = unlockState(g), U = UNLOCK[g];
+    const have = us.have.length ? us.have.map(h => HEROES[h].name).join(', ') : 'ninguno todavía';
+    const miss = [];
+    if (us.have.length < 2) miss.push(`${2 - us.have.length} héroe${us.have.length === 1 ? '' : 's'} más`);
+    if (!us.fromPack) miss.push(`uno de ${GAMES[U.pack].name}`);
+    openSheet(`<h3>${ICON_LOCK} ${GAMES[g].name}</h3>
+      <p class="lead">${us.req}</p>
+      <p class="fine">Héroes que ya cuentan: <b>${have}</b>.${miss.length ? ` Te falta: ${miss.join(' y ')}.` : ''}${U.own ? ` Solo cuentan las victorias en las que todos tus objetos eran de ${GAMES[U.from].name}.` : ''}</p>
+      <button type="button" class="btn primary" id="lkOk">Entendido</button>`, [['#lkOk', closeSheet]], true);
+  }
+
   function adventureScreen() {
     const slots = loadSlots();
     const sc = showScreen(`<div class="splash wide">
@@ -3622,10 +3712,13 @@ if (typeof module !== 'undefined') {
       <h2 class="screen-h">Elige la aventura</h2>
       <div class="adv-list">${ADV_ORDER.map(k => `<button type="button" class="adv-card" data-game="${k}">
         <img src="${ADV_INFO[k].img}" alt="${ADV_INFO[k].alt}" width="440" height="614" loading="eager" decoding="async">
-        <span class="adv-tag">${ADV_INFO[k].tag}</span>${slots.some(s => s.game === k) ? '<span class="adv-tag run">En curso</span>' : ''}<b>${GAMES[k].name}</b><p>${ADV_INFO[k].txt}</p></button>`).join('')}</div>
+        <span class="adv-tag">${ADV_INFO[k].tag}</span>${slots.some(s => s.game === k) ? '<span class="adv-tag run">En curso</span>' : ''}${unlockState(k).ok ? '' : `<span class="adv-lock">${ICON_LOCK}</span>`}<b>${GAMES[k].name}</b><p>${unlockState(k).ok ? ADV_INFO[k].txt : '<em class="req">Bloqueada. ' + unlockState(k).req + '</em>'}</p></button>`).join('')}</div>
       <p class="fine">Portadas © Little Rocket Games. One Card Dungeon es de Barny Skinner.</p></div>`,
       [['#back', menuScreen]]);
+    sc.querySelectorAll('[data-game]').forEach(b => { const us = unlockState(b.dataset.game); if (!us.ok) b.classList.add('locked'); });
     sc.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => {
+      const us = unlockState(b.dataset.game);
+      if (!us.ok) return lockedSheet(b.dataset.game);
       const x = slots.find(s => s.game === b.dataset.game);
       if (!x) return heroScreen(b.dataset.game, false);
       const lv = GAMES[x.game].levels[x.g.levelIdx];
@@ -3641,8 +3734,10 @@ if (typeof module !== 'undefined') {
   // Héroes de la caja original y de la aventura elegida; un botón añade los de las demás expansiones
   function heroScreen(game, more) {
     const own = ['base', game];
-    const card = k => `<button type="button" class="hero-card" data-hero="${k}">
-        <span class="ico">${HERO_ICONS[k]}</span><span><b>${HEROES[k].name}</b><p>${HEROES[k].txt}</p></span></button>`;
+    const card = k => heroOpen(k) ? `<button type="button" class="hero-card" data-hero="${k}">
+        <span class="ico">${HERO_ICONS[k]}</span><span><b>${HEROES[k].name}</b><p>${HEROES[k].txt}</p></span></button>`
+      : `<button type="button" class="hero-card locked" disabled>
+        <span class="ico">${ICON_LOCK}</span><span><b>${HEROES[k].name}</b><p>Se desbloquea con ${GAMES[HEROES[k].pack].name}.</p></span></button>`;
     const section = pk => { const hs = heroesOf(pk.key); return hs.length ? `<h3 class="pack-h">${pk.name}</h3><div class="hero-list">${hs.map(card).join('')}</div>` : ''; };
     const mine = PACKS.filter(pk => own.includes(pk.key)), others = PACKS.filter(pk => !own.includes(pk.key));
     const sc = showScreen(`<div class="splash wide">
@@ -3658,7 +3753,7 @@ if (typeof module !== 'undefined') {
   }
 
   function drawItems(game) {
-    const a = E.itemPool(game);
+    const a = openPool(game);
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a.slice(0, 3);
   }
@@ -3667,7 +3762,7 @@ if (typeof module !== 'undefined') {
   function itemsScreen(game, hero, pick, more) {
     const must = game === 'peak' || game === 'harbour' || game === 'hell';
     pick = pick || (must ? drawItems(game) : []);
-    const pool = E.itemPool(game);
+    const pool = openPool(game);
     // primero los de la expansión en juego y luego, con su título, los de cada expansión en orden
     const PACKS = [['Montaña Eterna', 'peak'], ['Harbour Clash', 'harbour'], ['Puerta del Infierno', 'hell']];
     const order = PACKS.slice().sort((a, b) => (b[1] === game) - (a[1] === game));

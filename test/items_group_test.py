@@ -5,6 +5,7 @@ async def main():
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
         for game, hero, first in [('base','corsair','Dungeon'),('peak','sherpa',None),('hell',None,None)]:
             ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=1, has_touch=True, is_mobile=True)
+            await ctx.add_init_script("localStorage.setItem('dioc-unlock-all','1')")
             page = await ctx.new_page(); errs=[]
             page.on('pageerror', lambda e: errs.append(str(e)))
             await page.goto('file:///home/claude/dungeon-in-one-card/index.html'); await page.wait_for_timeout(400)

@@ -54,7 +54,11 @@ async def main():
         # --- dispositivo A: crear usuario
         A, pa, ea = await device(b)
         await pa.click('#mUser'); await pa.click('#uNew'); await pa.wait_for_selector('#uPw2')
-        await pa.fill('#uName', 'Ana María'); await pa.fill('#uPw', '1234'); await pa.fill('#uPw2', '1234'); await pa.wait_for_timeout(150); await pa.click('#uGo'); await pa.wait_for_timeout(300)
+        await pa.wait_for_timeout(300)
+        for _ in range(3):   # bajo carga, a veces un campo queda vacío: se rellena hasta que los tres tengan su valor
+            await pa.fill('#uName', 'Ana María'); await pa.fill('#uPw', '1234'); await pa.fill('#uPw2', '1234'); await pa.wait_for_timeout(150)
+            if await pa.evaluate("['uName','uPw','uPw2'].every(id => document.getElementById(id).value)"): break
+        await pa.click('#uGo'); await pa.wait_for_timeout(300)
         print('err:', await pa.inner_text('#uErr')); assert '6 CARACTERES' in (await pa.inner_text('#uErr')).upper()
         await pa.fill('#uPw', 'secreto1'); await pa.fill('#uPw2', 'secreto1'); await pa.click('#uGo'); await pa.wait_for_timeout(800)
         assert 'Ana María' in await pa.inner_text('#mUser'); print('cuentas:', list(accounts))

@@ -15,6 +15,7 @@ S = {
 async def boot(p, name=None):
     b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
     ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    await ctx.add_init_script("localStorage.setItem('dioc-unlock-all','1')")
     if name: await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(make_state(S[name])))
     page = await ctx.new_page(); errs=[]
     page.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))
