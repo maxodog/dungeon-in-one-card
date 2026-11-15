@@ -54,7 +54,7 @@ async def main():
         # --- dispositivo A: crear usuario
         A, pa, ea = await device(b)
         await pa.click('#mUser'); await pa.click('#uNew'); await pa.wait_for_selector('#uPw2')
-        await pa.fill('#uName', 'Ana María'); await pa.fill('#uPw', '1234'); await pa.fill('#uPw2', '1234'); await pa.click('#uGo'); await pa.wait_for_timeout(300)
+        await pa.fill('#uName', 'Ana María'); await pa.fill('#uPw', '1234'); await pa.fill('#uPw2', '1234'); await pa.wait_for_timeout(150); await pa.click('#uGo'); await pa.wait_for_timeout(300)
         print('err:', await pa.inner_text('#uErr')); assert '6 CARACTERES' in (await pa.inner_text('#uErr')).upper()
         await pa.fill('#uPw', 'secreto1'); await pa.fill('#uPw2', 'secreto1'); await pa.click('#uGo'); await pa.wait_for_timeout(800)
         assert 'Ana María' in await pa.inner_text('#mUser'); print('cuentas:', list(accounts))
@@ -62,8 +62,8 @@ async def main():
         # gana una partida
         await pa.evaluate("s => localStorage.setItem('dioc-run-v3:u:ana maría', s)", ST)
         await pa.reload(); await pa.wait_for_timeout(500); await pa.click('#mContinue'); await pa.wait_for_timeout(500)
-        await pa.locator('.tile.target').first.click(); await pa.wait_for_timeout(3500)
-        t_new = await pa.inner_text('.end-new'); assert 'Cáliz de Brasas' in t_new and 'Sin trucos' in t_new, t_new
+        await pa.locator('.tile.target').first.click(); await pa.wait_for_timeout(3500); await pa.screenshot(path='/tmp/c_end.png', full_page=True)
+        t_new = await pa.inner_text('.end-new'); assert 'Cáliz de Brasas' in t_new and 'Sin trucos' in t_new and 'Purista' not in t_new and 'Minimalista' not in t_new, t_new
         await pa.click('#eMenu'); await pa.wait_for_timeout(1200)
         doc = json.loads(list(docs.values())[0]['fields']['data']['stringValue'])
         assert doc['rec']['games']['base']['wins'] == 1 and 'saves' in doc, doc['rec']['games']; print('nube: base ganada, logros', len(doc['rec']['ach']))

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="44d4ffaf6e">
+<meta name="build" content="a6d5b24f30">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -818,6 +818,15 @@ body.tight .dice-row.moving { display: none; }
 .medals i { width: 22px; height: 22px; }
 .medals b { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; color: var(--ink, #eef3ff); }
 .endscr .end-new span { display: inline-flex; align-items: center; gap: 5px; border-color: var(--tc); color: var(--tc); }
+
+/* premios y logros nuevos con su explicación */
+.endscr .end-awards .award { display: inline-flex; flex-direction: column; align-items: center; text-align: center; padding: 5px 14px; border-radius: 14px; line-height: 1.2; }
+.endscr .award em { font-style: normal; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; opacity: .85; margin-top: 2px; }
+.endscr .end-new { flex-direction: column; align-items: stretch; }
+.endscr .end-new span { display: grid !important; grid-template-columns: 20px 1fr; align-items: center; column-gap: 8px; padding: 6px 12px !important; border-radius: 12px !important; text-align: left; }
+.endscr .end-new span i { grid-row: 1 / 3; }
+.endscr .end-new span b { font-size: 15px; }
+.endscr .end-new span em { font-style: normal; font-weight: 500; font-size: 12px; color: var(--muted); }
 
 </style>
 </head>
@@ -2299,13 +2308,13 @@ if (typeof module !== 'undefined') {
     herbs: { name: 'Hierbas curativas', short: 'Hierbas', txt: 'Al recibir un ataque, reduces el daño a la mitad, redondeando hacia arriba.' },
     wyrm: { name: 'Extracto de Wyrm', short: 'Extracto', txt: 'Suma hasta +4 a tu Movimiento este turno.' },
     flame: { name: 'Llama del destino', short: 'Llama', txt: 'En la fase de Energía, vuelve a tirar uno o más dados y quédate con la segunda tirada.' },
-    hourglass: { name: 'Reloj de arena', short: 'Reloj', txt: 'Tras tu fase de aventurero, sáltate las fases de los monstruos y haz una nueva fase de Energía.' },
+    hourglass: { name: 'Reloj de arena', short: 'Reloj', txt: 'Al terminar tu turno, los monstruos no actúan y vuelves a tirar los dados de Energía.' },
     eye: { name: 'Ojo de dragón', short: 'Ojo', txt: 'En la fase de Energía, tira un D12 en lugar de un D6 y asígnalo a una habilidad como un dado normal.' },
     powder: { name: 'Pólvora negra', short: 'Pólvora', txt: 'Durante tu ataque, el daño a un monstruo se extiende a todos los demás monstruos, aunque estén fuera de Alcance o de visión.' },
-    sands: { name: 'Arenas ocultas', short: 'Arenas', txt: 'Durante todo un nivel, ignora las casillas de agua para las mejoras de los monstruos.' },
-    gorgon: { name: 'Cabeza de Gorgona', short: 'Gorgona', txt: 'Durante un turno, todos los monstruos se saltan su fase de Movimiento.' },
-    pendant: { name: 'Colgante de alma', short: 'Colgante', txt: 'Vuelves a la vida con 1 de Vida.' },
-    holy: { name: 'Agua bendita', short: 'Agua', txt: 'Durante todo un nivel, ignora las casillas malditas para las mejoras de los monstruos.' },
+    sands: { name: 'Arenas ocultas', short: 'Arenas', txt: 'Durante todo un nivel, los monstruos no reciben los bonos del agua.' },
+    gorgon: { name: 'Cabeza de Gorgona', short: 'Gorgona', txt: 'Durante un turno, los monstruos no se mueven (sí pueden atacar).' },
+    pendant: { name: 'Colgante de alma', short: 'Colgante', txt: 'Si tu Vida llega a 0, vuelves a la vida con 1.' },
+    holy: { name: 'Agua bendita', short: 'Agua', txt: 'Durante todo un nivel, los monstruos no reciben los bonos de las casillas malditas.' },
     laurel: { name: 'Corona de laurel', short: 'Corona', txt: 'Tras tu fase de aventurero, ordena a un monstruo que se mueva y ataque a otros monstruos con sus propias cifras. Luego siguen las fases normales de los monstruos.' },
     fist: { name: 'Puño de hierro', short: 'Puño', txt: 'Cuando rompas la Piedra de la Perdición, haces 2 de daño a todos los monstruos y 1 a tu aventurero.' },
     mail: { name: 'Cota de malla', short: 'Cota', txt: 'Cuando te atacan los monstruos, suma 3 a tu Defensa.' }
@@ -2457,6 +2466,8 @@ if (typeof module !== 'undefined') {
     };
   })();
 
+  // logros que una versión anterior otorgó por error (sin objetos en una aventura donde son opcionales)
+  function fixRec(r) { for (const k of ['naked', 'purist']) if (r.ach && r.ach[k] && !['peak', 'harbour', 'hell'].includes(r.ach[k].g)) delete r.ach[k]; return r; }
   // Une dos historiales (el de este dispositivo y el de la nube) sin perder logros ni récords
   function mergeRec(a, b) {
     a = a || {}; b = b || {};
@@ -2472,6 +2483,7 @@ if (typeof module !== 'undefined') {
     const seen = new Set();
     r.hist = [...(a.hist || []), ...(b.hist || [])].filter(h => { const id = h.d + '|' + h.g + '|' + h.won; if (seen.has(id)) return false; seen.add(id); return true; }).sort((p, q) => q.d - p.d).slice(0, 12);
     r.heroes = [...new Set([...(a.heroes || []), ...(b.heroes || [])])];
+    fixRec(r);
     r.heroWins = {}; for (const k of new Set([...Object.keys(a.heroWins || {}), ...Object.keys(b.heroWins || {})])) r.heroWins[k] = Math.max((a.heroWins || {})[k] || 0, (b.heroWins || {})[k] || 0);
     return r;
   }
@@ -2669,9 +2681,9 @@ if (typeof module !== 'undefined') {
     { t: 'plata', g: 'Hazañas', id: 'fullhp', name: 'Vida plena', txt: 'Gana con la Vida completa.' },
     { t: 'plata', g: 'Hazañas', id: 'max6', name: 'Al tope', txt: 'Termina una partida con una habilidad en 6.' },
     { t: 'oro', g: 'Hazañas', id: 'balance', name: 'Equilibrado', txt: 'Gana con Mov, Atq y Def en 4 o más.' },
-    { t: 'oro', g: 'Hazañas', id: 'naked', name: 'Minimalista', txt: 'Gana sin objetos una aventura que los permite.' },
+    { t: 'oro', g: 'Hazañas', id: 'naked', name: 'Minimalista', txt: 'Gana sin objetos en Montaña Eterna, Harbour Clash o La Puerta del Infierno.' },
     { t: 'oro', g: 'Hazañas', id: 'notrick', name: 'Sin trucos', txt: 'Gana sin usar nunca la habilidad del héroe (no vale el Clérigo).' },
-    { t: 'diamante', g: 'Hazañas', id: 'purist', name: 'Purista', txt: 'Gana sin objetos y sin usar la habilidad del héroe, en una aventura con objetos.' },
+    { t: 'diamante', g: 'Hazañas', id: 'purist', name: 'Purista', txt: 'Gana sin objetos y sin usar la habilidad del héroe en Montaña Eterna, Harbour Clash o La Puerta del Infierno.' },
     { t: 'oro', g: 'Hazañas', id: 'phoenix', name: 'Fénix', txt: 'Gana tras caer 5 veces o más.' },
     { t: 'bronce', g: 'Hazañas', id: 'half', name: 'A mitad de camino', txt: 'Llega a la mitad de una aventura.' },
     { t: 'oro', g: 'Héroes', id: 'h6', name: 'Maestro de armas', txt: 'Gana con 6 héroes distintos.' },
@@ -2684,6 +2696,7 @@ if (typeof module !== 'undefined') {
     { t: 'plata', g: 'Trayectoria', id: 't1000', name: 'Incansable', txt: 'Juega 1.000 turnos en total.' },
     { t: 'diamante', g: 'Trayectoria', id: 'medals', name: 'Medallero', txt: 'Consigue 30 logros.' }
   ];
+  const ITEM_GAMES = ['peak', 'harbour', 'hell'];   // aventuras que se juegan con objetos
   const TIERS = [['diamante', 'Diamante'], ['oro', 'Oro'], ['plata', 'Plata'], ['bronce', 'Bronce']];
   const TIER_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 18M15 3l-3 18"/></svg>';
   const RANK_ORDER = ['Cucaracha inmortal', 'Terco con suerte', 'Héroe de manual', 'Intocable'];
@@ -2695,6 +2708,7 @@ if (typeof module !== 'undefined') {
     if (!G.runId) G.runId = newRunId();
     const s = G.stats || {}, N = LEVELS.length, game = G.game, turns = G.totalTurns || 0, today = Date.now();
     return Users.update(r => {
+      fixRec(r);
       // totales: solo lo nuevo desde la última vez que se anotó esta partida (las caídas y reintentos acumulan)
       const prev = r.runs[G.runId] || {};
       for (const k of TOT_KEYS) r.tot[k] = (r.tot[k] || 0) + Math.max(0, (s[k] || 0) - (prev[k] || 0));
@@ -2725,11 +2739,11 @@ if (typeof module !== 'undefined') {
         if (a.hp === 1) unlock('edge');
         if (a.hp >= START_HP) unlock('fullhp');
         if (a.spd >= 4 && a.atk >= 4 && a.def >= 4) unlock('balance');
-        if (GAMES[game].items && !(G.items || []).length) unlock('naked');
+        if (ITEM_GAMES.includes(game) && !(G.items || []).length) unlock('naked');
         if ((s.deaths || 0) >= 5) unlock('phoenix');
         const noAbil = G.trackAbil && !G.abilEver && G.hero !== 'cleric';
         if (noAbil) unlock('notrick');
-        if (noAbil && GAMES[game].items && !(G.items || []).length) unlock('purist');
+        if (noAbil && ITEM_GAMES.includes(game) && !(G.items || []).length) unlock('purist');
       } else {
         gm.falls++; gm.best = Math.max(gm.best, G.levelIdx + 1);
         r.tot.falls = (r.tot.falls || 0) + 1;
@@ -3185,7 +3199,7 @@ if (typeof module !== 'undefined') {
     const has = k => !g || g === k;
     openSheet(`
       <h3>Cómo se juega</h3>
-      <p class="lead">${g ? GAME_LEAD[g] : 'Elige una aventura al empezar: la original, M\'Guf-yn Returns, Montaña Eterna, Harbour Clash o La Puerta del Infierno.'} Si tu Vida llega a 0, caes.</p>
+      <p class="lead">${g ? GAME_LEAD[g] : 'Elige una aventura al empezar: la original, M\'Guf-yn Returns, Montaña Eterna, Harbour Clash o La Puerta del Infierno.'} Para superar un nivel, vence a todos sus monstruos. Si tu Vida llega a 0, caes.</p>
       <h4>1 · Energía</h4>
       <p>Tira tres dados. Asigna uno a <b>Mov</b>, otro a <b>Atq</b> y otro a <b>Def</b>: su valor se suma a la habilidad base. <b>Alc</b> no recibe dado, salvo con la habilidad del Ranger.</p>
       <h4>2 · Tu turno</h4>
@@ -3197,9 +3211,9 @@ if (typeof module !== 'undefined') {
         <li>Ver o no ver: una línea recta desde cualquier esquina de tu casilla hasta cualquier esquina de la suya, sin cruzar muros ni otros monstruos.</li>
       </ul>
       <h4>3 · Monstruos</h4>
-      <p>Se mueven, del más cercano al más lejano, buscando la casilla desde la que te ven a su Alcance máximo. Luego atacan todos los que te vean a su alcance: el daño es <b>Ataque total ÷ tu Defensa</b>, redondeado hacia abajo.</p>
+      <p>Se mueven, del más cercano al más lejano, para quedar viéndote a su Alcance máximo (si están más cerca de lo necesario, se alejan). Luego atacan todos los que te vean a su alcance: el daño es <b>Ataque total ÷ tu Defensa</b>, redondeado hacia abajo.</p>
       <h4>Entre niveles</h4>
-      <p>Mejora una habilidad en 1 <b>o</b> recupera tu Vida hasta 6. Nunca las dos.</p>
+      <p>Elige una: subir una habilidad en 1 (máximo 6) <b>o</b> curarte hasta 6 de Vida.</p>
       ${has('mguf') || has('peak') || has('harbour') || has('hell') ? `<h4>Cofre del tesoro</h4>
       <p>${g === 'base' ? 'Solo en las aventuras con cofre. ' : ''}Cada nivel tiene un cofre en la escalera opuesta a la de entrada (o en la casilla marcada con una X). Su número es su <b>Defensa</b> y su <b>botín</b>. Hasta que lo abras cuenta como un muro: no se cruza y tapa la visión. Ábrelo atacándolo, a tu Alcance y a la vista, con al menos esos puntos de Atq. Los puntos del botín se suman, en una fase de Energía, a <b>una</b> habilidad por turno (Mov, Atq, Def o Alc), en ese nivel y en su jefe. Lo que no gastes se pierde al terminar el nivel.</p>` : ''}
       ${has('mguf') || has('hell') ? `<h4>Jefes</h4>
@@ -3210,7 +3224,7 @@ if (typeof module !== 'undefined') {
       <p>Los monstruos ganan los bonos en rojo de su carta <b>mientras tú estés sobre una casilla maldita</b> (el bono es para todos a la vez). La <b>Piedra de la Perdición</b> es un muro especial con un número (D4): atácala a tu Alcance y a la vista, gastando tantos puntos de Atq como su número. Al romperla, <b>todos los monstruos reciben 1 de daño</b> y <b>tú también</b>. Sigue siendo un muro. El Cazador de demonios puede mover a un monstruo hasta 3 casillas.</p>` : ''}
       ${has('peak') ? `<h4>Ventisca (Montaña Eterna)</h4>
       <p>Mientras estés sobre una casilla de ventisca, tu Ataque y tu Defensa bases valen 1 menos.</p>` : ''}
-      <h4>Objetos (opcional)</h4>
+      <h4>Objetos</h4>
       <p>Puedes jugar con tres objetos, al azar o a tu elección: la Montaña Eterna, Harbour Clash y La Puerta del Infierno los usan siempre; en las demás aventuras es opcional. Cada uno se usa una sola vez y se descarta.</p>
       <ul>${ITEM_KEYS.filter(k => ITEMS[k]).map(k => `<li><b>${ITEMS[k].name}.</b> ${ITEMS[k].txt}${k === 'cloak' ? ' (Solo Montaña Eterna.)' : k === 'sands' ? ' (Solo Harbour Clash.)' : k === 'holy' || k === 'fist' ? ' (Solo La Puerta del Infierno.)' : ''}</li>`).join('')}</ul>
       <h4>Héroes</h4>
@@ -3242,7 +3256,7 @@ if (typeof module !== 'undefined') {
     }
     openSheet(`<h3>Nivel superado</h3>
       ${foe}
-      <p class="lead">Descansa un momento. Elige una sola cosa. Cada habilidad llega como máximo a 6.</p>
+      <p class="lead">Elige <b>una</b> mejora.</p>
       <div class="choices">${ch}
         <button type="button" class="choice wide" data-c="heal" ${full ? 'disabled' : ''}><b>Curarte</b><span>Vida <em>${a.hp}</em> → <em>${START_HP}</em></span></button>
       </div>`, [], false);
@@ -3310,7 +3324,8 @@ if (typeof module !== 'undefined') {
       if (ab) { rank = pick(['Desertor', 'Retirada estratégica', 'Prudente', 'Pies ligeros']); quip = pick(['Una retirada a tiempo también es una victoria. Pequeñita, pero victoria.', 'Los monstruos ya están contando la historia de cómo huiste.', 'Saliste corriendo con tanta elegancia que casi parece un plan.', `${mon.plural} celebran: ganaron sin mover un dedo.`]); awards.push('Retirada estratégica'); }
       else awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
     }
-    const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id, achT = id => (ACH.find(a => a.id === id) || {}).t || 'bronce';
+    const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id, achT = id => (ACH.find(a => a.id === id) || {}).t || 'bronce', achTxt = id => (ACH.find(a => a.id === id) || {}).txt || '';
+    const byTier = l => l.slice().sort((x, y) => TIERS.findIndex(t => t[0] === achT(x)) - TIERS.findIndex(t => t[0] === achT(y)));
     const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(ab ? ['¿Ya te vas? Si recién empezábamos.', '¡Corre, corre! Nadie te sigue… por ahora.', 'Cierra la puerta al salir, que entra frío.', 'Me quedo con tu botín, gracias.', 'Huir también es un deporte. Y eres bueno.'] : TAUNTS)}»`;
     const cell = (ico, v, l, wide) => `<div class="${wide ? 'wide' : ''}"><i>${STAT_ICO[ico]}</i><b>${v}</b><span>${l}</span></div>`;
     const cells = [
@@ -3341,8 +3356,8 @@ if (typeof module !== 'undefined') {
         <div class="end-skills"><b>Habilidades</b>
           <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
         <div class="end-say"><span class="mico">${ICONS[mon.key] || ''}</span><q>${say}</q></div>
-        <div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${awards.map(x => `<span class="award">${x}</span>`).join('')}</div>
-        ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${fresh.slice().sort((x, y) => TIERS.findIndex(t => t[0] === achT(x)) - TIERS.findIndex(t => t[0] === achT(y))).map(x => `<span class="${achT(x)}"><i>${TIER_ICON}</i>${achName(x)}</span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
+        ${awards.some(x => !fresh.includes(x)) ? `<div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${byTier(awards.filter(x => !fresh.includes(x))).map(x => `<span class="award">${x}<em>${achTxt(x)}</em></span>`).join('')}</div>` : ''}
+        ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${byTier(fresh).map(x => `<span class="${achT(x)}"><i>${TIER_ICON}</i><b>${achName(x)}</b><em>${TIERS.find(t => t[0] === achT(x))[1]} · ${achTxt(x)}</em></span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
           : '<p class="fine">Entra con un usuario desde el menú para guardar tus logros y estadísticas.</p>'}
         ${won || ab ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste, ahora o más tarde desde el menú.</p>`}
         <div class="menu-btns">
@@ -3521,7 +3536,7 @@ if (typeof module !== 'undefined') {
   // Perfil: mazmorras, estadísticas, logros, últimas partidas y copia de seguridad
   function profileScreen(panel) {
     const me = Users.get(); if (!me) return usersScreen();
-    const r = Object.assign({ games: {}, tot: {}, ach: {}, hist: [], heroes: [] }, me.rec), t = r.tot;
+    const r = fixRec(Object.assign({ games: {}, tot: {}, ach: {}, hist: [], heroes: [] }, me.rec)), t = r.tot;
     const got = ACH.filter(a => r.ach[a.id]).length;
     const games = ADV_ORDER.map(g => {
       const x = r.games[g], n = GAMES[g].levels.length;
@@ -3580,7 +3595,7 @@ if (typeof module !== 'undefined') {
     });
     sc.querySelector('#pDel').addEventListener('click', () => {
       const box = sc.querySelector('#delBox');
-      box.innerHTML = `<div class="del-box"><p class="lead">Se borrarán el usuario, sus logros y su partida en curso de este dispositivo. Escribe tu contraseña para confirmar.</p>
+      box.innerHTML = `<div class="del-box"><p class="lead">Se borrarán el usuario, sus logros, estadísticas y partidas, también de la nube. No se puede deshacer. Escribe tu contraseña para confirmar.</p>
         <input id="dPw" class="field" type="password" autocomplete="current-password" aria-label="Contraseña"><p class="err" id="dErr" role="alert"></p>
         <button type="button" class="btn danger" id="dGo">Borrar definitivamente</button></div>`;
       box.querySelector('#dGo').addEventListener('click', async () => {
@@ -3692,7 +3707,7 @@ if (typeof module !== 'undefined') {
   }
 
   const START_MSG = {
-    base: 'Una carta, doce niveles.',
+    base: 'Vence a todos los monstruos de cada nivel.',
     mguf: "M'Guf-yn Returns: abre cofres para ganar puntos extra y derrota a los comandantes.",
     peak: 'Montaña Eterna: las casillas de ventisca restan 1 a tu Atq y Def.',
     harbour: 'Harbour Clash: los monstruos en agua se vuelven más fuertes.',
