@@ -7,6 +7,7 @@ async def main():
         b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox', '--lang=es-CL'])
         ctx=await b.new_context(locale='es-CL', viewport={'width':1600,'height':900})
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s); localStorage.setItem('dioc-classic','0')"%json.dumps(state))
+        await ctx.add_init_script("localStorage.setItem('dioc-users-v1', JSON.stringify({monogu:{name:'Monogu',salt:'a',hash:'x',created:1,rec:{}}})); localStorage.setItem('dioc-user','monogu'); const s=localStorage.getItem('dioc-run-v3'); if (s) { localStorage.setItem('dioc-run-v3:u:monogu:' + (JSON.parse(s).game || 'base'), s); localStorage.removeItem('dioc-run-v3'); }")
         pg=await ctx.new_page(); errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto('file:///home/claude/dungeon-in-one-card/index.html'); await pg.wait_for_timeout(300); await pg.click('#mContinue'); await pg.wait_for_timeout(700)
         print('clásico apagado -> body.classic:', await pg.evaluate("document.body.classList.contains('classic')"), '| nombre:', await pg.evaluate("document.querySelector('#gameName').textContent"))

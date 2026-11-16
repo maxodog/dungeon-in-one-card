@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="672e9ecf9f">
+<meta name="build" content="db7792c7a3">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -848,6 +848,7 @@ body.tight .dice-row.moving { display: none; }
 .lang-sw button { font: inherit; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; }
 .lang-sw button.on { background: var(--torch); color: #1a1208; }
 .lang-sw button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
+#classicBtn[hidden] { display: none !important; }
 
 </style>
 </head>
@@ -3063,15 +3064,19 @@ if (typeof module !== 'undefined') {
   const cardUrl = (game, key) => { const g = (CARD_SET[game] || []).includes(key) ? game : 'base'; return `img/cards/${g}_${key}.webp`; };
   let classic = false;
   try { classic = localStorage.getItem('dioc-classic') === '1'; } catch (e) {}
+  // Modo Clásico (carta real como tablero): solo para los usuarios de esta lista; para el resto no aparece ni se puede activar
+  const CLASSIC_USERS = ['monogu', 'max'];
+  const classicOk = () => !!Users.cur && CLASSIC_USERS.includes(Users.cur);
   function paintClassic() {
-    document.body.classList.toggle('classic', classic);
-    const b = $('#classicBtn'); if (b) { b.classList.toggle('on', classic); b.setAttribute('aria-pressed', classic ? 'true' : 'false'); }
+    const ok = classicOk(), on = classic && ok;
+    document.body.classList.toggle('classic', on);
+    const b = $('#classicBtn'); if (b) { b.hidden = !ok; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
     if (G && LEVELS[G.levelIdx]) {
       const lv = LEVELS[G.levelIdx];
-      $('#card').style.setProperty('--card-img', classic ? `url("${cardUrl(G.game, lv.mon.key)}")` : 'none');
+      $('#card').style.setProperty('--card-img', on ? `url("${cardUrl(G.game, lv.mon.key)}")` : 'none');
     }
   }
-  function toggleClassic() { classic = !classic; try { localStorage.setItem('dioc-classic', classic ? '1' : '0'); } catch (e) {} paintClassic(); needFit = true; fit(); }
+  function toggleClassic() { if (!classicOk()) return; classic = !classic; try { localStorage.setItem('dioc-classic', classic ? '1' : '0'); } catch (e) {} paintClassic(); needFit = true; fit(); }
   const AB_EN = { 'Cancelar muros': 'Cancel walls', 'Atravesar muros': 'Walk through walls', 'Cancelar abordaje': 'Cancel boarding', 'Abordaje': 'Boarding', 'Sacrificio −1 Vida': 'Sacrifice −1 Health',
     'Mover monstruo': 'Move monster', 'Conservar dado': 'Keep die', 'Volver a tirar': 'Reroll', 'Dado al Mov': 'Die to Mov', 'Dado al Alcance': 'Die to Range', 'Un dado por habilidad': 'One die per skill', 'Dos dados a una': 'Two dice to one', '+1 a los dados': '+1 to the dice' };
   const abLabel = s => LANG === 'en' ? (AB_EN[s] || s) : s;
