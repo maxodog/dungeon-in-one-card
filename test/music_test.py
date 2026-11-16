@@ -11,8 +11,8 @@ def st(game, hero, steps):
     return subprocess.check_output(['node','-e',js]).decode()
 SPY="window.__p=[];const o=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){window.__p.push(this.src.split('/').pop());return o.apply(this,arguments)};"
 async def case(p, game, steps, label):
-    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox','--autoplay-policy=no-user-gesture-required'])
-    ctx = await b.new_context(viewport={'width':390,'height':780}, is_mobile=True, has_touch=True)
+    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL','--autoplay-policy=no-user-gesture-required'])
+    ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':780}, is_mobile=True, has_touch=True)
     await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(st(game,'paladin',steps))); await ctx.add_init_script(SPY)
     page = await ctx.new_page(); errs=[]; reqs=[]
     page.on('pageerror', lambda e: errs.append(str(e))); page.on('request', lambda r: reqs.append(r.url.split('/')[-1]) if '/musica/' in r.url else None)

@@ -6,8 +6,8 @@ def make_state(js):
     return subprocess.check_output(['node','-e',code]).decode()
 
 async def new_page(p, state=None):
-    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-    ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
+    ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
     await ctx.add_init_script("localStorage.setItem('dioc-unlock-all','1')")
     if state: await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(state))
     page = await ctx.new_page(); errs=[]

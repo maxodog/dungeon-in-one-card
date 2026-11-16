@@ -2,7 +2,7 @@ import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 
 def make_state(js):
-    code = "const E=require('/home/claude/dungeon-in-one-card/engine.js');" + js + ";console.log(JSON.stringify(st));"
+    code = "const E=require('/home/claude/dungeon-in-one-card/src/engine.js');" + js + ";console.log(JSON.stringify(st));"
     return subprocess.check_output(['node','-e',code]).decode()
 
 STATES = {
@@ -17,8 +17,8 @@ STATES = {
 async def run(name, steps):
     state = make_state(STATES[name])
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-        ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
+        ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(state))
         page = await ctx.new_page()
         await page.add_init_script("window.__s=[];const o=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(){window.__s.push(+this.buffer.duration.toFixed(2));return o.apply(this,arguments)}")

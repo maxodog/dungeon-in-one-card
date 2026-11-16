@@ -5,8 +5,8 @@ def node(js): return subprocess.check_output(['node','-e',"const E=require('/hom
 
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-        ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
+        ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
         page = await ctx.new_page(); errs=[]
         page.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))
         await page.goto('file:///home/claude/dungeon-in-one-card/index.html'); await page.wait_for_timeout(500)

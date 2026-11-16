@@ -1,11 +1,11 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
-js="const E=require('/home/claude/dungeon-in-one-card/engine.js');console.log(JSON.stringify(E.newRun('paladin','base',[])));"
+js="const E=require('/home/claude/dungeon-in-one-card/src/engine.js');console.log(JSON.stringify(E.newRun('paladin','base',[])));"
 st=subprocess.check_output(['node','-e',js]).decode()
 async def main():
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
-        ctx=await b.new_context(viewport={'width':390,'height':780},is_mobile=True,has_touch=True)
+        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox', '--lang=es-CL'])
+        ctx=await b.new_context(locale='es-CL', viewport={'width':390,'height':780},is_mobile=True,has_touch=True)
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)"%json.dumps(st))
         pg=await ctx.new_page(); errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto('file:///home/claude/dungeon-in-one-card/index.html'); await pg.wait_for_timeout(300); await pg.click('#mContinue'); await pg.wait_for_timeout(500)

@@ -7,8 +7,8 @@ JS = """const st=E.newRun('knight','base',[]); E.setupLevel(st,1); const lv=E.LE
 st = subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+JS+";console.log(JSON.stringify(st));"]).decode()
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-        ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
+        ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(st))
         page = await ctx.new_page(); errs=[]
         page.on('pageerror', lambda e: errs.append(str(e)))

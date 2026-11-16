@@ -44,13 +44,13 @@ async def handler(route):
         if req.method == 'DELETE': docs.pop(uid, None); return await ok({})
     await route.continue_()
 async def device(b):
-    ctx = await b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    ctx = await b.new_context(locale='es-CL', viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
     await ctx.route(re.compile(r'https://(identitytoolkit|securetoken|firestore)\.googleapis\.com/.*'), handler)
     pg = await ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     await pg.goto(URL); await pg.wait_for_timeout(400); return ctx, pg, errs
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
         # --- dispositivo A: crear usuario
         A, pa, ea = await device(b)
         await pa.click('#mUser'); await pa.click('#uNew'); await pa.wait_for_selector('#uPw2')

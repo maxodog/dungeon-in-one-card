@@ -1,13 +1,13 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 def st(game, mons_js, extra=''):
-    js="""const E=require('/home/claude/dungeon-in-one-card/engine.js');const st=E.newRun('paladin','%s',[]);%s
+    js="""const E=require('/home/claude/dungeon-in-one-card/src/engine.js');const st=E.newRun('paladin','%s',[]);%s
     st.phase='move'; st.turn={dice:[3,3,3],assign:{spd:0,atk:1,def:2,rng:-1},sel:-1,lock:-1,ranger:false,rerolled:false,spd:8,atk:8,def:4,rng:2,spdLeft:8,atkLeft:8}; st.adv.x=4; st.adv.y=4; st.totalTurns=3;%s console.log(JSON.stringify(st));"""%(game,mons_js,extra)
     return subprocess.check_output(['node','-e',js]).decode()
 SPY="window.__s=[];const o=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(){window.__s.push(+this.buffer.duration.toFixed(2));return o.apply(this,arguments)}"
 async def go(p, state, label, action):
-    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox','--autoplay-policy=no-user-gesture-required'])
-    ctx = await b.new_context(viewport={'width':390,'height':780}, is_mobile=True, has_touch=True)
+    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL','--autoplay-policy=no-user-gesture-required'])
+    ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':780}, is_mobile=True, has_touch=True)
     await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(state)); await ctx.add_init_script(SPY)
     page = await ctx.new_page(); errs=[]; page.on('pageerror', lambda e: errs.append(str(e)))
     await page.goto('file:///home/claude/dungeon-in-one-card/index.html'); await page.wait_for_timeout(300)

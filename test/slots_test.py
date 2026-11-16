@@ -7,8 +7,8 @@ PEAK = st("E.useGame('peak');const st=E.newRun('sherpa','peak',E.itemPool('peak'
 SPY = "window.__sfx=[];"
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-        ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
+        ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
         pg = await ctx.new_page(); errs=[]; pg.on('pageerror', lambda e: errs.append(str(e)))
         await pg.goto('file:///home/claude/dungeon-in-one-card/index.html'); await pg.wait_for_timeout(300)
         # partida antigua (una sola ranura) + otra en Montaña Eterna

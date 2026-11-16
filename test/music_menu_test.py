@@ -13,8 +13,8 @@ async def played(pg): return await pg.evaluate("window.__p.filter(x=>x.endsWith(
 async def main():
     s=serve()
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox','--autoplay-policy=no-user-gesture-required'])
-        ctx=await b.new_context(viewport={'width':390,'height':780},is_mobile=True,has_touch=True)
+        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox', '--lang=es-CL','--autoplay-policy=no-user-gesture-required'])
+        ctx=await b.new_context(locale='es-CL', viewport={'width':390,'height':780},is_mobile=True,has_touch=True)
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)"%json.dumps(state)); await ctx.add_init_script(SPY)
         pg=await ctx.new_page(); errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto('http://127.0.0.1:%d/index.html'%PORT); await pg.wait_for_timeout(500)

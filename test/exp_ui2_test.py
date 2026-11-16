@@ -1,7 +1,7 @@
 import asyncio, json, subprocess
 from playwright.async_api import async_playwright
 def make_state(js):
-    return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/engine.js');"+js+";console.log(JSON.stringify(st));"]).decode()
+    return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+js+";console.log(JSON.stringify(st));"]).decode()
 S = {
  'chest': """const st=E.newRun('knight','mguf',['gorgon']); st.chest.val=2; E.rollTurn(st); st.turn.dice=[4,5,6];
    st.turn.assign={spd:0,atk:1,def:2,rng:-1}; E.confirmEnergy(st);
@@ -14,8 +14,8 @@ S = {
 async def run(name, steps):
     st = make_state(S[name])
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
-        ctx = await b.new_context(viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
+        ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':844}, device_scale_factor=2, has_touch=True, is_mobile=True)
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(st))
         page = await ctx.new_page(); errs=[]
         page.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))

@@ -5,9 +5,9 @@ def st(game, items):
     return subprocess.check_output(['node','-e',js]).decode()
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
         ua='Mozilla/5.0 (Linux; Android 10; SM-A105M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36'
-        ctx = await b.new_context(viewport={'width':360,'height':740}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=ua)
+        ctx = await b.new_context(locale='es-CL', viewport={'width':360,'height':740}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=ua)
         await ctx.add_init_script("localStorage.setItem('dioc-unlock-all','1')")
         page = await ctx.new_page(); errs=[]
         page.on('pageerror', lambda e: errs.append(str(e)))

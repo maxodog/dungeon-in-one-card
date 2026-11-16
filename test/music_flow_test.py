@@ -8,8 +8,8 @@ def st(game, steps):
 SPY="""window.__els=[];const o=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){if(!this.src.startsWith('data:'))window.__els.push(this);return o.apply(this,arguments)};
 window.__bs=[];const s0=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(){if(this.buffer&&this.buffer.duration>20)window.__bs.push([+this.buffer.duration.toFixed(1),this.loop]);return s0.apply(this,arguments)};"""
 async def open_(p, game, steps):
-    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox','--autoplay-policy=no-user-gesture-required'])
-    ctx = await b.new_context(viewport={'width':390,'height':780}, is_mobile=True, has_touch=True)
+    b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL','--autoplay-policy=no-user-gesture-required'])
+    ctx = await b.new_context(locale='es-CL', viewport={'width':390,'height':780}, is_mobile=True, has_touch=True)
     await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(st(game,steps))); await ctx.add_init_script(SPY)
     page = await ctx.new_page(); reqs=[]; errs=[]
     page.on('pageerror', lambda e: errs.append(str(e))); page.on('request', lambda r: reqs.append(r.url.split('/')[-1]) if '/musica/' in r.url else None)

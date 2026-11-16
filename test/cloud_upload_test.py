@@ -2,7 +2,7 @@ import asyncio, json, hashlib
 exec(open('/home/claude/dungeon-in-one-card/test/cloud_test.py').read().split('async def main')[0])
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
         A, pa, ea = await device(b)
         h = hashlib.sha256(b'abc|1234').hexdigest()
         users = {'max': {'name': 'Max', 'salt': 'abc', 'hash': h, 'created': 1, 'rec': {'games': {'peak': {'wins': 2, 'falls': 1, 'best': 10, 'bestRank': 'Intocable', 'fastest': 50}}, 'tot': {'wins': 2}, 'ach': {'win_peak': {'d': 1, 'g': 'peak'}}, 'hist': [], 'heroes': ['knight'], 'runs': {}}}}

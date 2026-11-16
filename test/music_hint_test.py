@@ -6,8 +6,8 @@ h=functools.partial(Q,directory='/home/claude/dungeon-in-one-card'); socketserve
 threading.Thread(target=s.serve_forever,daemon=True).start()
 async def main():
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
-        ctx=await b.new_context(viewport={'width':390,'height':780},is_mobile=True,has_touch=True,device_scale_factor=2)
+        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox', '--lang=es-CL'])
+        ctx=await b.new_context(locale='es-CL', viewport={'width':390,'height':780},is_mobile=True,has_touch=True,device_scale_factor=2)
         pg=await ctx.new_page(); errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto('http://127.0.0.1:%d/index.html'%PORT); await pg.wait_for_timeout(1800)
         print('aviso visible:', await pg.locator('#musicHint').count(), await pg.locator('#musicHint').inner_text())

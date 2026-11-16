@@ -4,7 +4,7 @@ exec(open('/home/claude/dungeon-in-one-card/test/cloud_test.py').read().split('a
 exec(open('/home/claude/dungeon-in-one-card/test/unlock_test.py').read().split('async def win(')[0].split('from playwright')[1].split('\n', 1)[1])
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
         A, pa, ea = await device(b)
         await pa.evaluate("localStorage.setItem('dioc-unlock-all','1')")
         await pa.click('#mUser'); await pa.click('#uNew'); await pa.wait_for_timeout(300)

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="57e3e5d36f">
+<meta name="build" content="672e9ecf9f">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -842,6 +842,12 @@ body.tight .dice-row.moving { display: none; }
 .end-unlock small { display: block; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #7fe7ff; font-weight: 700; }
 .end-unlock b { display: block; font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1.15; }
 .end-unlock span { font-size: 13px; color: var(--muted); }
+
+/* selector de idioma */
+.lang-sw { display: inline-flex; align-self: flex-start; border: 1.5px solid var(--line-dim); border-radius: 999px; padding: 3px; gap: 2px; }
+.lang-sw button { font: inherit; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; }
+.lang-sw button.on { background: var(--torch); color: #1a1208; }
+.lang-sw button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 
 </style>
 </head>
@@ -2023,6 +2029,35 @@ if (typeof module !== 'undefined') {
     stoneInfo, breakStone, resolveAttack, laurelStart, laurelMon, laurelReach, laurelMove, laurelAttackInfo, laurelAttack, laurelEnd };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+  /* ---------- idioma: español o inglés (detecta el del dispositivo; se cambia en el menú) ---------- */
+  const LANG_KEY = 'dioc-lang';
+  const LANG = (() => { try { const s = localStorage.getItem(LANG_KEY); if (s === 'es' || s === 'en') return s; } catch (e) {} return /^es\b/i.test(navigator.language || '') ? 'es' : 'en'; })();
+  const L = (es, en) => LANG === 'en' ? en : es;
+  document.documentElement.lang = LANG;
+  function setLang(l) { try { localStorage.setItem(LANG_KEY, l); } catch (e) {} location.reload(); }
+  // nombres de monstruos, niveles y aventuras (vienen del motor en español)
+  if (LANG === 'en') {
+    const MON = { spider: ['Spider', 'Spiders'], skeleton: ['Skeleton', 'Skeletons'], orc: ['Orc', 'Orcs'], demon: ['Demon', 'Demons'], ogre: ['Ember Ogre', 'Ember Ogre'],
+      reaper: ['Skeletal Herald', 'Skeletal Herald'], drake: ['Winged Serpent', 'Winged Serpent'], mguf: ["M'Guf-yn", "M'Guf-yn"], goblin: ['Goblin', 'Goblins'], wolf: ['Wolf', 'Wolves'],
+      yeti: ['Yeti', 'Yetis'], sorcerer: ['White Sorcerer', 'White Sorcerer'], crab: ['Crab', 'Crabs'], octopus: ['Octopus Man', 'Octopus Men'], zombie: ['Zombie Pirate', 'Zombie Pirates'],
+      kraken: ['Kraken', 'Krakens'], imp: ['Imp', 'Imps'], chained: ['Damned', 'Damned'], fiend: ['Hell Bat', 'Hell Bats'], cultist: ['Crimson Priest', 'Crimson Priest'], maw: ['Abyssal', 'Abyssals'],
+      goat: ['Flame Demon', 'Flame Demon'], butcher: ['Horned Executioner', 'Horned Executioner'], lord: ['Lord of Hell', 'Lord of Hell'] };
+    const TIT = { 'Telarañas': 'Webs', 'Osario': 'Ossuary', 'Cubil del orco': "Orc's Den", 'Puerta del demonio': "Demon's Gate", 'Ogro de las brasas': 'Ember Ogre', 'Heraldo esquelético': 'Skeletal Herald',
+      'Serpiente alada': 'Winged Serpent', "M'Guf-yn": "M'Guf-yn", 'Sendero helado': 'Frozen Trail', 'Aullidos en la nieve': 'Howls in the Snow', 'Guarida del yeti': "Yeti's Lair", 'Campamento goblin': 'Goblin Camp',
+      'Colmillos de escarcha': 'Frost Fangs', 'Ventisquero del yeti': "Yeti's Snowdrift", 'Horda goblin': 'Goblin Horde', 'Manada del huargo': 'Warg Pack', 'Cumbre del yeti': "Yeti's Summit", 'El Hechicero Blanco': 'The White Sorcerer',
+      'Orilla de cangrejos': 'Crab Shore', 'Muelle de tentáculos': 'Tentacle Pier', 'Marea de piratas': 'Pirate Tide', 'El Kraken despierta': 'The Kraken Awakens', 'Plaga de cangrejos': 'Crab Plague', 'Pulpos del rompeolas': 'Breakwater Octopi',
+      'Tripulación maldita': 'Cursed Crew', 'Furia del Kraken': "Kraken's Fury", 'Umbral de brasas': 'Ember Threshold', 'Cadenas al rojo': 'Red-Hot Chains', 'Alas de ceniza': 'Ash Wings', 'Sacerdote carmesí': 'Crimson Priest',
+      'Boca del abismo': 'Mouth of the Abyss', 'Legión de diablillos': 'Imp Legion', 'Penitentes del fuego': 'Fire Penitents', 'Demonio de las llamas': 'Flame Demon', 'Bandada infernal': 'Infernal Flock', 'Fauces gemelas': 'Twin Maws',
+      'Horda del Averno': 'Horde of the Underworld', 'Verdugo cornudo': 'Horned Executioner', 'Cárcel de los condenados': 'Prison of the Damned', 'Tormenta de alas': 'Storm of Wings', 'Abismo sin fondo': 'Bottomless Abyss', 'Señor del Infierno': 'Lord of Hell' };
+    const done = new Set();
+    for (const g of Object.keys(GAMES)) for (const lv of GAMES[g].levels) {
+      const b = lv.title.replace(/ (I|II|III)$/, ''), suf = lv.title.slice(b.length);
+      lv.title = (TIT[b] || b) + suf;
+      if (!done.has(lv.mon)) { done.add(lv.mon); const n = MON[lv.mon.key]; if (n) { lv.mon.name = n[0]; lv.mon.plural = n[1]; } }
+    }
+    Object.assign(GAMES.peak, { name: 'Eternal Peak' }); Object.assign(GAMES.hell, { name: "Hell's Door" });
+  }
+
   /* ---------- sonido: cada acción sortea entre varios clips y no repite el último ---------- */
   const Sfx = (() => {
     let ctx = null, master = null, on = true; const bufs = {}, last = {};
@@ -2061,7 +2096,7 @@ if (typeof module !== 'undefined') {
     }
     const paint = () => {
       const any = on || Music.on, b = $('#btnSnd');
-      if (b) { b.classList.toggle('muted', !any); b.title = 'Sonido y música'; }
+      if (b) { b.classList.toggle('muted', !any); b.title = L('Sonido y música', 'Sound and music'); }
     };
     function set(v) { on = !!v; try { localStorage.setItem('dioc-sound', on ? '1' : '0'); } catch (e) {} paint(); unlock(); if (on) play('atk', .5); }
     return { play, set, paint, ctx: () => { init(); return ctx; }, unlock, get on() { return on; } };
@@ -2191,7 +2226,7 @@ if (typeof module !== 'undefined') {
     function hint() {
       if (!on || !T.length || unlocked || !document.body.classList.contains('menu')) return;
       let h = $('#musicHint'); if (h) return;
-      h = document.createElement('div'); h.id = 'musicHint'; h.textContent = '♪ Toca para activar la música'; document.body.appendChild(h);
+      h = document.createElement('div'); h.id = 'musicHint'; h.textContent = L('♪ Toca para activar la música', '♪ Tap to turn on the music'); document.body.appendChild(h);
       const gone = () => { h.classList.add('off'); setTimeout(() => h.remove(), 600); };
       const iv = setInterval(() => { if (unlocked || !document.body.classList.contains('menu')) { clearInterval(iv); gone(); } }, 200);
     }
@@ -2281,22 +2316,22 @@ if (typeof module !== 'undefined') {
     demonhunter: svg(`<path d="M5 17 27 5"/><path d="M8 12l-3 5 5 3M24 8l3-3 1 5"/><path d="M3 9c2-3 6-3 7 0M22 27c0-5 3-8 7-8 0 4-3 8-7 8z" ${F}/><path d="M13 14l7 11"/>`)
   };
   const HEROES = {
-    paladin: { name: 'Paladín', pack: 'base', txt: 'Una vez por nivel, antes de tirar, conserva el dado que diste a una habilidad el turno anterior y tira solo los otros dos.' },
-    barbarian: { name: 'Bárbaro', pack: 'base', txt: 'Con 1 de Vida, puede volver a tirar los tres dados una vez por turno.' },
-    ranger: { name: 'Ranger', pack: 'base', txt: 'Una vez por nivel, puede sumar un dado al Alcance en lugar de al Movimiento.' },
-    mage: { name: 'Mago', pack: 'base', txt: 'Una vez por nivel, puede volver a tirar los tres dados.' },
-    necromancer: { name: 'Nigromante', pack: 'mguf', txt: 'Una vez por nivel, pierde 1 de Vida para hacer 1 de daño a un enemigo a su Alcance.' },
-    cleric: { name: 'Clérigo', pack: 'mguf', txt: 'Cuando los tres dados de Energía salen iguales (por ejemplo 3-3-3), cada uno sube 2, hasta un máximo de 6.' },
-    knight: { name: 'Caballero', pack: 'mguf', txt: 'Una vez por nivel, puede asignar dos dados de Energía a una misma habilidad (Movimiento, Ataque o Defensa).' },
-    rogue: { name: 'Pícaro', pack: 'mguf', txt: 'Una vez por nivel, puede sumar 1 al valor de los tres dados de Energía.' },
-    sherpa: { name: 'Sherpa', pack: 'peak', txt: 'Una vez por nivel, puede moverse ignorando los muros, pero no puede terminar sobre uno.' },
-    corsair: { name: 'Corsario', pack: 'harbour', txt: 'Una vez por nivel, puede moverse a cualquier casilla libre, sin importar su Movimiento.' },
-    demonhunter: { name: 'Cazador de demonios', pack: 'hell', txt: 'Una vez por nivel, en cualquier momento, puede mover a un monstruo hasta 3 puntos de Movimiento.' }
+    paladin: { name: L('Paladín', 'Paladin'), pack: 'base', txt: L('Una vez por nivel, antes de tirar, conserva el dado que diste a una habilidad el turno anterior y tira solo los otros dos.', 'Once per level, before rolling, keep the die you gave a skill last turn and roll only the other two.') },
+    barbarian: { name: L('Bárbaro', 'Barbarian'), pack: 'base', txt: L('Con 1 de Vida, puede volver a tirar los tres dados una vez por turno.', 'At 1 Health, may reroll all three dice once per turn.') },
+    ranger: { name: L('Ranger', 'Ranger'), pack: 'base', txt: L('Una vez por nivel, puede sumar un dado al Alcance en lugar de al Movimiento.', 'Once per level, may add a die to Range instead of Move.') },
+    mage: { name: L('Mago', 'Mage'), pack: 'base', txt: L('Una vez por nivel, puede volver a tirar los tres dados.', 'Once per level, may reroll all three dice.') },
+    necromancer: { name: L('Nigromante', 'Necromancer'), pack: 'mguf', txt: L('Una vez por nivel, pierde 1 de Vida para hacer 1 de daño a un enemigo a su Alcance.', 'Once per level, loses 1 Health to deal 1 damage to an enemy within Range.') },
+    cleric: { name: L('Clérigo', 'Cleric'), pack: 'mguf', txt: L('Cuando los tres dados de Energía salen iguales (por ejemplo 3-3-3), cada uno sube 2, hasta un máximo de 6.', 'When all three Energy dice match (e.g. 3-3-3), each goes up by 2, to a maximum of 6.') },
+    knight: { name: L('Caballero', 'Knight'), pack: 'mguf', txt: L('Una vez por nivel, puede asignar dos dados de Energía a una misma habilidad (Movimiento, Ataque o Defensa).', 'Once per level, may assign two Energy dice to the same skill (Move, Attack or Defence).') },
+    rogue: { name: L('Pícaro', 'Rogue'), pack: 'mguf', txt: L('Una vez por nivel, puede sumar 1 al valor de los tres dados de Energía.', 'Once per level, may add 1 to the value of all three Energy dice.') },
+    sherpa: { name: L('Sherpa', 'Sherpa'), pack: 'peak', txt: L('Una vez por nivel, puede moverse ignorando los muros, pero no puede terminar sobre uno.', 'Once per level, may move ignoring walls, but cannot end on one.') },
+    corsair: { name: L('Corsario', 'Corsair'), pack: 'harbour', txt: L('Una vez por nivel, puede moverse a cualquier casilla libre, sin importar su Movimiento.', 'Once per level, may move to any empty tile, regardless of Move.') },
+    demonhunter: { name: L('Cazador de demonios', 'Demon Hunter'), pack: 'hell', txt: L('Una vez por nivel, en cualquier momento, puede mover a un monstruo hasta 3 puntos de Movimiento.', 'Once per level, at any time, may move a monster up to 3 Move points.') }
   };
   // Qué héroes trae cada caja y qué nombre lleva
   const PACKS = [
-    { key: 'base', name: 'One Card Dungeon' }, { key: 'mguf', name: "M'Guf-yn Returns" }, { key: 'peak', name: 'Montaña Eterna' },
-    { key: 'harbour', name: 'Harbour Clash' }, { key: 'hell', name: 'La Puerta del Infierno' }
+    { key: 'base', name: 'One Card Dungeon' }, { key: 'mguf', name: "M'Guf-yn Returns" }, { key: 'peak', name: L('Montaña Eterna', 'Eternal Peak') },
+    { key: 'harbour', name: 'Harbour Clash' }, { key: 'hell', name: L('La Puerta del Infierno', "Hell's Door") }
   ];
   const heroesOf = pack => HERO_KEYS.filter(k => HEROES[k].pack === pack);
   const ICON_WIND = svg(`<path d="M4 11h13c4 0 5-5 1.5-5.5M4 17h19c4 0 5 5 1.5 5.5M4 23h9c3 0 4 3 1.5 3.5"/>`);
@@ -2318,21 +2353,21 @@ if (typeof module !== 'undefined') {
     gorgon: svg(`<circle cx="16" cy="17" r="7" ${F}/><circle cx="13.500" cy="16" r="1.300" ${S}/><circle cx="18.500" cy="16" r="1.300" ${S}/><path d="M13 21c2 1.500 4 1.500 6 0M16 10C14 5 8 5 6 9s2 6 5 5M16 10c2-5 8-5 10-1s-2 6-5 5M9 20c-4 1-5 5-3 8M23 20c4 1 5 5 3 8M14 24c-1 3-3 4-3 5M18 24c1 3 3 4 3 5"/>`)
   };
   const ITEMS = {
-    cloak: { name: 'Capa de cuero', short: 'Capa', txt: 'Durante todo un nivel, ignoras el efecto de las ventiscas.' },
-    axe: { name: 'Cuerda y piolet', short: 'Piolet', txt: 'En tu turno, suma +2 a tu Ataque y +2 a tu Alcance.' },
-    herbs: { name: 'Hierbas curativas', short: 'Hierbas', txt: 'Al recibir un ataque, reduces el daño a la mitad, redondeando hacia arriba.' },
-    wyrm: { name: 'Extracto de Wyrm', short: 'Extracto', txt: 'Suma hasta +4 a tu Movimiento este turno.' },
-    flame: { name: 'Llama del destino', short: 'Llama', txt: 'En la fase de Energía, vuelve a tirar uno o más dados y quédate con la segunda tirada.' },
-    hourglass: { name: 'Reloj de arena', short: 'Reloj', txt: 'Al terminar tu turno, los monstruos no actúan y vuelves a tirar los dados de Energía.' },
-    eye: { name: 'Ojo de dragón', short: 'Ojo', txt: 'En la fase de Energía, tira un D12 en lugar de un D6 y asígnalo a una habilidad como un dado normal.' },
-    powder: { name: 'Pólvora negra', short: 'Pólvora', txt: 'Durante tu ataque, el daño a un monstruo se extiende a todos los demás monstruos, aunque estén fuera de Alcance o de visión.' },
-    sands: { name: 'Arenas ocultas', short: 'Arenas', txt: 'Durante todo un nivel, los monstruos no reciben los bonos del agua.' },
-    gorgon: { name: 'Cabeza de Gorgona', short: 'Gorgona', txt: 'Durante un turno, los monstruos no se mueven (sí pueden atacar).' },
-    pendant: { name: 'Colgante de alma', short: 'Colgante', txt: 'Si tu Vida llega a 0, vuelves a la vida con 1.' },
-    holy: { name: 'Agua bendita', short: 'Agua', txt: 'Durante todo un nivel, los monstruos no reciben los bonos de las casillas malditas.' },
-    laurel: { name: 'Corona de laurel', short: 'Corona', txt: 'Tras tu fase de aventurero, ordena a un monstruo que se mueva y ataque a otros monstruos con sus propias cifras. Luego siguen las fases normales de los monstruos.' },
-    fist: { name: 'Puño de hierro', short: 'Puño', txt: 'Cuando rompas la Piedra de la Perdición, haces 2 de daño a todos los monstruos y 1 a tu aventurero.' },
-    mail: { name: 'Cota de malla', short: 'Cota', txt: 'Cuando te atacan los monstruos, suma 3 a tu Defensa.' }
+    cloak: { name: L('Capa de cuero', 'Leather Cloak'), short: L('Capa', 'Cloak'), txt: L('Durante todo un nivel, ignoras el efecto de las ventiscas.', 'For a whole level, you ignore the effect of blizzards.') },
+    axe: { name: L('Cuerda y piolet', 'Rope and Ice Axe'), short: L('Piolet', 'Ice Axe'), txt: L('En tu turno, suma +2 a tu Ataque y +2 a tu Alcance.', 'On your turn, add +2 to your Attack and +2 to your Range.') },
+    herbs: { name: L('Hierbas curativas', 'Healing Herbs'), short: L('Hierbas', 'Herbs'), txt: L('Al recibir un ataque, reduces el daño a la mitad, redondeando hacia arriba.', 'When attacked, halve the damage, rounding up.') },
+    wyrm: { name: L('Extracto de Wyrm', 'Wyrm Extract'), short: L('Extracto', 'Extract'), txt: L('Suma hasta +4 a tu Movimiento este turno.', 'Add up to +4 to your Move this turn.') },
+    flame: { name: L('Llama del destino', 'Flame of Fate'), short: L('Llama', 'Flame'), txt: L('En la fase de Energía, vuelve a tirar uno o más dados y quédate con la segunda tirada.', 'In the Energy phase, reroll one or more dice and keep the second roll.') },
+    hourglass: { name: L('Reloj de arena', 'Hourglass'), short: L('Reloj', 'Hourglass'), txt: L('Al terminar tu turno, los monstruos no actúan y vuelves a tirar los dados de Energía.', 'At the end of your turn, the monsters don\'t act and you roll the Energy dice again.') },
+    eye: { name: L('Ojo de dragón', 'Dragon\'s Eye'), short: L('Ojo', 'Eye'), txt: L('En la fase de Energía, tira un D12 en lugar de un D6 y asígnalo a una habilidad como un dado normal.', 'In the Energy phase, roll a D12 instead of a D6 and assign it to a skill like a normal die.') },
+    powder: { name: L('Pólvora negra', 'Black Powder'), short: L('Pólvora', 'Powder'), txt: L('Durante tu ataque, el daño a un monstruo se extiende a todos los demás monstruos, aunque estén fuera de Alcance o de visión.', 'During your attack, damage to one monster spreads to all other monsters, even out of Range or sight.') },
+    sands: { name: L('Arenas ocultas', 'Hidden Sands'), short: L('Arenas', 'Sands'), txt: L('Durante todo un nivel, los monstruos no reciben los bonos del agua.', 'For a whole level, monsters don\'t get water bonuses.') },
+    gorgon: { name: L('Cabeza de Gorgona', 'Gorgon\'s Head'), short: L('Gorgona', 'Gorgon'), txt: L('Durante un turno, los monstruos no se mueven (sí pueden atacar).', 'For one turn, monsters don\'t move (they can still attack).') },
+    pendant: { name: L('Colgante de alma', 'Soul Pendant'), short: L('Colgante', 'Pendant'), txt: L('Si tu Vida llega a 0, vuelves a la vida con 1.', 'If your Health reaches 0, you come back to life with 1.') },
+    holy: { name: L('Agua bendita', 'Holy Water'), short: L('Agua', 'Water'), txt: L('Durante todo un nivel, los monstruos no reciben los bonos de las casillas malditas.', 'For a whole level, monsters don\'t get bonuses from cursed tiles.') },
+    laurel: { name: L('Corona de laurel', 'Laurel Crown'), short: L('Corona', 'Crown'), txt: L('Tras tu fase de aventurero, ordena a un monstruo que se mueva y ataque a otros monstruos con sus propias cifras. Luego siguen las fases normales de los monstruos.', 'After your adventurer phase, order a monster to move and attack other monsters with its own stats. Then the normal monster phases follow.') },
+    fist: { name: L('Puño de hierro', 'Iron Fist'), short: L('Puño', 'Fist'), txt: L('Cuando rompas la Piedra de la Perdición, haces 2 de daño a todos los monstruos y 1 a tu aventurero.', 'When you break the Stone of Doom, you deal 2 damage to all monsters and 1 to your adventurer.') },
+    mail: { name: L('Cota de malla', 'Chainmail'), short: L('Cota', 'Mail'), txt: L('Cuando te atacan los monstruos, suma 3 a tu Defensa.', 'When monsters attack you, add 3 to your Defence.') }
   };
   const ITEM_PACK = { cloak: 'Montaña Eterna', axe: 'Montaña Eterna', herbs: 'Montaña Eterna', wyrm: 'Montaña Eterna', flame: 'Montaña Eterna',
     hourglass: 'Harbour Clash', eye: 'Harbour Clash', powder: 'Harbour Clash', sands: 'Harbour Clash', gorgon: 'Harbour Clash',
@@ -2341,8 +2376,8 @@ if (typeof module !== 'undefined') {
   const ICON_LOCK_OPEN = '<svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>';
   const ICON_STAIR = svg(`<path d="M4 26h7v-6h6v-6h6v-6h5"/>`);
 
-  const NAMES = { spd: 'Mov', atk: 'Atq', def: 'Def', rng: 'Alc' };
-  const LONG = { spd: 'Movimiento', atk: 'Ataque', def: 'Defensa', rng: 'Alcance' };
+  const NAMES = LANG === 'en' ? { spd: 'Mov', atk: 'Atk', def: 'Def', rng: 'Rng' } : { spd: 'Mov', atk: 'Atq', def: 'Def', rng: 'Alc' };
+  const LONG = LANG === 'en' ? { spd: 'Move', atk: 'Attack', def: 'Defence', rng: 'Range' } : { spd: 'Movimiento', atk: 'Ataque', def: 'Defensa', rng: 'Alcance' };
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
   let keepSet = new Set();
@@ -2430,19 +2465,19 @@ if (typeof module !== 'undefined') {
     const DOC = uid => `https://firestore.googleapis.com/v1/projects/${FB.project}/databases/(default)/documents/users/${uid}`;
     const toks = {};
     const MSG = {
-      EMAIL_EXISTS: 'Ese nombre de usuario ya existe. Elige otro o entra con él.',
-      EMAIL_NOT_FOUND: 'Usuario o contraseña incorrectos.', INVALID_PASSWORD: 'Usuario o contraseña incorrectos.',
-      INVALID_LOGIN_CREDENTIALS: 'Usuario o contraseña incorrectos.', INVALID_EMAIL: 'Ese nombre no se puede usar. Prueba con letras y números.',
-      USER_DISABLED: 'Este usuario está deshabilitado.', TOO_MANY_ATTEMPTS_TRY_LATER: 'Demasiados intentos. Espera unos minutos.',
-      OPERATION_NOT_ALLOWED: 'Falta activar «Correo electrónico/contraseña» en Firebase (Authentication).',
-      CONFIGURATION_NOT_FOUND: 'Falta activar Authentication en Firebase.',
-      PERMISSION_DENIED: 'La base de datos rechazó el acceso: revisa las reglas de Firestore.',
-      NOT_FOUND: 'Falta crear la base de datos Firestore en Firebase.'
+      EMAIL_EXISTS: L('Ese nombre de usuario ya existe. Elige otro o entra con él.', 'That username already exists. Pick another or sign in with it.'),
+      EMAIL_NOT_FOUND: L('Usuario o contraseña incorrectos.', 'Wrong username or password.'), INVALID_PASSWORD: L('Usuario o contraseña incorrectos.', 'Wrong username or password.'),
+      INVALID_LOGIN_CREDENTIALS: L('Usuario o contraseña incorrectos.', 'Wrong username or password.'), INVALID_EMAIL: L('Ese nombre no se puede usar. Prueba con letras y números.', "That name can't be used. Try letters and numbers."),
+      USER_DISABLED: L('Este usuario está deshabilitado.', 'This user is disabled.'), TOO_MANY_ATTEMPTS_TRY_LATER: L('Demasiados intentos. Espera unos minutos.', 'Too many attempts. Wait a few minutes.'),
+      OPERATION_NOT_ALLOWED: L('Falta activar «Correo electrónico/contraseña» en Firebase (Authentication).', 'Email/password sign-in is not enabled in Firebase (Authentication).'),
+      CONFIGURATION_NOT_FOUND: L('Falta activar Authentication en Firebase.', 'Authentication is not enabled in Firebase.'),
+      PERMISSION_DENIED: L('La base de datos rechazó el acceso: revisa las reglas de Firestore.', 'The database refused access: check the Firestore rules.'),
+      NOT_FOUND: L('Falta crear la base de datos Firestore en Firebase.', 'The Firestore database has not been created in Firebase.')
     };
-    const msg = c => { c = String(c || ''); const k = Object.keys(MSG).find(x => c.startsWith(x)); return k ? MSG[k] : c.startsWith('WEAK_PASSWORD') ? 'La contraseña debe tener al menos 6 caracteres.' : 'No se pudo conectar con la nube (' + (c || 'error') + ').'; };
+    const msg = c => { c = String(c || ''); const k = Object.keys(MSG).find(x => c.startsWith(x)); return k ? MSG[k] : c.startsWith('WEAK_PASSWORD') ? L('La contraseña debe tener al menos 6 caracteres.', 'Password must be at least 6 characters.') : L('No se pudo conectar con la nube (', 'Could not connect to the cloud (') + (c || 'error') + ').'; };
     async function call(url, opt, okMissing) {
       let r;
-      try { r = await fetch(url, opt); } catch (e) { const er = new Error('Sin conexión a internet.'); er.off = true; throw er; }
+      try { r = await fetch(url, opt); } catch (e) { const er = new Error(L('Sin conexión a internet.', 'No internet connection.')); er.off = true; throw er; }
       if (okMissing && r.status === 404) return null;
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { const er = new Error(msg(j.error && (j.error.status === 'PERMISSION_DENIED' || j.error.status === 'NOT_FOUND' ? j.error.status : j.error.message))); er.code = j.error && (j.error.message || j.error.status); throw er; }
@@ -2531,9 +2566,9 @@ if (typeof module !== 'undefined') {
     const putSave = (k, g, x) => { try { x.s ? localStorage.setItem(sKey(k, g), x.s) : localStorage.removeItem(sKey(k, g)); localStorage.setItem(tKey(k, g), String(x.t || 0)); } catch (e) {} };
     function checkName(name) {
       name = String(name || '').trim().replace(/\s+/g, ' ');
-      if (name.length < 2 || name.length > 16) return [null, 'El nombre debe tener entre 2 y 16 caracteres.'];
-      if (!/^[\p{L}\p{N} ._-]+$/u.test(name)) return [null, 'Usa solo letras, números, espacios, puntos o guiones.'];
-      if (Cloud.emailOf(name).split('@')[0].length > 64) return [null, 'Ese nombre es demasiado largo. Prueba uno más corto.'];
+      if (name.length < 2 || name.length > 16) return [null, L('El nombre debe tener entre 2 y 16 caracteres.', 'The name must be 2 to 16 characters long.')];
+      if (!/^[\p{L}\p{N} ._-]+$/u.test(name)) return [null, L('Usa solo letras, números, espacios, puntos o guiones.', 'Use only letters, numbers, spaces, dots or dashes.')];
+      if (Cloud.emailOf(name).split('@')[0].length > 64) return [null, L('Ese nombre es demasiado largo. Prueba uno más corto.', 'That name is too long. Try a shorter one.')];
       return [name, null];
     }
     // trae lo de la nube y lo une con lo de este dispositivo; luego sube el resultado
@@ -2565,24 +2600,24 @@ if (typeof module !== 'undefined') {
       // crear usuario nuevo en la nube
       async create(name, pw) {
         let e; [name, e] = checkName(name); if (e) return e;
-        if ((pw || '').length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+        if ((pw || '').length < 6) return L('La contraseña debe tener al menos 6 caracteres.', 'Password must be at least 6 characters.');
         const k = ukey(name);
-        if (all()[k]) return 'Ya existe un usuario con ese nombre en este dispositivo.';
-        let c; try { c = await Cloud.signUp(name, pw); } catch (er) { return er.off ? 'Necesitas internet para crear el usuario.' : er.message; }
+        if (all()[k]) return L('Ya existe un usuario con ese nombre en este dispositivo.', 'There is already a user with that name on this device.');
+        let c; try { c = await Cloud.signUp(name, pw); } catch (er) { return er.off ? L('Necesitas internet para crear el usuario.', 'You need internet to create the user.') : er.message; }
         const o = all(), s = salt();
         o[k] = { name, salt: s, hash: await hash(pw, s), created: Date.now(), rec: emptyRec(), cloud: c };
-        if (!store(o)) return 'No se pudo guardar en este navegador.';
+        if (!store(o)) return L('No se pudo guardar en este navegador.', 'Could not save in this browser.');
         setCur(k); sync(k); return null;
       },
       // entrar: con internet se comprueba en la nube; sin internet basta la copia de este dispositivo
       async login(name, pw) {
         const k = ukey(name), o = all(), u = o[k];
-        if (u && !u.cloud) { if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.'; setCur(k); return null; }
+        if (u && !u.cloud) { if (await hash(pw, u.salt) !== u.hash) return L('Contraseña incorrecta.', 'Wrong password.'); setCur(k); return null; }
         let c;
         try { c = await Cloud.signIn(u ? u.name : name, pw); }
         catch (er) {
           if (er.off && u && await hash(pw, u.salt) === u.hash) { setCur(k); return null; }
-          return er.off ? 'Necesitas internet para entrar con un usuario que no está en este dispositivo.' : er.message;
+          return er.off ? L('Necesitas internet para entrar con un usuario que no está en este dispositivo.', "You need internet to sign in with a user that isn't on this device.") : er.message;
         }
         const o2 = all(), s = salt();
         o2[k] = Object.assign(o2[k] || { name: String(name).trim(), created: Date.now(), rec: emptyRec() }, { salt: s, hash: await hash(pw, s), cloud: c });
@@ -2592,27 +2627,27 @@ if (typeof module !== 'undefined') {
       },
       // pasar a la nube un usuario que se creó solo en este dispositivo
       async upload(pw) {
-        const o = all(), u = o[cur]; if (!u) return 'No hay usuario.';
-        if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.';
+        const o = all(), u = o[cur]; if (!u) return L('No hay usuario.', 'No user.');
+        if (await hash(pw, u.salt) !== u.hash) return L('Contraseña incorrecta.', 'Wrong password.');
         if (pw.length < 6) return 'short';
-        let c; try { c = await Cloud.signUp(u.name, pw); } catch (er) { return er.off ? 'Necesitas internet para subir el usuario a la nube.' : er.message; }
+        let c; try { c = await Cloud.signUp(u.name, pw); } catch (er) { return er.off ? L('Necesitas internet para subir el usuario a la nube.', 'You need internet to upload the user to the cloud.') : er.message; }
         const o2 = all(); o2[cur].cloud = c; store(o2);
         try { await syncNow(cur); } catch (er) { return null; }
         return null;
       },
       async setPassword(oldPw, newPw) {   // para usuarios locales con contraseña corta, antes de subirlos
-        const o = all(), u = o[cur]; if (!u) return 'No hay usuario.';
-        if (await hash(oldPw, u.salt) !== u.hash) return 'Contraseña incorrecta.';
-        if ((newPw || '').length < 6) return 'La contraseña nueva debe tener al menos 6 caracteres.';
+        const o = all(), u = o[cur]; if (!u) return L('No hay usuario.', 'No user.');
+        if (await hash(oldPw, u.salt) !== u.hash) return L('Contraseña incorrecta.', 'Wrong password.');
+        if ((newPw || '').length < 6) return L('La contraseña nueva debe tener al menos 6 caracteres.', 'The new password must be at least 6 characters.');
         u.salt = salt(); u.hash = await hash(newPw, u.salt); store(o); return null;
       },
       logout() { setCur(null); },
       async remove(k, pw) {
         const o = all(), u = o[k]; if (!u) return null;
-        if (await hash(pw, u.salt) !== u.hash) return 'Contraseña incorrecta.';
+        if (await hash(pw, u.salt) !== u.hash) return L('Contraseña incorrecta.', 'Wrong password.');
         if (u.cloud) {
           try { await Cloud.signIn(u.name, pw).then(c => { u.cloud = c; }); await Cloud.remove(u.cloud); }
-          catch (er) { return er.off ? 'Necesitas internet para borrar el usuario de la nube.' : er.message; }
+          catch (er) { return er.off ? L('Necesitas internet para borrar el usuario de la nube.', 'You need internet to delete the user from the cloud.') : er.message; }
         }
         const o2 = all(); delete o2[k]; store(o2);
         try { for (const g of SLOTS) { localStorage.removeItem(sKey(k, g)); localStorage.removeItem(tKey(k, g)); } localStorage.removeItem(BEST_KEY + ':u:' + k); } catch (e) {}
@@ -2662,60 +2697,60 @@ if (typeof module !== 'undefined') {
 
   // Catálogo de logros: mazmorras completadas, rangos de victoria y premios (los mismos de la pantalla final)
   const ACH = [
-    { t: 'bronce', g: 'Mazmorras', id: 'win_base', name: 'Cáliz de Brasas', txt: 'Completa One Card Dungeon.' },
-    { t: 'plata', g: 'Mazmorras', id: 'win_mguf', name: "Fin de M'Guf-yn", txt: "Completa M'Guf-yn Returns." },
-    { t: 'plata', g: 'Mazmorras', id: 'win_peak', name: 'Rey de la cima', txt: 'Completa la Montaña Eterna.' },
-    { t: 'plata', g: 'Mazmorras', id: 'win_harbour', name: 'Lobo de mar', txt: 'Completa Harbour Clash.' },
-    { t: 'oro', g: 'Mazmorras', id: 'win_hell', name: 'Portero del Infierno', txt: 'Completa La Puerta del Infierno.' },
-    { t: 'diamante', g: 'Mazmorras', id: 'all', name: 'Leyenda de la mazmorra', txt: 'Completa las cinco aventuras.' },
-    { t: 'plata', g: 'Mazmorras', id: 'multi', name: 'Multiclase', txt: 'Gana con 3 héroes distintos.' },
-    { t: 'diamante', g: 'Rangos', id: 'Intocable', name: 'Intocable', txt: 'Gana sin caer y con 10 de daño o menos.' },
-    { t: 'plata', g: 'Rangos', id: 'Héroe de manual', name: 'Héroe de manual', txt: 'Gana sin caer ni una vez.' },
-    { t: 'bronce', g: 'Rangos', id: 'Terco con suerte', name: 'Terco con suerte', txt: 'Gana tras caer 1 o 2 veces.' },
-    { t: 'bronce', g: 'Rangos', id: 'Cucaracha inmortal', name: 'Cucaracha inmortal', txt: 'Gana tras caer 3 veces o más.' },
-    { t: 'plata', g: 'Premios', id: 'Muro humano', name: 'Muro humano', txt: 'Gana bloqueando 8 ataques o más.' },
-    { t: 'plata', g: 'Premios', id: 'Exterminador', name: 'Exterminador', txt: 'Gana venciendo 10 monstruos o más.' },
-    { t: 'plata', g: 'Premios', id: 'Saqueador', name: 'Saqueador', txt: 'Gana abriendo 3 cofres o más.' },
-    { t: 'oro', g: 'Premios', id: 'Piel de roca', name: 'Piel de roca', txt: 'Gana recibiendo 5 de daño o menos.' },
-    { t: 'plata', g: 'Premios', id: 'Manos rápidas', name: 'Manos rápidas', txt: 'Gana dando 15 golpes o más.' },
-    { t: 'plata', g: 'Premios', id: 'Sin pausa para morir', name: 'Sin pausa para morir', txt: 'Gana sin caer.' },
-    { t: 'plata', g: 'Premios', id: 'Con prisa', name: 'Con prisa', txt: 'Gana en 70 turnos o menos.' },
-    { t: 'bronce', g: 'Premios', id: 'Superviviente', name: 'Superviviente', txt: 'Gana sin ningún otro premio.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'Saco de boxeo', name: 'Saco de boxeo', txt: 'Cae tras recibir 12 de daño o más.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'Pacifista involuntario', name: 'Pacifista involuntario', txt: 'Cae sin haber vencido a ningún monstruo.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'Visitante frecuente', name: 'Visitante frecuente', txt: 'Cae por tercera vez en una misma partida.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'Defensa opcional', name: 'Defensa opcional', txt: 'Cae sin haber bloqueado ningún ataque.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'Premio participación', name: 'Premio participación', txt: 'Cae sin otro premio de consuelo.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'Retirada estratégica', name: 'Retirada estratégica', txt: 'Abandona una partida.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'trip', name: 'Tropezón', txt: 'Cae en el primer nivel de una aventura.' },
-    { t: 'bronce', g: 'Premios consuelo', id: 'close', name: 'Tan cerca', txt: 'Cae en el último nivel de una aventura.' },
-    { t: 'diamante', g: 'Hazañas', id: 'nodmg', name: 'Sin un rasguño', txt: 'Gana sin recibir daño.' },
-    { t: 'oro', g: 'Hazañas', id: 'flash', name: 'Relámpago', txt: 'Gana en 50 turnos o menos.' },
-    { t: 'plata', g: 'Hazañas', id: 'marathon', name: 'Maratonista', txt: 'Gana una partida de 150 turnos o más.' },
-    { t: 'plata', g: 'Hazañas', id: 'butcher', name: 'Carnicero', txt: 'Vence 20 monstruos en una sola partida.' },
-    { t: 'plata', g: 'Hazañas', id: 'fortress', name: 'Fortaleza', txt: 'Bloquea 15 ataques en una sola partida.' },
-    { t: 'oro', g: 'Hazañas', id: 'treasure', name: 'Cazatesoros', txt: 'Abre 6 cofres en una sola partida.' },
-    { t: 'oro', g: 'Hazañas', id: 'edge', name: 'Al límite', txt: 'Gana con 1 de Vida.' },
-    { t: 'plata', g: 'Hazañas', id: 'fullhp', name: 'Vida plena', txt: 'Gana con la Vida completa.' },
-    { t: 'plata', g: 'Hazañas', id: 'max6', name: 'Al tope', txt: 'Termina una partida con una habilidad en 6.' },
-    { t: 'oro', g: 'Hazañas', id: 'balance', name: 'Equilibrado', txt: 'Gana con Mov, Atq y Def en 4 o más.' },
-    { t: 'oro', g: 'Hazañas', id: 'naked', name: 'Minimalista', txt: 'Gana sin objetos en Montaña Eterna, Harbour Clash o La Puerta del Infierno.' },
-    { t: 'oro', g: 'Hazañas', id: 'notrick', name: 'Sin trucos', txt: 'Gana sin usar nunca la habilidad del héroe (no vale el Clérigo).' },
-    { t: 'diamante', g: 'Hazañas', id: 'purist', name: 'Purista', txt: 'Gana sin objetos y sin usar la habilidad del héroe en Montaña Eterna, Harbour Clash o La Puerta del Infierno.' },
-    { t: 'oro', g: 'Hazañas', id: 'phoenix', name: 'Fénix', txt: 'Gana tras caer 5 veces o más.' },
-    { t: 'bronce', g: 'Hazañas', id: 'half', name: 'A mitad de camino', txt: 'Llega a la mitad de una aventura.' },
-    { t: 'oro', g: 'Héroes', id: 'h6', name: 'Maestro de armas', txt: 'Gana con 6 héroes distintos.' },
-    { t: 'diamante', g: 'Héroes', id: 'hall', name: 'Panteón completo', txt: 'Gana con todos los héroes.' },
-    { t: 'plata', g: 'Héroes', id: 'loyal', name: 'Fiel compañero', txt: 'Gana 3 veces con el mismo héroe.' },
-    { t: 'plata', g: 'Trayectoria', id: 'k100', name: 'Cien cabezas', txt: 'Vence 100 monstruos en total.' },
-    { t: 'diamante', g: 'Trayectoria', id: 'k500', name: 'Azote de la mazmorra', txt: 'Vence 500 monstruos en total.' },
-    { t: 'oro', g: 'Trayectoria', id: 'w10', name: 'Veterano', txt: 'Gana 10 partidas.' },
-    { t: 'plata', g: 'Trayectoria', id: 'f25', name: 'Persistente', txt: 'Cae 25 veces en total.' },
-    { t: 'plata', g: 'Trayectoria', id: 't1000', name: 'Incansable', txt: 'Juega 1.000 turnos en total.' },
-    { t: 'diamante', g: 'Trayectoria', id: 'medals', name: 'Medallero', txt: 'Consigue 30 logros.' }
+    { t: 'bronce', g: L('Mazmorras', 'Dungeons'), id: 'win_base', name: L('Cáliz de Brasas', 'Ember Chalice'), txt: L('Completa One Card Dungeon.', 'Complete One Card Dungeon.') },
+    { t: 'plata', g: L('Mazmorras', 'Dungeons'), id: 'win_mguf', name: L("Fin de M'Guf-yn", 'End of M\'Guf-yn'), txt: L("Completa M'Guf-yn Returns.", 'Complete M\'Guf-yn Returns.') },
+    { t: 'plata', g: L('Mazmorras', 'Dungeons'), id: 'win_peak', name: L('Rey de la cima', 'King of the Peak'), txt: L('Completa la Montaña Eterna.', 'Complete Eternal Peak.') },
+    { t: 'plata', g: L('Mazmorras', 'Dungeons'), id: 'win_harbour', name: L('Lobo de mar', 'Sea Wolf'), txt: L('Completa Harbour Clash.', 'Complete Harbour Clash.') },
+    { t: 'oro', g: L('Mazmorras', 'Dungeons'), id: 'win_hell', name: L('Portero del Infierno', 'Gatekeeper of Hell'), txt: L('Completa La Puerta del Infierno.', 'Complete Hell\'s Door.') },
+    { t: 'diamante', g: L('Mazmorras', 'Dungeons'), id: 'all', name: L('Leyenda de la mazmorra', 'Dungeon Legend'), txt: L('Completa las cinco aventuras.', 'Complete all five adventures.') },
+    { t: 'plata', g: L('Mazmorras', 'Dungeons'), id: 'multi', name: L('Multiclase', 'Multiclass'), txt: L('Gana con 3 héroes distintos.', 'Win with 3 different heroes.') },
+    { t: 'diamante', g: L('Rangos', 'Ranks'), id: 'Intocable', name: L('Intocable', 'Untouchable'), txt: L('Gana sin caer y con 10 de daño o menos.', 'Win without falling and taking 10 damage or less.') },
+    { t: 'plata', g: L('Rangos', 'Ranks'), id: 'Héroe de manual', name: L('Héroe de manual', 'Textbook Hero'), txt: L('Gana sin caer ni una vez.', 'Win without falling even once.') },
+    { t: 'bronce', g: L('Rangos', 'Ranks'), id: 'Terco con suerte', name: L('Terco con suerte', 'Lucky Stubborn'), txt: L('Gana tras caer 1 o 2 veces.', 'Win after falling 1 or 2 times.') },
+    { t: 'bronce', g: L('Rangos', 'Ranks'), id: 'Cucaracha inmortal', name: L('Cucaracha inmortal', 'Immortal Cockroach'), txt: L('Gana tras caer 3 veces o más.', 'Win after falling 3 or more times.') },
+    { t: 'plata', g: L('Premios', 'Awards'), id: 'Muro humano', name: L('Muro humano', 'Human Wall'), txt: L('Gana bloqueando 8 ataques o más.', 'Win blocking 8 or more attacks.') },
+    { t: 'plata', g: L('Premios', 'Awards'), id: 'Exterminador', name: L('Exterminador', 'Exterminator'), txt: L('Gana venciendo 10 monstruos o más.', 'Win defeating 10 or more monsters.') },
+    { t: 'plata', g: L('Premios', 'Awards'), id: 'Saqueador', name: L('Saqueador', 'Looter'), txt: L('Gana abriendo 3 cofres o más.', 'Win opening 3 or more chests.') },
+    { t: 'oro', g: L('Premios', 'Awards'), id: 'Piel de roca', name: L('Piel de roca', 'Rock Skin'), txt: L('Gana recibiendo 5 de daño o menos.', 'Win taking 5 damage or less.') },
+    { t: 'plata', g: L('Premios', 'Awards'), id: 'Manos rápidas', name: L('Manos rápidas', 'Quick Hands'), txt: L('Gana dando 15 golpes o más.', 'Win landing 15 or more hits.') },
+    { t: 'plata', g: L('Premios', 'Awards'), id: 'Sin pausa para morir', name: L('Sin pausa para morir', 'No Time to Die'), txt: L('Gana sin caer.', 'Win without falling.') },
+    { t: 'plata', g: L('Premios', 'Awards'), id: 'Con prisa', name: L('Con prisa', 'In a Hurry'), txt: L('Gana en 70 turnos o menos.', 'Win in 70 turns or less.') },
+    { t: 'bronce', g: L('Premios', 'Awards'), id: 'Superviviente', name: L('Superviviente', 'Survivor'), txt: L('Gana sin ningún otro premio.', 'Win without any other award.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'Saco de boxeo', name: L('Saco de boxeo', 'Punching Bag'), txt: L('Cae tras recibir 12 de daño o más.', 'Fall after taking 12 or more damage.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'Pacifista involuntario', name: L('Pacifista involuntario', 'Accidental Pacifist'), txt: L('Cae sin haber vencido a ningún monstruo.', 'Fall without defeating a single monster.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'Visitante frecuente', name: L('Visitante frecuente', 'Frequent Visitor'), txt: L('Cae por tercera vez en una misma partida.', 'Fall for the third time in the same run.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'Defensa opcional', name: L('Defensa opcional', 'Optional Defence'), txt: L('Cae sin haber bloqueado ningún ataque.', 'Fall without blocking a single attack.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'Premio participación', name: L('Premio participación', 'Participation Prize'), txt: L('Cae sin otro premio de consuelo.', 'Fall without any other consolation award.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'Retirada estratégica', name: L('Retirada estratégica', 'Strategic Retreat'), txt: L('Abandona una partida.', 'Abandon a run.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'trip', name: L('Tropezón', 'Stumble'), txt: L('Cae en el primer nivel de una aventura.', 'Fall on the first level of an adventure.') },
+    { t: 'bronce', g: L('Premios consuelo', 'Consolation awards'), id: 'close', name: L('Tan cerca', 'So Close'), txt: L('Cae en el último nivel de una aventura.', 'Fall on the last level of an adventure.') },
+    { t: 'diamante', g: L('Hazañas', 'Feats'), id: 'nodmg', name: L('Sin un rasguño', 'Not a Scratch'), txt: L('Gana sin recibir daño.', 'Win without taking damage.') },
+    { t: 'oro', g: L('Hazañas', 'Feats'), id: 'flash', name: L('Relámpago', 'Lightning'), txt: L('Gana en 50 turnos o menos.', 'Win in 50 turns or less.') },
+    { t: 'plata', g: L('Hazañas', 'Feats'), id: 'marathon', name: L('Maratonista', 'Marathoner'), txt: L('Gana una partida de 150 turnos o más.', 'Win a run of 150 turns or more.') },
+    { t: 'plata', g: L('Hazañas', 'Feats'), id: 'butcher', name: L('Carnicero', 'Butcher'), txt: L('Vence 20 monstruos en una sola partida.', 'Defeat 20 monsters in a single run.') },
+    { t: 'plata', g: L('Hazañas', 'Feats'), id: 'fortress', name: L('Fortaleza', 'Fortress'), txt: L('Bloquea 15 ataques en una sola partida.', 'Block 15 attacks in a single run.') },
+    { t: 'oro', g: L('Hazañas', 'Feats'), id: 'treasure', name: L('Cazatesoros', 'Treasure Hunter'), txt: L('Abre 6 cofres en una sola partida.', 'Open 6 chests in a single run.') },
+    { t: 'oro', g: L('Hazañas', 'Feats'), id: 'edge', name: L('Al límite', 'On the Edge'), txt: L('Gana con 1 de Vida.', 'Win with 1 Health.') },
+    { t: 'plata', g: L('Hazañas', 'Feats'), id: 'fullhp', name: L('Vida plena', 'Full Health'), txt: L('Gana con la Vida completa.', 'Win with full Health.') },
+    { t: 'plata', g: L('Hazañas', 'Feats'), id: 'max6', name: L('Al tope', 'Maxed Out'), txt: L('Termina una partida con una habilidad en 6.', 'Finish a run with a skill at 6.') },
+    { t: 'oro', g: L('Hazañas', 'Feats'), id: 'balance', name: L('Equilibrado', 'Balanced'), txt: L('Gana con Mov, Atq y Def en 4 o más.', 'Win with Mov, Atk and Def at 4 or more.') },
+    { t: 'oro', g: L('Hazañas', 'Feats'), id: 'naked', name: L('Minimalista', 'Minimalist'), txt: L('Gana sin objetos en Montaña Eterna, Harbour Clash o La Puerta del Infierno.', 'Win without items in Eternal Peak, Harbour Clash or Hell\'s Door.') },
+    { t: 'oro', g: L('Hazañas', 'Feats'), id: 'notrick', name: L('Sin trucos', 'No Tricks'), txt: L('Gana sin usar nunca la habilidad del héroe (no vale el Clérigo).', 'Win without ever using your hero\'s ability (Cleric doesn\'t count).') },
+    { t: 'diamante', g: L('Hazañas', 'Feats'), id: 'purist', name: L('Purista', 'Purist'), txt: L('Gana sin objetos y sin usar la habilidad del héroe en Montaña Eterna, Harbour Clash o La Puerta del Infierno.', 'Win without items and without using your hero\'s ability in Eternal Peak, Harbour Clash or Hell\'s Door.') },
+    { t: 'oro', g: L('Hazañas', 'Feats'), id: 'phoenix', name: L('Fénix', 'Phoenix'), txt: L('Gana tras caer 5 veces o más.', 'Win after falling 5 or more times.') },
+    { t: 'bronce', g: L('Hazañas', 'Feats'), id: 'half', name: L('A mitad de camino', 'Halfway There'), txt: L('Llega a la mitad de una aventura.', 'Reach the middle of an adventure.') },
+    { t: 'oro', g: L('Héroes', 'Heroes'), id: 'h6', name: L('Maestro de armas', 'Weapon Master'), txt: L('Gana con 6 héroes distintos.', 'Win with 6 different heroes.') },
+    { t: 'diamante', g: L('Héroes', 'Heroes'), id: 'hall', name: L('Panteón completo', 'Full Pantheon'), txt: L('Gana con todos los héroes.', 'Win with every hero.') },
+    { t: 'plata', g: L('Héroes', 'Heroes'), id: 'loyal', name: L('Fiel compañero', 'Loyal Companion'), txt: L('Gana 3 veces con el mismo héroe.', 'Win 3 times with the same hero.') },
+    { t: 'plata', g: L('Trayectoria', 'Career'), id: 'k100', name: L('Cien cabezas', 'A Hundred Heads'), txt: L('Vence 100 monstruos en total.', 'Defeat 100 monsters in total.') },
+    { t: 'diamante', g: L('Trayectoria', 'Career'), id: 'k500', name: L('Azote de la mazmorra', 'Scourge of the Dungeon'), txt: L('Vence 500 monstruos en total.', 'Defeat 500 monsters in total.') },
+    { t: 'oro', g: L('Trayectoria', 'Career'), id: 'w10', name: L('Veterano', 'Veteran'), txt: L('Gana 10 partidas.', 'Win 10 runs.') },
+    { t: 'plata', g: L('Trayectoria', 'Career'), id: 'f25', name: L('Persistente', 'Persistent'), txt: L('Cae 25 veces en total.', 'Fall 25 times in total.') },
+    { t: 'plata', g: L('Trayectoria', 'Career'), id: 't1000', name: L('Incansable', 'Tireless'), txt: L('Juega 1.000 turnos en total.', 'Play 1,000 turns in total.') },
+    { t: 'diamante', g: L('Trayectoria', 'Career'), id: 'medals', name: L('Medallero', 'Medal Collector'), txt: L('Consigue 30 logros.', 'Earn 30 achievements.') }
   ];
   const ITEM_GAMES = ['peak', 'harbour', 'hell'];   // aventuras que se juegan con objetos
-  const TIERS = [['diamante', 'Diamante'], ['oro', 'Oro'], ['plata', 'Plata'], ['bronce', 'Bronce']];
+  const TIERS = [['diamante', L('Diamante', 'Diamond')], ['oro', L('Oro', 'Gold')], ['plata', L('Plata', 'Silver')], ['bronce', L('Bronce', 'Bronze')]];
   const TIER_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 18M15 3l-3 18"/></svg>';
   const RANK_ORDER = ['Cucaracha inmortal', 'Terco con suerte', 'Héroe de manual', 'Intocable'];
   const TOT_KEYS = ['kills', 'hits', 'dmgIn', 'blocks', 'chests'];
@@ -2824,9 +2859,9 @@ if (typeof module !== 'undefined') {
     let saved = false; try { saved = !!localStorage.getItem(saveKey(g)); } catch (e) {}
     const played = progOf(g).played || saved;
     const packNames = u.pack ? heroesOf(u.pack).map(h => HEROES[h].name) : [];
-    const req = `Completa ${GAMES[u.from].name} con 2 héroes distintos`
-      + (u.pack ? (packNames.length === 1 ? `, uno de ellos el ${packNames[0]}` : `, al menos uno de ${GAMES[u.pack].name} (${packNames.join(', ')})`) : '')
-      + (u.own ? `, usando solo objetos de ${GAMES[u.from].name}` : '') + '.';
+    const req = L(`Completa ${GAMES[u.from].name} con 2 héroes distintos`, `Complete ${GAMES[u.from].name} with 2 different heroes`)
+      + (u.pack ? (packNames.length === 1 ? L(`, uno de ellos el ${packNames[0]}`, `, one of them the ${packNames[0]}`) : L(`, al menos uno de ${GAMES[u.pack].name} (${packNames.join(', ')})`, `, at least one from ${GAMES[u.pack].name} (${packNames.join(', ')})`)) : '')
+      + (u.own ? L(`, usando solo objetos de ${GAMES[u.from].name}`, `, using only ${GAMES[u.from].name} items`) : '') + '.';
     return { ok: done || played, req, have: list, fromPack, from: u.from };
   }
   const heroOpen = k => HEROES[k].pack === 'base' || unlockState(HEROES[k].pack).ok;
@@ -2878,7 +2913,8 @@ if (typeof module !== 'undefined') {
       b.type = 'button';
       b.className = 'tile' + (lv.walls[i] ? ' wall' : '') + (lv.voids[i] ? ' void' : '') + (lv.blizz[i] ? ' blizz' : '') + (lv.water[i] ? ' water' : '') + (lv.damned && lv.damned[i] ? ' damned' : '') + (lv.stoneAt === i ? ' stone' : '');
       b.dataset.i = i;
-      b.setAttribute('aria-label', lv.voids[i] ? 'Hueco' : lv.walls[i] ? 'Muro' : lv.blizz[i] ? `Ventisca, columna ${x + 1}, fila ${y + 1}` : lv.water[i] ? `Agua, columna ${x + 1}, fila ${y + 1}` : lv.stoneAt === i ? 'Piedra de la Perdición' : lv.damned && lv.damned[i] ? `Casilla maldita, columna ${x + 1}, fila ${y + 1}` : `Casilla columna ${x + 1}, fila ${y + 1}`);
+      const cr = L(`columna ${x + 1}, fila ${y + 1}`, `column ${x + 1}, row ${y + 1}`);
+      b.setAttribute('aria-label', lv.voids[i] ? L('Hueco', 'Gap') : lv.walls[i] ? L('Muro', 'Wall') : lv.blizz[i] ? L('Ventisca, ', 'Blizzard, ') + cr : lv.water[i] ? L('Agua, ', 'Water, ') + cr : lv.stoneAt === i ? L('Piedra de la Perdición', 'Stone of Doom') : lv.damned && lv.damned[i] ? L('Casilla maldita, ', 'Cursed tile, ') + cr : L('Casilla ', 'Tile ') + cr);
       if (lv.walls[i] && lv.stoneAt !== i) b.tabIndex = -1;
       if (lv.stairs.includes(i)) b.innerHTML = `<span class="stair">${ICON_STAIR}</span>`;
       else if (lv.blizz[i]) b.innerHTML = `<span class="wind">${ICON_WIND}</span>`;
@@ -3010,11 +3046,11 @@ if (typeof module !== 'undefined') {
   // dado D12 (Ojo de dragón): dodecaedro violeta, distinto de los D6 con puntos
   const D12_SVG = '<svg viewBox="0 0 100 100" aria-hidden="true"><polygon class="o" points="50,3 96,37 79,94 21,94 4,37"/><polygon class="m" points="50,28 74,45 65,73 35,73 26,45"/><path class="l" d="M50 3v25M96 37 74 45M79 94 65 73M21 94 35 73M4 37 26 45"/></svg>';
   function dieHTML(v, extra, d12) {
-    if (v > 6 || d12) return `<span class="die d12 ${extra || ''}" aria-label="Dado D12: ${v}">${D12_SVG}<b>${v}</b><small>D12</small></span>`;
+    if (v > 6 || d12) return `<span class="die d12 ${extra || ''}" aria-label="${L('Dado', 'Die')} D12: ${v}">${D12_SVG}<b>${v}</b><small>D12</small></span>`;
     const on = PIPS[v] || [];
     let s = '';
     for (let i = 0; i < 9; i++) s += `<i class="${on.includes(i) ? 'on' : ''}"></i>`;
-    return `<span class="die ${extra || ''}" aria-label="Dado ${v}">${s}</span>`;
+    return `<span class="die ${extra || ''}" aria-label="${L('Dado', 'Die')} ${v}">${s}</span>`;
   }
 
   const regularCount = () => LEVELS.filter(l => !l.boss).length;
@@ -3036,37 +3072,40 @@ if (typeof module !== 'undefined') {
     }
   }
   function toggleClassic() { classic = !classic; try { localStorage.setItem('dioc-classic', classic ? '1' : '0'); } catch (e) {} paintClassic(); needFit = true; fit(); }
-  const stageLabel = lv => lv.boss ? `Jefe ${lv.boss}` : `Nivel ${lv.num}`;
+  const AB_EN = { 'Cancelar muros': 'Cancel walls', 'Atravesar muros': 'Walk through walls', 'Cancelar abordaje': 'Cancel boarding', 'Abordaje': 'Boarding', 'Sacrificio −1 Vida': 'Sacrifice −1 Health',
+    'Mover monstruo': 'Move monster', 'Conservar dado': 'Keep die', 'Volver a tirar': 'Reroll', 'Dado al Mov': 'Die to Mov', 'Dado al Alcance': 'Die to Range', 'Un dado por habilidad': 'One die per skill', 'Dos dados a una': 'Two dice to one', '+1 a los dados': '+1 to the dice' };
+  const abLabel = s => LANG === 'en' ? (AB_EN[s] || s) : s;
+  const stageLabel = lv => lv.boss ? L(`Jefe ${lv.boss}`, `Boss ${lv.boss}`) : L(`Nivel ${lv.num}`, `Level ${lv.num}`);
   function renderHead() {
     const lv = LEVELS[G.levelIdx];
-    $('.lvl-num').innerHTML = lv.boss ? `Jefe <b id="lvlNum">${lv.boss}</b> de <span id="lvlTot">${bossCount()}</span>` : `Nivel <b id="lvlNum">${lv.num}</b> de <span id="lvlTot">${regularCount()}</span>`;
+    $('.lvl-num').innerHTML = lv.boss ? `${L('Jefe', 'Boss')} <b id="lvlNum">${lv.boss}</b> ${L('de', 'of')} <span id="lvlTot">${bossCount()}</span>` : `${L('Nivel', 'Level')} <b id="lvlNum">${lv.num}</b> ${L('de', 'of')} <span id="lvlTot">${regularCount()}</span>`;
     $('#lvlName').textContent = lv.title;
     $('#dots').innerHTML = LEVELS.map((l, i) => `<i class="${l.boss ? 'boss ' : ''}${i < G.levelIdx ? 'done' : i === G.levelIdx ? 'now' : ''}"></i>`).join('');
     const m = lv.mon, bo = m.bonus;
-    const st = (k, v) => `<div><b>${v}</b>${bo && bo[k] ? `<u>+${bo[k]}</u>` : ''}<span>${{ hp: 'Vida', spd: 'Vel', atk: 'Atq', def: 'Def', rng: 'Alc' }[k]}</span></div>`;
+    const st = (k, v) => `<div><b>${v}</b>${bo && bo[k] ? `<u>+${bo[k]}</u>` : ''}<span>${(LANG === 'en' ? { hp: 'Health', spd: 'Spd', atk: 'Atk', def: 'Def', rng: 'Rng' } : { hp: 'Vida', spd: 'Vel', atk: 'Atq', def: 'Def', rng: 'Alc' })[k]}</span></div>`;
     $('#foot').innerHTML = `
       <div class="ico">${ICONS[m.key]}</div>
       <div>
-        <div class="nm">${m.plural}<small>${lv.boss ? 'jefe' : `quedan ${G.mons.length} de ${lv.spawns.length}`}</small></div>
+        <div class="nm">${m.plural}<small>${lv.boss ? L('jefe', 'boss') : L(`quedan ${G.mons.length} de ${lv.spawns.length}`, `${G.mons.length} of ${lv.spawns.length} left`)}</small></div>
         <div class="stats">${['hp', 'spd', 'atk', 'def', 'rng'].map(k => st(k, m[k])).join('')}</div>
-        ${bo ? (m.bonusOn === 'hero' ? `<div class="wnote hell ${G.sands ? 'off' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'on' : ''}">${G.sands ? 'Agua bendita: los bonos no cuentan este nivel.' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'Estás en casilla maldita: suman el bono.' : 'Si estás en casilla maldita, suman el bono en rojo.'}</div>` : '<div class="wnote">En casillas de agua suman el bono en azul.</div>') : ''}
+        ${bo ? (m.bonusOn === 'hero' ? `<div class="wnote hell ${G.sands ? 'off' : lv.damned[idx(G.adv.x, G.adv.y)] ? 'on' : ''}">${G.sands ? L('Agua bendita: los bonos no cuentan este nivel.', "Holy Water: bonuses don't count this level.") : lv.damned[idx(G.adv.x, G.adv.y)] ? L('Estás en casilla maldita: suman el bono.', "You're on a cursed tile: they add the bonus.") : L('Si estás en casilla maldita, suman el bono en rojo.', "If you're on a cursed tile, they add the red bonus.")}</div>` : `<div class="wnote">${L('En casillas de agua suman el bono en azul.', 'On water tiles they add the blue bonus.')}</div>`) : ''}
       </div>`;
     const gt = GAME_TITLE[G.game] || GAME_TITLE.base, wn = $('#foot .wnote');
     $('#gameName').textContent = gt; $('#sysSub').textContent = gt;
     $('#sysLvl').hidden = false;
-    $('#sysLvl').innerHTML = `<b>${lv.boss ? `Jefe ${lv.boss} de ${bossCount()}` : `Nivel ${lv.num} de ${regularCount()}`}</b><span>${lv.title}</span>${wn ? `<em class="${wn.classList.contains('on') ? 'on' : ''}">${wn.textContent.trim()}</em>` : ''}`;
+    $('#sysLvl').innerHTML = `<b>${lv.boss ? L(`Jefe ${lv.boss} de ${bossCount()}`, `Boss ${lv.boss} of ${bossCount()}`) : L(`Nivel ${lv.num} de ${regularCount()}`, `Level ${lv.num} of ${regularCount()}`)}</b><span>${lv.title}</span>${wn ? `<em class="${wn.classList.contains('on') ? 'on' : ''}">${wn.textContent.trim()}</em>` : ''}`;
   }
 
   function renderHP() {
     const hp = G.adv.hp;
     $('#pips').innerHTML = Array.from({ length: START_HP }, (_, i) =>
       `<i class="${i < hp ? 'on' : ''}${i >= hp && i < lastHp ? ' lost' : ''}"></i>`).join('');
-    $('#hpnum').textContent = `Vida ${hp} / ${START_HP}`;
+    $('#hpnum').textContent = `${L('Vida', 'Health')} ${hp} / ${START_HP}`;
     const hb = $('#heroBox');
     if (hb) {
       if (hb.dataset.hero !== G.hero) { hb.dataset.hero = G.hero; hb.innerHTML = `<span class="ico">${HERO_ICONS[G.hero] || ICON_ADV}</span><b>${HEROES[G.hero].name}</b><p>${HEROES[G.hero].txt}</p><div class="hpbar"><div class="pips"></div><span class="hpnum"></span></div>`; }
       hb.querySelector('.pips').innerHTML = $('#pips').innerHTML;
-      hb.querySelector('.hpnum').textContent = `Vida ${hp} / ${START_HP}`;
+      hb.querySelector('.hpnum').textContent = `${L('Vida', 'Health')} ${hp} / ${START_HP}`;
     }
     $('#heroTag').textContent = HEROES[G.hero].name;
     if (tok.adv) tok.adv.querySelector('.badge').textContent = hp;
@@ -3082,7 +3121,7 @@ if (typeof module !== 'undefined') {
     const sk = slotKeys(t);
     const out = [];
     for (const k of ['spd', 'atk', 'def', 'rng']) {
-      let val = a[k], sub = 'base', cls = 'chip', bar = '';
+      let val = a[k], sub = L('base', 'base'), cls = 'chip', bar = '';
       const slot = ph === 'energy' && sk.includes(k);
       const lootHere = t.loot && t.loot.k === k ? t.loot.n : 0;
       if (ph === 'energy') {
@@ -3095,16 +3134,16 @@ if (typeof module !== 'undefined') {
             val = a[k] + ds.reduce((x, i) => x + t.dice[i], 0) + lootHere;
             sub = `${a[k]} + ${parts.join(' + ')}`;
             cls += ' filled' + (t.lock === k ? ' locked' : '');
-          } else if (slot) { sub = 'asigna un dado'; if (t.sel >= 0) cls += ' armed'; }
-          else sub = 'sin dado';
+          } else if (slot) { sub = L('asigna un dado', 'assign a die'); if (t.sel >= 0) cls += ' armed'; }
+          else sub = L('sin dado', 'no die');
           if (slot && t.sel >= 0 && ds.length === 1 && t.knight) cls += ' armed';
-        } else if (!slot) sub = 'sin dado';
+        } else if (!slot) sub = L('sin dado', 'no die');
       } else if (ph === 'move' || ph === 'monsters') {
         const pen = E.blizzPen(G);
-        if (k === 'spd') { val = t.spdLeft; sub = `de ${t.spd}`; bar = `<span class="bar"><i style="width:${t.spd ? (100 * t.spdLeft / t.spd) : 0}%"></i></span>`; }
-        else if (k === 'atk') { val = E.atkAvail(G); sub = pen ? 'ventisca −1' : `de ${t.atk}`; bar = `<span class="bar"><i style="width:${t.atk ? (100 * t.atkLeft / t.atk) : 0}%"></i></span>`; }
-        else if (k === 'def') { val = E.heroDef(G); sub = pen ? 'ventisca −1' : 'este turno'; }
-        else { val = t.rng || a.rng; sub = t.rng !== a.rng ? 'este turno' : 'fijo'; }
+        if (k === 'spd') { val = t.spdLeft; sub = L(`de ${t.spd}`, `of ${t.spd}`); bar = `<span class="bar"><i style="width:${t.spd ? (100 * t.spdLeft / t.spd) : 0}%"></i></span>`; }
+        else if (k === 'atk') { val = E.atkAvail(G); sub = pen ? L('ventisca −1', 'blizzard −1') : L(`de ${t.atk}`, `of ${t.atk}`); bar = `<span class="bar"><i style="width:${t.atk ? (100 * t.atkLeft / t.atk) : 0}%"></i></span>`; }
+        else if (k === 'def') { val = E.heroDef(G); sub = pen ? L('ventisca −1', 'blizzard −1') : L('este turno', 'this turn'); }
+        else { val = t.rng || a.rng; sub = t.rng !== a.rng ? L('este turno', 'this turn') : L('fijo', 'fixed'); }
       }
       if (pen0(k)) cls += ' chilled';
       const clickable = slot && t.dice && !rolling && t.lock !== k;
@@ -3122,7 +3161,7 @@ if (typeof module !== 'undefined') {
       else row.innerHTML = '';
       return;
     }
-    if (!t.dice) { row.innerHTML = '<span class="hint">Tres dados de Energía por turno</span>'; return; }
+    if (!t.dice) { row.innerHTML = `<span class="hint">${L('Tres dados de Energía por turno', 'Three Energy dice per turn')}</span>`; return; }
     if (rolling) {
       row.innerHTML = [0, 1, 2].map(i => (t.lock >= 0 && i === 0) ? dieHTML(t.dice[0], 'locked', (t.d12 || [])[0]) : keepSet.has(i) ? dieHTML(t.dice[i], 'used', (t.d12 || [])[i]) : (t.d12 || [])[i] ? dieHTML(1 + Math.floor(Math.random() * 12), 'rolling', true) : dieHTML(1 + Math.floor(Math.random() * 6), 'rolling')).join('');
       return;
@@ -3138,20 +3177,20 @@ if (typeof module !== 'undefined') {
     const t = G.turn, ph = G.phase;
     let step = '1', txt = '';
     if (ph === 'energy') {
-      if (!t.dice) txt = 'Tira los tres dados de <em>Energía</em>.';
-      else if (!E.assignComplete(t)) txt = t.knight ? 'Caballero: reparte los tres dados; puedes poner dos en la misma habilidad.' : t.ranger ? 'Toca un dado y luego <em>Alc</em>, <em>Atq</em> o <em>Def</em>.' : 'Toca un dado y luego <em>Mov</em>, <em>Atq</em> o <em>Def</em>.';
-      else txt = 'Reparto listo. Confírmalo o toca una habilidad para cambiarlo.';
+      if (!t.dice) txt = L('Tira los tres dados de <em>Energía</em>.', 'Roll the three <em>Energy</em> dice.');
+      else if (!E.assignComplete(t)) txt = t.knight ? L('Caballero: reparte los tres dados; puedes poner dos en la misma habilidad.', 'Knight: assign the three dice; you can put two on the same skill.') : t.ranger ? L('Toca un dado y luego <em>Alc</em>, <em>Atq</em> o <em>Def</em>.', 'Tap a die, then <em>Rng</em>, <em>Atk</em> or <em>Def</em>.') : L('Toca un dado y luego <em>Mov</em>, <em>Atq</em> o <em>Def</em>.', 'Tap a die, then <em>Mov</em>, <em>Atk</em> or <em>Def</em>.');
+      else txt = L('Reparto listo. Confírmalo o toca una habilidad para cambiarlo.', 'Dice assigned. Confirm, or tap a skill to change it.');
     } else if (ph === 'move') {
       step = '2';
-      txt = mode === 'necro' ? 'Nigromante: toca el monstruo al que quieres hacer <em>1 de daño</em> (cuesta 1 de tu Vida).'
-        : mode === 'demonPick' ? 'Cazador: toca el monstruo que quieres <em>mover</em>.'
-        : mode && mode.demon ? 'Cazador: toca la casilla marcada a la que lo mueves (hasta 3 de Mov).'
-        : mode === 'laurelPick' ? 'Corona de laurel: toca el monstruo al que das la orden.'
-        : G.laurel ? 'Corona de laurel: mueve al monstruo o toca a otro monstruo para que lo ataque. Termina la orden cuando quieras.'
-        : 'Toca una casilla marcada para <em>moverte</em>, o un monstruo, el cofre o la piedra resaltados para <em>atacar</em>.';
+      txt = mode === 'necro' ? L('Nigromante: toca el monstruo al que quieres hacer <em>1 de daño</em> (cuesta 1 de tu Vida).', 'Necromancer: tap the monster you want to deal <em>1 damage</em> to (costs 1 of your Health).')
+        : mode === 'demonPick' ? L('Cazador: toca el monstruo que quieres <em>mover</em>.', 'Hunter: tap the monster you want to <em>move</em>.')
+        : mode && mode.demon ? L('Cazador: toca la casilla marcada a la que lo mueves (hasta 3 de Mov).', 'Hunter: tap the marked tile to move it to (up to 3 Mov).')
+        : mode === 'laurelPick' ? L('Corona de laurel: toca el monstruo al que das la orden.', 'Laurel Crown: tap the monster you give the order to.')
+        : G.laurel ? L('Corona de laurel: mueve al monstruo o toca a otro monstruo para que lo ataque. Termina la orden cuando quieras.', 'Laurel Crown: move the monster or tap another monster for it to attack. End the order whenever you like.')
+        : L('Toca una casilla marcada para <em>moverte</em>, o un monstruo, el cofre o la piedra resaltados para <em>atacar</em>.', 'Tap a marked tile to <em>move</em>, or a highlighted monster, chest or stone to <em>attack</em>.');
     }
-    else if (ph === 'monsters') { step = '3'; txt = 'Turno de los monstruos.'; }
-    else if (ph === 'clear') { step = '2'; txt = 'Nivel superado.'; }
+    else if (ph === 'monsters') { step = '3'; txt = L('Turno de los monstruos.', "Monsters' turn."); }
+    else if (ph === 'clear') { step = '2'; txt = L('Nivel superado.', 'Level cleared.'); }
     $('#step').textContent = step;
     $('#bannerText').innerHTML = txt;
   }
@@ -3169,19 +3208,19 @@ if (typeof module !== 'undefined') {
     const t = G.turn, ph = G.phase, box = $('#actions');
     if (ph === 'energy') {
       const ab = E.abilityInfo(G);
-      const abBtn = ab ? `<button type="button" class="btn abil" id="btnAbil" ${rolling ? 'disabled' : ''}>${ab.label}</button>` : '';
-      if (!t.dice) box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnRoll" ${rolling ? 'disabled' : ''}>Tirar dados</button>`;
-      else box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnConfirm" ${E.assignComplete(t) && !rolling ? '' : 'disabled'}>Confirmar</button>`;
+      const abBtn = ab ? `<button type="button" class="btn abil" id="btnAbil" ${rolling ? 'disabled' : ''}>${abLabel(ab.label)}</button>` : '';
+      if (!t.dice) box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnRoll" ${rolling ? 'disabled' : ''}>${L('Tirar dados', 'Roll dice')}</button>`;
+      else box.innerHTML = abBtn + `<button type="button" class="btn primary" id="btnConfirm" ${E.assignComplete(t) && !rolling ? '' : 'disabled'}>${L('Confirmar', 'Confirm')}</button>`;
     } else if (ph === 'move') {
-      if (G.laurel) { box.innerHTML = `<button type="button" class="btn primary" id="btnLaurelEnd" ${busy ? 'disabled' : ''}>Terminar orden</button>`; return; }
-      if (mode === 'laurelPick') { box.innerHTML = `<button type="button" class="btn" id="btnLaurelNo">Cancelar</button>`; return; }
+      if (G.laurel) { box.innerHTML = `<button type="button" class="btn primary" id="btnLaurelEnd" ${busy ? 'disabled' : ''}>${L('Terminar orden', 'End order')}</button>`; return; }
+      if (mode === 'laurelPick') { box.innerHTML = `<button type="button" class="btn" id="btnLaurelNo">${L('Cancelar', 'Cancel')}</button>`; return; }
       const ab = E.abilityInfo(G);
-      const cancel = (ab && ((ab.id === 'necro' && mode === 'necro') || (ab.id === 'demon' && mode))) ? 'Cancelar' : null;
-      const abBtn = ab ? `<button type="button" class="btn abil tight ${G.sherpaOn || G.corsairOn || cancel ? 'on' : ''}" id="btnAbil" ${busy ? 'disabled' : ''}>${cancel || ab.label}</button>` : '';
-      box.innerHTML = `<button type="button" class="btn small" id="btnUndo" ${G.undo.length && !busy ? '' : 'disabled'}>Deshacer</button>${abBtn}
-        <button type="button" class="btn primary ${nothingLeft() ? 'pulse' : ''}" id="btnEnd" ${busy ? 'disabled' : ''}>Fin de turno</button>`;
+      const cancel = (ab && ((ab.id === 'necro' && mode === 'necro') || (ab.id === 'demon' && mode))) ? L('Cancelar', 'Cancel') : null;
+      const abBtn = ab ? `<button type="button" class="btn abil tight ${G.sherpaOn || G.corsairOn || cancel ? 'on' : ''}" id="btnAbil" ${busy ? 'disabled' : ''}>${cancel || abLabel(ab.label)}</button>` : '';
+      box.innerHTML = `<button type="button" class="btn small" id="btnUndo" ${G.undo.length && !busy ? '' : 'disabled'}>${L('Deshacer', 'Undo')}</button>${abBtn}
+        <button type="button" class="btn primary ${nothingLeft() ? 'pulse' : ''}" id="btnEnd" ${busy ? 'disabled' : ''}>${L('Fin de turno', 'End turn')}</button>`;
     } else {
-      box.innerHTML = `<button type="button" class="btn" disabled>${ph === 'monsters' ? 'Los monstruos actúan…' : '…'}</button>`;
+      box.innerHTML = `<button type="button" class="btn" disabled>${ph === 'monsters' ? L('Los monstruos actúan…', 'Monsters are acting…') : '…'}</button>`;
     }
   }
 
@@ -3189,11 +3228,11 @@ if (typeof module !== 'undefined') {
     const box = $('#items');
     const list = G.items || [];
     const act = [];
-    if (G.cloak) act.push(['cloak', 'Capa activa']);
-    if (G.sands) act.push(LEVELS[G.levelIdx].damned && LEVELS[G.levelIdx].damned.some(Boolean) ? ['holy', 'Agua bendita activa'] : ['sands', 'Arenas activas']);
-    if (G.fist) act.push(['fist', 'Puño listo']);
-    if (G.powder) act.push(['powder', 'Pólvora lista']);
-    if (G.gorgon) act.push(['gorgon', 'Gorgona activa']);
+    if (G.cloak) act.push(['cloak', L('Capa activa', 'Cloak active')]);
+    if (G.sands) act.push(LEVELS[G.levelIdx].damned && LEVELS[G.levelIdx].damned.some(Boolean) ? ['holy', L('Agua bendita activa', 'Holy Water active')] : ['sands', L('Arenas activas', 'Sands active')]);
+    if (G.fist) act.push(['fist', L('Puño listo', 'Fist ready')]);
+    if (G.powder) act.push(['powder', L('Pólvora lista', 'Powder ready')]);
+    if (G.gorgon) act.push(['gorgon', L('Gorgona activa', 'Gorgon active')]);
     if (!list.length && !act.length) { box.innerHTML = ''; box.hidden = true; return; }
     box.hidden = false;
     const idle = id => !E.itemUsable(G, id) || busy || rolling || G.phase === 'monsters';
@@ -3207,9 +3246,9 @@ if (typeof module !== 'undefined') {
     if (!(G.loot > 0)) { box.innerHTML = ''; box.hidden = true; return; }
     box.hidden = false;
     const can = G.phase === 'energy' && t.dice && !rolling;
-    const set = t.loot && t.loot.k && G.phase === 'energy' ? `+${t.loot.n} a ${NAMES[t.loot.k]}` : '';
-    box.innerHTML = `<span class="ico">${ICON_CHEST}</span><span class="txt">Botín del cofre: <b>${G.loot}</b> punto${G.loot > 1 ? 's' : ''}${set ? ' · ' + set : ''}</span>
-      ${can ? `<button type="button" class="btn mini" id="btnLoot">${set ? 'Cambiar' : 'Sumar'}</button>` : ''}`;
+    const set = t.loot && t.loot.k && G.phase === 'energy' ? `+${t.loot.n} ${L('a', 'to')} ${NAMES[t.loot.k]}` : '';
+    box.innerHTML = `<span class="ico">${ICON_CHEST}</span><span class="txt">${L('Botín del cofre', 'Chest loot')}: <b>${G.loot}</b> ${L('punto', 'point')}${G.loot > 1 ? 's' : ''}${set ? ' · ' + set : ''}</span>
+      ${can ? `<button type="button" class="btn mini" id="btnLoot">${set ? L('Cambiar', 'Change') : L('Sumar', 'Add')}</button>` : ''}`;
   }
 
   function say(html) { $('#log').innerHTML = html; }
@@ -3249,20 +3288,20 @@ if (typeof module !== 'undefined') {
   function closeSheet() { const v = $('#veil'); if (v) v.remove(); }
 
   const GAME_LEAD = {
-    base: 'Atraviesa 12 niveles. En el último hay que derrotar a los tres demonios.',
-    mguf: "Atraviesa 12 niveles. Tras el 3, el 6 y el 9 te espera un comandante, y tras el 12, el mismísimo M'Guf-yn.",
-    peak: 'Sube los 10 niveles de la Montaña Eterna. En el último te espera el Hechicero Blanco.',
-    harbour: 'Defiende el puerto a lo largo de 8 niveles. Al final despierta el Kraken.',
-    hell: 'Desciende 12 niveles por la Puerta del Infierno. Tras el 3, el 6 y el 9 te espera un jefe, y tras el 12, el Señor del Infierno.'
+    base: L('Atraviesa 12 niveles. En el último hay que derrotar a los tres demonios.', 'Get through 12 levels. In the last one you must defeat the three demons.'),
+    mguf: L("Atraviesa 12 niveles. Tras el 3, el 6 y el 9 te espera un comandante, y tras el 12, el mismísimo M'Guf-yn.", "Get through 12 levels. After 3, 6 and 9 a commander awaits, and after 12, M'Guf-yn himself."),
+    peak: L('Sube los 10 niveles de la Montaña Eterna. En el último te espera el Hechicero Blanco.', 'Climb the 10 levels of Eternal Peak. The White Sorcerer awaits in the last one.'),
+    harbour: L('Defiende el puerto a lo largo de 8 niveles. Al final despierta el Kraken.', 'Defend the harbour over 8 levels. At the end, the Kraken awakens.'),
+    hell: L('Desciende 12 niveles por la Puerta del Infierno. Tras el 3, el 6 y el 9 te espera un jefe, y tras el 12, el Señor del Infierno.', "Descend 12 levels through Hell's Door. After 3, 6 and 9 a boss awaits, and after 12, the Lord of Hell.")
   };
 
   function soundSheet() {
-    openSheet(`<h3>Sonido</h3>
-      <label class="opt"><input type="checkbox" id="oSfx" ${Sfx.on ? 'checked' : ''}><span>Efectos de sonido</span></label>
-      ${Music.has ? `<label class="opt"><input type="checkbox" id="oMus" ${Music.on ? 'checked' : ''}><span>Música</span></label>
-      <label class="opt vol"><span>Volumen de la música</span><input type="range" id="oVol" min="0" max="100" value="${Math.round(Music.vol * 100)}"></label>
-      <p class="small">La música se descarga mientras suena (cerca de 1 MB por canción).</p>` : ''}
-      <button type="button" class="btn" id="oOk">Listo</button>`, [['#oOk', closeSheet]], true);
+    openSheet(`<h3>${L('Sonido', 'Sound')}</h3>
+      <label class="opt"><input type="checkbox" id="oSfx" ${Sfx.on ? 'checked' : ''}><span>${L('Efectos de sonido', 'Sound effects')}</span></label>
+      ${Music.has ? `<label class="opt"><input type="checkbox" id="oMus" ${Music.on ? 'checked' : ''}><span>${L('Música', 'Music')}</span></label>
+      <label class="opt vol"><span>${L('Volumen de la música', 'Music volume')}</span><input type="range" id="oVol" min="0" max="100" value="${Math.round(Music.vol * 100)}"></label>
+      <p class="small">${L('La música se descarga mientras suena (cerca de 1 MB por canción).', 'Music downloads while it plays (about 1 MB per song).')}</p>` : ''}
+      <button type="button" class="btn" id="oOk">${L('Listo', 'Done')}</button>`, [['#oOk', closeSheet]], true);
     const q = s => document.querySelector('#veil ' + s);
     q('#oSfx').addEventListener('change', e => Sfx.set(e.target.checked));
     if (q('#oMus')) { q('#oMus').addEventListener('change', e => Music.setOn(e.target.checked)); q('#oVol').addEventListener('input', e => Music.setVol(e.target.value / 100)); }
@@ -3271,6 +3310,45 @@ if (typeof module !== 'undefined') {
   function rulesSheet() {
     const g = G ? G.game : null;
     const has = k => !g || g === k;
+    if (LANG === 'en') return openSheet(`
+      <h3>How to play</h3>
+      <p class="lead">${g ? GAME_LEAD[g] : "Pick an adventure to start: the original, M'Guf-yn Returns, Eternal Peak, Harbour Clash or Hell's Door."} To clear a level, defeat all its monsters. If your Health reaches 0, you fall.</p>
+      <h4>1 · Energy</h4>
+      <p>Roll three dice. Assign one to <b>Mov</b>, one to <b>Atk</b> and one to <b>Def</b>: its value is added to the base skill. <b>Rng</b> gets no die, except with the Ranger's ability.</p>
+      <h4>2 · Your turn</h4>
+      <ul>
+        <li>Move and attack in any order. You don't have to spend everything.</li>
+        <li>A straight step costs <b>2</b> Mov; a diagonal one, <b>3</b>. You can't step on walls or monsters, or slip diagonally between two of them (wall or monster) touching at the corner.</li>
+        <li>To attack, the monster must be within your <b>Range</b> and in sight. Distance is measured in movement cost: adjacent straight is 2, diagonal 3.</li>
+        <li>Each hit costs as many Atk points as the monster's <b>Defence</b> and takes away 1 Health.</li>
+        <li>Line of sight: a straight line from any corner of your tile to any corner of theirs, without crossing walls or other monsters.</li>
+      </ul>
+      <h4>3 · Monsters</h4>
+      <p>From nearest to farthest, they move to see you at their maximum Range (if they're closer than needed, they back away). Then everyone who sees you within range attacks: damage is <b>total Attack ÷ your Defence</b>, rounded down.</p>
+      <h4>Between levels</h4>
+      <p>Pick one: raise a skill by 1 (maximum 6) <b>or</b> heal up to 6 Health.</p>
+      ${has('mguf') || has('peak') || has('harbour') || has('hell') ? `<h4>Treasure chest</h4>
+      <p>${g === 'base' ? 'Only in adventures with chests. ' : ''}Each level has a chest on the stairs opposite the entrance (or on the tile marked with an X). Its number is its <b>Defence</b> and its <b>loot</b>. Until you open it, it counts as a wall: it can't be crossed and blocks sight. Open it by attacking it, within your Range and in sight, with at least that many Atk points. In an Energy phase, loot points are added to <b>one</b> skill per turn (Mov, Atk, Def or Rng), in that level and its boss. Whatever you don't spend is lost when the level ends.</p>` : ''}
+      ${has('mguf') || has('hell') ? `<h4>Bosses</h4>
+      <p>After levels 3, 6, 9 and 12 you play a boss map as an <b>extension</b> of the level: you can't upgrade or heal before it, and an opened chest stays with you. Bosses are shown with a 12-sided die. The final boss ends the adventure.</p>` : ''}
+      ${has('harbour') ? `<h4>Water (Harbour Clash)</h4>
+      <p>Monsters standing on a water tile add the blue bonuses to their Attack, Defence or Range. You don't get them.</p>` : ''}
+      ${has('hell') ? `<h4>Cursed tiles and the Stone (Hell's Door)</h4>
+      <p>Monsters get the red bonuses on their card <b>while you stand on a cursed tile</b> (the bonus applies to all of them). The <b>Stone of Doom</b> is a special wall with a number (D4): attack it within your Range and in sight, spending as many Atk points as its number. When it breaks, <b>every monster takes 1 damage</b> and <b>so do you</b>. It's still a wall. The Demon Hunter can move a monster up to 3 tiles.</p>` : ''}
+      ${has('peak') ? `<h4>Blizzard (Eternal Peak)</h4>
+      <p>While you stand on a blizzard tile, your base Attack and Defence are 1 lower.</p>` : ''}
+      <h4>Items</h4>
+      <p>You can play with three items, at random or of your choice: Eternal Peak, Harbour Clash and Hell's Door always use them; in the other adventures they're optional. Each one is used only once and then discarded.</p>
+      <ul>${ITEM_KEYS.filter(k => ITEMS[k]).map(k => `<li><b>${ITEMS[k].name}.</b> ${ITEMS[k].txt}${k === 'cloak' ? ' (Eternal Peak only.)' : k === 'sands' ? ' (Harbour Clash only.)' : k === 'holy' || k === 'fist' ? " (Hell's Door only.)" : ''}</li>`).join('')}</ul>
+      <h4>Heroes</h4>
+      <p>In any adventure you play with the heroes from the original and from that expansion; the <b>Heroes from other expansions</b> button adds the rest.</p>
+      <ul>${HERO_KEYS.map(k => `<li><b>${HEROES[k].name}.</b> ${HEROES[k].txt}</li>`).join('')}</ul>
+      <h4>Adventures to unlock</h4>
+      <p>You start with the original. Each adventure opens when you complete the previous one with 2 different heroes; from Eternal Peak on, one must be from the previous expansion and, if that adventure uses items, only with its own items. Its heroes and items unlock with it. In "New game" you'll see what's missing.</p>
+      <h4>Saved games</h4>
+      <p>Your game saves itself at all times, one per adventure: you can have one in progress in each dungeon. From the menu, <b>Resume</b> continues it and <b>Abandon</b> counts it as lost. If you fall, you can retry the level as you started it. With a user, your games, achievements and stats are saved in the cloud.</p>
+      <p class="fine">Unofficial web version of the solo game One Card Dungeon and its expansions, by Barny Skinner (Little Rocket Games). Maps, monster stats and their appearance per level follow the original cards; the in-game illustrations and texts are our own. The menu covers are by Little Rocket Games. If you like it, support the author and get the game.</p>
+      <button type="button" class="btn primary" id="x">Got it</button>`, [['#x', closeSheet]], true);
     openSheet(`
       <h3>Cómo se juega</h3>
       <p class="lead">${g ? GAME_LEAD[g] : 'Elige una aventura al empezar: la original, M\'Guf-yn Returns, Montaña Eterna, Harbour Clash o La Puerta del Infierno.'} Para superar un nivel, vence a todos sus monstruos. Si tu Vida llega a 0, caes.</p>
@@ -3316,7 +3394,7 @@ if (typeof module !== 'undefined') {
     const a = G.adv;
     const ch = ['spd', 'atk', 'def', 'rng'].map(k =>
       a[k] >= E.SKILL_MAX
-        ? `<button type="button" class="choice" data-c="${k}" disabled><b>${LONG[k]}</b><span><em>${a[k]}</em> · máximo</span></button>`
+        ? `<button type="button" class="choice" data-c="${k}" disabled><b>${LONG[k]}</b><span><em>${a[k]}</em> · ${L('máximo', 'max')}</span></button>`
         : `<button type="button" class="choice" data-c="${k}"><b>${LONG[k]}</b><span><em>${a[k]}</em> → <em>${a[k] + 1}</em></span></button>`).join('');
     const full = a.hp >= START_HP;
     // lo que viene: monstruo del próximo nivel, cuántos y sus cifras, para elegir con información
@@ -3324,17 +3402,17 @@ if (typeof module !== 'undefined') {
     let foe = '';
     if (nx) {
       const m = nx.mon, n = nx.spawns.length, B = m.bonus || {};
-      const st = k => `<span><b>${m[k]}${B[k] ? `<i>+${B[k]}</i>` : ''}</b>${{ hp: 'Vida', spd: 'Vel', atk: 'Atq', def: 'Def', rng: 'Alc' }[k]}</span>`;
-      const bon = Object.keys(B).length ? `<p class="nf-note">${m.bonusOn === 'hero' ? 'Si pisas una casilla maldita' : 'En casillas de agua'} suman ${Object.keys(B).map(k => `+${B[k]} ${NAMES[k]}`).join(', ')}.</p>` : '';
-      foe = `<div class="next-foe"><small>Próximo · ${stageLabel(nx).toLowerCase()}: ${nx.title}</small>
-        <div class="nf-row"><span class="mico">${ICONS[m.key] || ''}</span><b>${n} ${n > 1 ? m.plural : m.name}</b>${m.boss ? '<em>Jefe</em>' : ''}</div>
+      const st = k => `<span><b>${m[k]}${B[k] ? `<i>+${B[k]}</i>` : ''}</b>${(LANG === 'en' ? { hp: 'Health', spd: 'Spd', atk: 'Atk', def: 'Def', rng: 'Rng' } : { hp: 'Vida', spd: 'Vel', atk: 'Atq', def: 'Def', rng: 'Alc' })[k]}</span>`;
+      const bon = Object.keys(B).length ? `<p class="nf-note">${m.bonusOn === 'hero' ? L('Si pisas una casilla maldita', 'If you step on a cursed tile they add') : L('En casillas de agua', 'On water tiles they add')}${L(' suman', '')} ${Object.keys(B).map(k => `+${B[k]} ${NAMES[k]}`).join(', ')}.</p>` : '';
+      foe = `<div class="next-foe"><small>${L('Próximo', 'Next')} · ${stageLabel(nx).toLowerCase()}: ${nx.title}</small>
+        <div class="nf-row"><span class="mico">${ICONS[m.key] || ''}</span><b>${n} ${n > 1 ? m.plural : m.name}</b>${m.boss ? `<em>${L('Jefe', 'Boss')}</em>` : ''}</div>
         <div class="nf-stats">${['hp', 'spd', 'atk', 'def', 'rng'].map(st).join('')}</div>${bon}</div>`;
     }
-    openSheet(`<h3>Nivel superado</h3>
+    openSheet(`<h3>${L('Nivel superado', 'Level cleared')}</h3>
       ${foe}
-      <p class="lead">Elige <b>una</b> mejora.</p>
+      <p class="lead">${L('Elige <b>una</b> mejora.', 'Choose <b>one</b> upgrade.')}</p>
       <div class="choices">${ch}
-        <button type="button" class="choice wide" data-c="heal" ${full ? 'disabled' : ''}><b>Curarte</b><span>Vida <em>${a.hp}</em> → <em>${START_HP}</em></span></button>
+        <button type="button" class="choice wide" data-c="heal" ${full ? 'disabled' : ''}><b>${L('Curarte', 'Heal')}</b><span>${L('Vida', 'Health')} <em>${a.hp}</em> → <em>${START_HP}</em></span></button>
       </div>`, [], false);
     document.querySelectorAll('#veil .choice').forEach(b => b.addEventListener('click', () => chooseBreak(b.dataset.c)));
   }
@@ -3363,59 +3441,65 @@ if (typeof module !== 'undefined') {
   };
   const ICON_TOMB = `<svg viewBox="0 0 64 80" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M14 72V30a18 18 0 0 1 36 0v42z" fill="currentColor" fill-opacity=".14"/><path d="M32 22v22M24 31h16"/><path d="M6 72h52M20 72v-5M44 72v-5M10 66l6-2M50 66l5-2"/></svg>`;
   const ICON_TROPHY = `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="M20 8h24v14a12 12 0 0 1-24 0z" fill="currentColor" fill-opacity=".16"/><path d="M20 12h-9v3a9 9 0 0 0 9 9M44 12h9v3a9 9 0 0 1-9 9M32 34v10M22 56h20M26 44h12v12H26z"/><path d="m32 14 2 4.500 5 .6-3.700 3.300 1 5-4.300-2.500-4.300 2.500 1-5-3.700-3.300 5-.6z" fill="currentColor"/></svg>`;
-  const EPITAFIOS = ['«Dijo: “yo puedo con uno más”.»', '«Su plan era bueno. El monstruo no lo leyó.»', '«Aquí yace un héroe y varias decisiones cuestionables.»',
+  const EPITAFIOS = LANG === 'en' ? ['“They said: ‘I can take one more.’”', '“Their plan was good. The monster didn\'t read it.”', '“Here lies a hero and several questionable decisions.”',
+    '“They went as they lived: trusting the dice.”', '“The dice betrayed them. They betrayed themselves a little too.”', '“Could have been a legend. Ended up an anecdote.”',
+    '“Rest in peace. The monster rests on your loot.”', '“Died doing what they loved: falling for obvious traps.”'] : ['«Dijo: “yo puedo con uno más”.»', '«Su plan era bueno. El monstruo no lo leyó.»', '«Aquí yace un héroe y varias decisiones cuestionables.»',
     '«Se fue como vivió: confiando en los dados.»', '«Los dados lo traicionaron. Él también, un poco.»', '«Pudo ser leyenda. Quedó en anécdota.»',
     '«Descansa en paz. El monstruo descansa sobre tu botín.»', '«Murió haciendo lo que amaba: caer en trampas obvias.»'];
-  const TAUNTS = ['¡Gracias por la visita!', '¿Eso era todo? Qué decepción.', 'Cinco minutos más y me aburría.', 'Deja la puerta abierta al salir.',
+  const TAUNTS = LANG === 'en' ? ['Thanks for stopping by!', 'Was that all? How disappointing.', 'Five more minutes and I\'d have been bored.', 'Leave the door open on your way out.',
+    'Relax, you can retry. I\'ll be waiting.', 'I didn\'t even scratch my armour.', 'I\'ll put this on my résumé.', 'I liked you. You were nice and soft.'] : ['¡Gracias por la visita!', '¿Eso era todo? Qué decepción.', 'Cinco minutos más y me aburría.', 'Deja la puerta abierta al salir.',
     'Tranquilo, puedes reintentar. Aquí te espero.', 'Ni siquiera despeiné mi armadura.', 'Anotaré esto en mi currículum.', 'Me caíste bien. Estabas muy blandito.'];
-  const BOSS_LAST = ['Esto no estaba en mi contrato.', 'Voy a pedir una revisión del combate.', 'Me voy a quejar con la administración de la mazmorra.',
+  const BOSS_LAST = LANG === 'en' ? ['This wasn\'t in my contract.', 'I\'m requesting a review of the fight.', 'I\'m complaining to dungeon management.',
+    'But I was the final boss!', 'I\'ll call my lawyer… once I get up.', 'I wanted to be the villain of a sequel. Too bad.'] : ['Esto no estaba en mi contrato.', 'Voy a pedir una revisión del combate.', 'Me voy a quejar con la administración de la mazmorra.',
     '¡Pero si yo era el jefe final!', 'Llamaré a mi abogado… cuando me levante.', 'Quería ser el villano de una secuela. Qué mal.'];
+  const RANK_EN = { 'Mártir': 'Martyr', 'Aperitivo': 'Snack', 'Lección aprendida': 'Lesson Learned', 'Daño colateral': 'Collateral Damage', 'Desertor': 'Deserter', 'Retirada estratégica': 'Strategic Retreat', 'Prudente': 'Cautious', 'Pies ligeros': 'Light Feet' };
   function endScreen(won) {
     const s = G.stats || {}, a = G.adv, lv = LEVELS[G.levelIdx], lab = stageLabel(lv), ab = !!G.abandoned;
     const w = WIN[G.game] || WIN.base, hasChest = G.game !== 'base', mon = lv.mon, N = LEVELS.length;
     const k = s.kills || 0, hits = s.hits || 0, dmg = s.dmgIn || 0, blk = s.blocks || 0, ch = s.chests || 0, dth = s.deaths || 0, turns = G.totalTurns || 0;
-    const plural = n => n === 1 ? 'vez' : 'veces';
+    const plural = n => LANG === 'en' ? (n === 1 ? 'time' : 'times') : (n === 1 ? 'vez' : 'veces');
     // título de rango / veredicto / premios
     let rank, quip, awards = [];
     if (won) {
-      if (dth === 0 && dmg <= 10) { rank = 'Intocable'; quip = 'Ni despeinado. Los monstruos piden una reunión urgente con Recursos Humanos.'; }
-      else if (dth === 0) { rank = 'Héroe de manual'; quip = 'Sin una sola caída. Los monstruos piden que, por favor, no vuelvas.'; }
-      else if (dth <= 2) { rank = 'Terco con suerte'; quip = `Caíste ${dth} ${plural(dth)} y te levantaste igual. Cabezadura con certificado.`; }
-      else { rank = 'Cucaracha inmortal'; quip = `${dth} caídas y aquí estás, sacudiéndote el polvo. Los monstruos ya perdieron la fe en la lógica.`; }
+      if (dth === 0 && dmg <= 10) { rank = 'Intocable'; quip = L('Ni despeinado. Los monstruos piden una reunión urgente con Recursos Humanos.', 'Not a hair out of place. The monsters are calling an urgent meeting with HR.'); }
+      else if (dth === 0) { rank = 'Héroe de manual'; quip = L('Sin una sola caída. Los monstruos piden que, por favor, no vuelvas.', 'Not a single fall. The monsters kindly ask you not to come back.'); }
+      else if (dth <= 2) { rank = 'Terco con suerte'; quip = L(`Caíste ${dth} ${plural(dth)} y te levantaste igual. Cabezadura con certificado.`, `You fell ${dth} ${plural(dth)} and got up anyway. Certified stubborn.`); }
+      else { rank = 'Cucaracha inmortal'; quip = L(`${dth} caídas y aquí estás, sacudiéndote el polvo. Los monstruos ya perdieron la fe en la lógica.`, `${dth} falls and here you are, dusting yourself off. The monsters have lost all faith in logic.`); }
       if (blk >= 8) awards.push('Muro humano'); if (k >= 10) awards.push('Exterminador'); if (ch >= 3) awards.push('Saqueador'); if (dmg <= 5) awards.push('Piel de roca');
       if (hits >= 15) awards.push('Manos rápidas'); if (dth === 0) awards.push('Sin pausa para morir'); if (turns <= 70) awards.push('Con prisa');
       if (!awards.length) awards.push('Superviviente');
     } else {
       rank = pick(['Mártir', 'Aperitivo', 'Lección aprendida', 'Daño colateral']);
       const opts = [];
-      if (dth >= 2) opts.push(`Es tu caída número ${dth + 1}. ${mon.name === 'Orco' ? 'El orco' : 'El monstruo'} ya te guarda el asiento.`);
-      if (blk === 0) opts.push('0 ataques bloqueados. La defensa era una sugerencia, claro.');
-      if (k === 0) opts.push('0 monstruos vencidos. Más que una aventura, un paseo turístico.');
-      if (dmg >= 15) opts.push(`Recibiste ${dmg} de daño. Como saco de boxeo, de primera.`);
-      if (turns <= 25) opts.push(`Solo ${turns} turnos. Hasta el café se enfría más lento.`);
-      if (G.levelIdx === 0) opts.push(`Caíste en la primera etapa. ${mon.plural} están organizando una fiesta.`);
-      if (G.levelIdx >= N - 2) opts.push('Tan cerca del final… y aun así tan lejos. Qué estilo para perder.');
-      opts.push('Las estadísticas dicen que fue una buena pelea. Las estadísticas mienten.', 'Como héroe eres un excelente espectador de monstruos.');
+      if (dth >= 2) opts.push(L(`Es tu caída número ${dth + 1}. ${mon.name === 'Orco' ? 'El orco' : 'El monstruo'} ya te guarda el asiento.`, `That's fall number ${dth + 1}. The monster is already saving you a seat.`));
+      if (blk === 0) opts.push(L('0 ataques bloqueados. La defensa era una sugerencia, claro.', '0 attacks blocked. Defence was just a suggestion, of course.'));
+      if (k === 0) opts.push(L('0 monstruos vencidos. Más que una aventura, un paseo turístico.', '0 monsters defeated. Less an adventure, more a sightseeing tour.'));
+      if (dmg >= 15) opts.push(L(`Recibiste ${dmg} de daño. Como saco de boxeo, de primera.`, `You took ${dmg} damage. As a punching bag, first class.`));
+      if (turns <= 25) opts.push(L(`Solo ${turns} turnos. Hasta el café se enfría más lento.`, `Only ${turns} turns. Even coffee cools down slower.`));
+      if (G.levelIdx === 0) opts.push(L(`Caíste en la primera etapa. ${mon.plural} están organizando una fiesta.`, `You fell on the first stage. The ${mon.plural} are throwing a party.`));
+      if (G.levelIdx >= N - 2) opts.push(L('Tan cerca del final… y aun así tan lejos. Qué estilo para perder.', 'So close to the end… and yet so far. What style in defeat.'));
+      opts.push(L('Las estadísticas dicen que fue una buena pelea. Las estadísticas mienten.', 'The stats say it was a good fight. The stats lie.'), L('Como héroe eres un excelente espectador de monstruos.', 'As a hero, you make an excellent monster spectator.'));
       quip = pick(opts);
-      if (ab) { rank = pick(['Desertor', 'Retirada estratégica', 'Prudente', 'Pies ligeros']); quip = pick(['Una retirada a tiempo también es una victoria. Pequeñita, pero victoria.', 'Los monstruos ya están contando la historia de cómo huiste.', 'Saliste corriendo con tanta elegancia que casi parece un plan.', `${mon.plural} celebran: ganaron sin mover un dedo.`]); awards.push('Retirada estratégica'); }
+      if (ab) { rank = pick(['Desertor', 'Retirada estratégica', 'Prudente', 'Pies ligeros']); quip = pick(LANG === 'en' ? ['A timely retreat is a victory too. A tiny one, but still.', 'The monsters are already telling the story of how you ran.', 'You ran off so gracefully it almost looked like a plan.', `The ${mon.plural} celebrate: they won without lifting a finger.`] : ['Una retirada a tiempo también es una victoria. Pequeñita, pero victoria.', 'Los monstruos ya están contando la historia de cómo huiste.', 'Saliste corriendo con tanta elegancia que casi parece un plan.', `${mon.plural} celebran: ganaron sin mover un dedo.`]); awards.push('Retirada estratégica'); }
       else awards.push(dmg >= 12 ? 'Saco de boxeo' : k === 0 ? 'Pacifista involuntario' : dth >= 2 ? 'Visitante frecuente' : blk === 0 ? 'Defensa opcional' : 'Premio participación');
     }
     const openBefore = ADV_ORDER.filter(g => unlockState(g).ok);
     noteGuest(won);
     const fresh = recordEnd(won, rank, awards), achName = id => (ACH.find(a => a.id === id) || {}).name || id, achT = id => (ACH.find(a => a.id === id) || {}).t || 'bronce', achTxt = id => (ACH.find(a => a.id === id) || {}).txt || '';
+    const rankName = r => LANG === 'en' ? (RANK_EN[r] || achName(r)) : r;
     const byTier = l => l.slice().sort((x, y) => TIERS.findIndex(t => t[0] === achT(x)) - TIERS.findIndex(t => t[0] === achT(y)));
-    const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(ab ? ['¿Ya te vas? Si recién empezábamos.', '¡Corre, corre! Nadie te sigue… por ahora.', 'Cierra la puerta al salir, que entra frío.', 'Me quedo con tu botín, gracias.', 'Huir también es un deporte. Y eres bueno.'] : TAUNTS)}»`;
+    const say = won ? `${mon.name}: «${pick(BOSS_LAST)}»` : `${mon.name}: «${pick(ab ? (LANG === 'en' ? ['Leaving already? We were just getting started.', 'Run, run! Nobody\'s following you… yet.', 'Close the door on your way out, it\'s cold.', 'I\'ll keep your loot, thanks.', 'Running away is a sport too. And you\'re good at it.'] : ['¿Ya te vas? Si recién empezábamos.', '¡Corre, corre! Nadie te sigue… por ahora.', 'Cierra la puerta al salir, que entra frío.', 'Me quedo con tu botín, gracias.', 'Huir también es un deporte. Y eres bueno.']) : TAUNTS)}»`;
     const cell = (ico, v, l, wide) => `<div class="${wide ? 'wide' : ''}"><i>${STAT_ICO[ico]}</i><b>${v}</b><span>${l}</span></div>`;
     const cells = [
-      cell('stage', won ? `${N}/${N}` : `${G.levelIdx + 1}/${N}`, won ? 'Etapas superadas' : 'Etapa alcanzada'),
-      cell('turns', turns, 'Turnos'),
-      cell('kills', k, 'Monstruos vencidos'),
-      cell('hits', hits, 'Golpes dados'),
-      cell('dmg', dmg, 'Daño recibido'),
-      cell('blocks', blk, 'Ataques bloqueados'),
-      hasChest ? cell('chests', ch, 'Cofres abiertos') : '',
-      won ? cell('life', `${a.hp}/${START_HP}`, 'Vida final') : cell('best', bestLevel, 'Mejor etapa'),
-      dth ? cell('deaths', dth, 'Veces caído') : ''
+      cell('stage', won ? `${N}/${N}` : `${G.levelIdx + 1}/${N}`, won ? L('Etapas superadas', 'Stages cleared') : L('Etapa alcanzada', 'Stage reached')),
+      cell('turns', turns, L('Turnos', 'Turns')),
+      cell('kills', k, L('Monstruos vencidos', 'Monsters defeated')),
+      cell('hits', hits, L('Golpes dados', 'Hits landed')),
+      cell('dmg', dmg, L('Daño recibido', 'Damage taken')),
+      cell('blocks', blk, L('Ataques bloqueados', 'Attacks blocked')),
+      hasChest ? cell('chests', ch, L('Cofres abiertos', 'Chests opened')) : '',
+      won ? cell('life', `${a.hp}/${START_HP}`, L('Vida final', 'Final Health')) : cell('best', bestLevel, L('Mejor etapa', 'Best stage')),
+      dth ? cell('deaths', dth, L('Veces caído', 'Times fallen')) : ''
     ].join('');
     const items = (G.items || []).map(i => ITEMS[i] ? `<span class="chip">${ITEMS[i].short || ITEMS[i].name}</span>` : '').join('');
     const embers = won ? Array.from({ length: 22 }, (_, i) => `<span style="--x:${(i * 47 + 9) % 100}%;--d:${(i * 0.37) % 4}s;--s:${3 + (i * 7) % 5}px;--t:${4 + (i * 3) % 4}s"></span>`).join('') : '';
@@ -3423,25 +3507,25 @@ if (typeof module !== 'undefined') {
       <div class="end-fx">${embers}</div>
       <div class="end-frame">
         <div class="end-badge">${won ? ICON_TROPHY : ICON_TOMB}</div>
-        <div class="end-kicker">${won ? '¡Mazmorra completada!' : ab ? 'Partida abandonada' : 'Fin del camino'}</div>
-        <h2>${won ? w[0] : ab ? 'Te retiraste' : 'Has caído'}</h2>
-        <p class="lead">${won ? w[1] : ab ? `Abandonaste ${GAMES[G.game].name} en ${lab.toLowerCase()}: ${lv.title}.` : `Derrotado por ${mon.name} en ${lab.toLowerCase()}: ${lv.title}.`}</p>
+        <div class="end-kicker">${won ? L('¡Mazmorra completada!', 'Dungeon complete!') : ab ? L('Partida abandonada', 'Run abandoned') : L('Fin del camino', 'End of the road')}</div>
+        <h2>${won ? w[0] : ab ? L('Te retiraste', 'You retreated') : L('Has caído', 'You have fallen')}</h2>
+        <p class="lead">${won ? w[1] : ab ? L(`Abandonaste ${GAMES[G.game].name} en ${lab.toLowerCase()}: ${lv.title}.`, `You abandoned ${GAMES[G.game].name} on ${lab.toLowerCase()}: ${lv.title}.`) : L(`Derrotado por ${mon.name} en ${lab.toLowerCase()}: ${lv.title}.`, `Defeated by the ${mon.name} on ${lab.toLowerCase()}: ${lv.title}.`)}</p>
         <div class="end-hero"><span class="ico">${HERO_ICONS[G.hero] || ICON_ADV}</span><span>${HEROES[G.hero].name} · ${GAMES[G.game].name}</span></div>
-        ${won ? `<div class="end-rank"><small>Rango obtenido</small><b>${rank}</b></div>`
-              : `<div class="end-epitaph"><small>${HEROES[G.hero].name} · ${rank}</small><q>${pick(EPITAFIOS)}</q></div>`}
+        ${won ? `<div class="end-rank"><small>${L('Rango obtenido', 'Rank earned')}</small><b>${rankName(rank)}</b></div>`
+              : `<div class="end-epitaph"><small>${HEROES[G.hero].name} · ${rankName(rank)}</small><q>${pick(EPITAFIOS)}</q></div>`}
         <p class="end-quip">${quip}</p>
         <div class="end-grid">${cells}</div>
-        <div class="end-skills"><b>Habilidades</b>
-          <span>Mov <em>${a.spd}</em></span><span>Atq <em>${a.atk}</em></span><span>Def <em>${a.def}</em></span><span>Alc <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
+        <div class="end-skills"><b>${L('Habilidades', 'Skills')}</b>
+          <span>${NAMES.spd} <em>${a.spd}</em></span><span>${NAMES.atk} <em>${a.atk}</em></span><span>${NAMES.def} <em>${a.def}</em></span><span>${NAMES.rng} <em>${a.rng}</em></span>${items ? `<span class="end-items">${items}</span>` : ''}</div>
         <div class="end-say"><span class="mico">${ICONS[mon.key] || ''}</span><q>${say}</q></div>
-        ${awards.some(x => !fresh.includes(x)) ? `<div class="end-awards"><small>${won ? 'Premios' : 'Premio consuelo'}</small>${byTier(awards.filter(x => !fresh.includes(x))).map(x => `<span class="award">${x}<em>${achTxt(x)}</em></span>`).join('')}</div>` : ''}
-        ${(() => { const nu = ADV_ORDER.filter(g => !openBefore.includes(g) && unlockState(g).ok); return nu.length ? `<div class="end-unlock">${ICON_LOCK_OPEN}<div><small>¡Aventura desbloqueada!</small><b>${nu.map(g => GAMES[g].name).join(' y ')}</b><span>Ya puedes jugarla desde «Nueva partida»${heroesOf(nu[0]).length ? `, con ${heroesOf(nu[0]).map(h => HEROES[h].name).join(', ')}` : ''}.</span></div></div>` : ''; })()}
-        ${Users.cur ? (fresh.length ? `<div class="end-new"><small>¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!</small>${byTier(fresh).map(x => `<span class="${achT(x)}"><i>${TIER_ICON}</i><b>${achName(x)}</b><em>${TIERS.find(t => t[0] === achT(x))[1]} · ${achTxt(x)}</em></span>`).join('')}</div>` : `<p class="fine">Guardado en el perfil de ${esc(Users.get().name)}.</p>`)
-          : '<p class="fine">Entra con un usuario desde el menú para guardar tus logros y estadísticas.</p>'}
-        ${won || ab ? '' : `<p class="fine">Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste, ahora o más tarde desde el menú.</p>`}
+        ${awards.some(x => !fresh.includes(x)) ? `<div class="end-awards"><small>${won ? L('Premios', 'Awards') : L('Premio consuelo', 'Consolation award')}</small>${byTier(awards.filter(x => !fresh.includes(x))).map(x => `<span class="award">${achName(x)}<em>${achTxt(x)}</em></span>`).join('')}</div>` : ''}
+        ${(() => { const nu = ADV_ORDER.filter(g => !openBefore.includes(g) && unlockState(g).ok); return nu.length ? `<div class="end-unlock">${ICON_LOCK_OPEN}<div><small>${L('¡Aventura desbloqueada!', 'Adventure unlocked!')}</small><b>${nu.map(g => GAMES[g].name).join(L(' y ', ' and '))}</b><span>${L('Ya puedes jugarla desde «Nueva partida»', 'You can now play it from "New game"')}${heroesOf(nu[0]).length ? L(`, con ${heroesOf(nu[0]).map(h => HEROES[h].name).join(', ')}`, `, with ${heroesOf(nu[0]).map(h => HEROES[h].name).join(', ')}`) : ''}.</span></div></div>` : ''; })()}
+        ${Users.cur ? (fresh.length ? `<div class="end-new"><small>${L(`¡Logro${fresh.length > 1 ? 's' : ''} nuevo${fresh.length > 1 ? 's' : ''} para ${esc(Users.get().name)}!`, `New achievement${fresh.length > 1 ? 's' : ''} for ${esc(Users.get().name)}!`)}</small>${byTier(fresh).map(x => `<span class="${achT(x)}"><i>${TIER_ICON}</i><b>${achName(x)}</b><em>${TIERS.find(t => t[0] === achT(x))[1]} · ${achTxt(x)}</em></span>`).join('')}</div>` : `<p class="fine">${L(`Guardado en el perfil de ${esc(Users.get().name)}.`, `Saved to ${esc(Users.get().name)}'s profile.`)}</p>`)
+          : `<p class="fine">${L('Entra con un usuario desde el menú para guardar tus logros y estadísticas.', 'Sign in with a user from the menu to save your achievements and stats.')}</p>`}
+        ${won || ab ? '' : `<p class="fine">${L(`Puedes reintentar ${lab.toLowerCase()} tal como lo empezaste, ahora o más tarde desde el menú.`, `You can retry ${lab.toLowerCase()} as you started it, now or later from the menu.`)}</p>`}
         <div class="menu-btns">
-          ${won || ab ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>Reintentar ${lab.toLowerCase()}</span></button>`}
-          <button type="button" class="btn ${won ? 'primary ' : ''}menu-main" id="eMenu"><span>Ir al menú</span></button>
+          ${won || ab ? '' : `<button type="button" class="btn primary menu-main" id="eRetry"><span>${L('Reintentar', 'Retry')} ${lab.toLowerCase()}</span></button>`}
+          <button type="button" class="btn ${won ? 'primary ' : ''}menu-main" id="eMenu"><span>${L('Ir al menú', 'Go to menu')}</span></button>
         </div>
       </div></div>`,
       [['#eRetry', () => { busy = false; retry(); }], ['#eMenu', () => { busy = false; goMenu(); }]], true);
@@ -3449,11 +3533,11 @@ if (typeof module !== 'undefined') {
   }
 
   const WIN = {
-    base: ['Cáliz de Brasas', 'Los tres demonios han caído y el cáliz es tuyo.'],
-    mguf: ["M'Guf-yn derrotado", "El señor del inframundo cae y su ejército se desbanda."],
-    peak: ['Cima despejada', 'El Hechicero Blanco ha caído y la tormenta se calma.'],
-    harbour: ['Puerto a salvo', 'El Kraken vuelve a las profundidades y la marea se retira.'],
-    hell: ['Puerta cerrada', 'El Señor del Infierno cae y las llamas se apagan.']
+    base: [L('Cáliz de Brasas', 'Ember Chalice'), L('Los tres demonios han caído y el cáliz es tuyo.', 'The three demons have fallen and the chalice is yours.')],
+    mguf: [L("M'Guf-yn derrotado", "M'Guf-yn defeated"), L("El señor del inframundo cae y su ejército se desbanda.", 'The lord of the underworld falls and his army scatters.')],
+    peak: [L('Cima despejada', 'Summit cleared'), L('El Hechicero Blanco ha caído y la tormenta se calma.', 'The White Sorcerer has fallen and the storm calms down.')],
+    harbour: [L('Puerto a salvo', 'Harbour saved'), L('El Kraken vuelve a las profundidades y la marea se retira.', 'The Kraken returns to the depths and the tide recedes.')],
+    hell: [L('Puerta cerrada', 'Door sealed'), L('El Señor del Infierno cae y las llamas se apagan.', 'The Lord of Hell falls and the flames die out.')]
   };
   function winSheet() {
     Music.stop();
@@ -3478,33 +3562,35 @@ if (typeof module !== 'undefined') {
   function menuScreen() {
     G = null; busy = false; rolling = false; mode = null;
     const slots = loadSlots(), me = Users.get();
-    const slotHTML = slots.length ? `<div class="rslots"><small class="rslots-h">Partidas en curso · se guardan solas</small>${slots.map((x, i) => {
+    const slotHTML = slots.length ? `<div class="rslots"><small class="rslots-h">${L('Partidas en curso · se guardan solas', 'Games in progress · saved automatically')}</small>${slots.map((x, i) => {
       const sv = x.g, lv = GAMES[sv.game].levels[sv.levelIdx];
-      return `<div class="rslot"><span class="ico">${HERO_ICONS[sv.hero] || ICON_ADV}</span><div class="rslot-t"><b>${GAMES[sv.game].name}</b><small>${HEROES[sv.hero].name} · ${stageLabel(lv).toLowerCase()} de ${GAMES[sv.game].levels.length} · Vida ${sv.adv.hp}</small></div>
-        <div class="rslot-b"><button type="button" class="btn primary mini" data-res="${sv.game}"${i === 0 ? ' id="mContinue"' : ''}>Retomar</button><button type="button" class="btn mini danger" data-ab="${sv.game}">Abandonar</button></div></div>`;
+      return `<div class="rslot"><span class="ico">${HERO_ICONS[sv.hero] || ICON_ADV}</span><div class="rslot-t"><b>${GAMES[sv.game].name}</b><small>${HEROES[sv.hero].name} · ${stageLabel(lv).toLowerCase()} ${L('de', 'of')} ${GAMES[sv.game].levels.length} · ${L('Vida', 'Health')} ${sv.adv.hp}</small></div>
+        <div class="rslot-b"><button type="button" class="btn primary mini" data-res="${sv.game}"${i === 0 ? ' id="mContinue"' : ''}>${L('Retomar', 'Resume')}</button><button type="button" class="btn mini danger" data-ab="${sv.game}">${L('Abandonar', 'Abandon')}</button></div></div>`;
     }).join('')}</div>` : '';
     const sc = showScreen(`<div class="splash">${LOGO}
-      <p class="tagline">Una carta, tres dados y una aventura por elegir.</p>
-      <button type="button" class="userbar ${me ? 'in' : ''}" id="mUser">${ICON_USER}<span>${me ? `<b>${esc(me.name)}</b><small>Ver perfil, logros y estadísticas</small>` : '<b>Entrar o crear usuario</b><small>Para guardar tus logros y estadísticas</small>'}</span><i aria-hidden="true">›</i></button>
+      <p class="tagline">${L('Una carta, tres dados y una aventura por elegir.', 'One card, three dice and an adventure to choose.')}</p>
+      <button type="button" class="userbar ${me ? 'in' : ''}" id="mUser">${ICON_USER}<span>${me ? `<b>${esc(me.name)}</b><small>${L('Ver perfil, logros y estadísticas', 'View profile, achievements and stats')}</small>` : `<b>${L('Entrar o crear usuario', 'Sign in or create user')}</b><small>${L('Para guardar tus logros y estadísticas', 'To save your achievements and stats')}</small>`}</span><i aria-hidden="true">›</i></button>
       ${slotHTML}
       <div class="menu-btns">
-        <button type="button" class="btn ${slots.length ? '' : 'primary'} menu-main" id="mNew"><span>Nueva partida</span></button>
-        <button type="button" class="ghost" id="mRules">Cómo se juega</button>
+        <button type="button" class="btn ${slots.length ? '' : 'primary'} menu-main" id="mNew"><span>${L('Nueva partida', 'New game')}</span></button>
+        <button type="button" class="ghost" id="mRules">${L('Cómo se juega', 'How to play')}</button>
       </div>
-      <p class="fine">Versión no oficial de One Card Dungeon, de Barny Skinner. · versión ${(document.querySelector('meta[name=build]') || {}).content || '?'}</p></div>`,
+      <div class="lang-sw" role="group" aria-label="${L('Idioma', 'Language')}"><button type="button" data-lang="es" class="${LANG === 'es' ? 'on' : ''}">Español</button><button type="button" data-lang="en" class="${LANG === 'en' ? 'on' : ''}">English</button></div>
+      <p class="fine">${L('Versión no oficial de One Card Dungeon, de Barny Skinner.', 'Unofficial version of One Card Dungeon, by Barny Skinner.')} · ${L('versión', 'version')} ${(document.querySelector('meta[name=build]') || {}).content || '?'}</p></div>`,
       [['#mUser', () => (Users.cur ? profileScreen() : usersScreen())], ['#mNew', adventureScreen], ['#mRules', rulesSheet]]);
     sc.querySelectorAll('[data-res]').forEach(b => b.addEventListener('click', () => { const x = slots.find(s => s.game === b.dataset.res); if (x) resume(x.g); }));
     sc.querySelectorAll('[data-ab]').forEach(b => b.addEventListener('click', () => { const x = slots.find(s => s.game === b.dataset.ab); if (x) abandonSheet(x.g); }));
+    sc.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => { if (b.dataset.lang !== LANG) setLang(b.dataset.lang); }));
   }
 
   // Abandonar: pide confirmación y ejecuta la secuencia de derrota (grito, canción y estadísticas); la partida se borra
   function abandonSheet(g) {
     const sv = g || G; if (!sv) return;
     const lv = GAMES[sv.game].levels[sv.levelIdx];
-    openSheet(`<h3>¿Abandonar la partida?</h3>
-      <p class="lead">${HEROES[sv.hero].name} en ${GAMES[sv.game].name}, ${stageLabel(lv).toLowerCase()}. Perderás todo el avance de esta aventura y contará como una derrota.</p>
-      <button type="button" class="btn danger" id="abGo">Abandonar</button>
-      <button type="button" class="btn" id="abNo">Cancelar</button>`,
+    openSheet(`<h3>${L('¿Abandonar la partida?', 'Abandon this run?')}</h3>
+      <p class="lead">${L(`${HEROES[sv.hero].name} en ${GAMES[sv.game].name}, ${stageLabel(lv).toLowerCase()}. Perderás todo el avance de esta aventura y contará como una derrota.`, `${HEROES[sv.hero].name} in ${GAMES[sv.game].name}, ${stageLabel(lv).toLowerCase()}. You'll lose all progress in this adventure and it will count as a defeat.`)}</p>
+      <button type="button" class="btn danger" id="abGo">${L('Abandonar', 'Abandon')}</button>
+      <button type="button" class="btn" id="abNo">${L('Cancelar', 'Cancel')}</button>`,
       [['#abNo', closeSheet], ['#abGo', () => { closeSheet(); abandonRun(sv); }]], true);
   }
   async function abandonRun(sv) {
@@ -3512,7 +3598,7 @@ if (typeof module !== 'undefined') {
     closeSheet(); mode = null; busy = true;
     G.abandoned = true; G.phase = 'dead';
     try { localStorage.removeItem(saveKey(G.game)); localStorage.setItem(saveKey(G.game) + ':t', String(Date.now())); } catch (e) {}
-    render(); say('Te retiras de la mazmorra…');
+    render(); say(L('Te retiras de la mazmorra…', 'You retreat from the dungeon…'));
     sfxDie(); Music.stop(); noteBest();
     await sleep(1700);
     if (G && G.abandoned) endScreen(false);
@@ -3523,54 +3609,54 @@ if (typeof module !== 'undefined') {
   function pauseSheet() {
     if (busy || rolling || !G) return;
     const lv = LEVELS[G.levelIdx];
-    return openSheet(`<h3>Pausa</h3>
+    return openSheet(`<h3>${L('Pausa', 'Pause')}</h3>
       <p class="lead">${HEROES[G.hero].name} · ${GAMES[G.game].name} · ${stageLabel(lv).toLowerCase()}: ${lv.title}.</p>
-      <p class="fine">Tu partida se guarda sola en todo momento${Users.cur ? ' y se sincroniza con tu usuario' : ''}. Desde el menú puedes retomarla cuando quieras.</p>
-      <button type="button" class="btn primary" id="pwClose">Seguir jugando</button>
-      <button type="button" class="btn" id="pwMenu">Ir al menú</button>
-      <button type="button" class="btn danger" id="pwAb">Abandonar partida</button>`,
+      <p class="fine">${L(`Tu partida se guarda sola en todo momento${Users.cur ? ' y se sincroniza con tu usuario' : ''}. Desde el menú puedes retomarla cuando quieras.`, `Your game saves itself at all times${Users.cur ? ' and syncs with your user' : ''}. You can resume it from the menu whenever you like.`)}</p>
+      <button type="button" class="btn primary" id="pwClose">${L('Seguir jugando', 'Keep playing')}</button>
+      <button type="button" class="btn" id="pwMenu">${L('Ir al menú', 'Go to menu')}</button>
+      <button type="button" class="btn danger" id="pwAb">${L('Abandonar partida', 'Abandon run')}</button>`,
       [['#pwClose', closeSheet], ['#pwMenu', goMenu], ['#pwAb', () => abandonSheet()]], true);
   }
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const ICON_USER = '<svg class="uico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/></svg>';
-  const fmtDate = t => { try { return new Date(t).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } };
-  const USERS_NOTE = '<p class="fine">Tu usuario se guarda en la nube: entra con el mismo nombre y contraseña desde cualquier dispositivo. Este dispositivo guarda además una copia para jugar sin internet.</p>';
+  const fmtDate = t => { try { return new Date(t).toLocaleDateString(L('es-CL', 'en-GB'), { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } };
+  const USERS_NOTE = `<p class="fine">${L('Tu usuario se guarda en la nube: entra con el mismo nombre y contraseña desde cualquier dispositivo. Este dispositivo guarda además una copia para jugar sin internet.', 'Your user is saved in the cloud: sign in with the same name and password from any device. This device also keeps a copy so you can play offline.')}</p>`;
 
   // Entrar, crear usuario o recuperar uno con un código de copia
   function usersScreen(view, arg, err) {
     const list = Users.list();
     view = view || 'pick';
     let body = '';
-    if (view === 'pick') body = `<h2 class="screen-h">Usuarios</h2>
-      ${list.length ? `<p class="lead">Usuarios en este dispositivo:</p>
-      <div class="user-list">${list.map(x => `<button type="button" class="btn user-btn" data-uk="${esc(x.k)}">${ICON_USER}<span>${esc(x.name)}</span>${x.cloud ? '' : '<small class="loc">solo aquí</small>'}</button>`).join('')}</div>` : '<p class="lead">Entra con tu usuario o crea uno nuevo.</p>'}
-      <div class="menu-btns"><button type="button" class="btn ${list.length ? '' : 'primary'}" id="uRem">Entrar con mi usuario</button><button type="button" class="btn" id="uNew">Crear usuario nuevo</button><button type="button" class="ghost" id="uImp">Recuperar con copia de seguridad</button></div>`;
+    if (view === 'pick') body = `<h2 class="screen-h">${L('Usuarios', 'Users')}</h2>
+      ${list.length ? `<p class="lead">${L('Usuarios en este dispositivo:', 'Users on this device:')}</p>
+      <div class="user-list">${list.map(x => `<button type="button" class="btn user-btn" data-uk="${esc(x.k)}">${ICON_USER}<span>${esc(x.name)}</span>${x.cloud ? '' : `<small class="loc">${L('solo aquí', 'this device only')}</small>`}</button>`).join('')}</div>` : `<p class="lead">${L('Entra con tu usuario o crea uno nuevo.', 'Sign in with your user or create a new one.')}</p>`}
+      <div class="menu-btns"><button type="button" class="btn ${list.length ? '' : 'primary'}" id="uRem">${L('Entrar con mi usuario', 'Sign in with my user')}</button><button type="button" class="btn" id="uNew">${L('Crear usuario nuevo', 'Create new user')}</button><button type="button" class="ghost" id="uImp">${L('Recuperar con copia de seguridad', 'Restore from backup')}</button></div>`;
     else if (view === 'login') body = `<h2 class="screen-h">${esc((Users.get(arg) || {}).name)}</h2>
-      <p class="lead">Escribe tu contraseña.</p>
-      <input id="uPw" class="field" type="password" autocomplete="current-password" aria-label="Contraseña">
+      <p class="lead">${L('Escribe tu contraseña.', 'Enter your password.')}</p>
+      <input id="uPw" class="field" type="password" autocomplete="current-password" aria-label="${L('Contraseña', 'Password')}">
       <p class="err" id="uErr" role="alert">${err || ''}</p>
-      <button type="button" class="btn primary" id="uGo">Entrar</button>`;
-    else if (view === 'remote') body = `<h2 class="screen-h">Entrar</h2>
-      <p class="lead">Escribe tu nombre de usuario y tu contraseña.</p>
-      <label class="flabel">Nombre<input id="uName" class="field" type="text" maxlength="16" autocomplete="username" autocapitalize="off"></label>
-      <label class="flabel">Contraseña<input id="uPw" class="field" type="password" autocomplete="current-password"></label>
+      <button type="button" class="btn primary" id="uGo">${L('Entrar', 'Sign in')}</button>`;
+    else if (view === 'remote') body = `<h2 class="screen-h">${L('Entrar', 'Sign in')}</h2>
+      <p class="lead">${L('Escribe tu nombre de usuario y tu contraseña.', 'Enter your username and password.')}</p>
+      <label class="flabel">${L('Nombre', 'Name')}<input id="uName" class="field" type="text" maxlength="16" autocomplete="username" autocapitalize="off"></label>
+      <label class="flabel">${L('Contraseña', 'Password')}<input id="uPw" class="field" type="password" autocomplete="current-password"></label>
       <p class="err" id="uErr" role="alert">${err || ''}</p>
-      <button type="button" class="btn primary" id="uGo">Entrar</button>`;
-    else if (view === 'new') body = `<h2 class="screen-h">Crear usuario</h2>
-      <label class="flabel">Nombre<input id="uName" class="field" type="text" maxlength="16" autocomplete="username" autocapitalize="words"></label>
-      <label class="flabel">Contraseña <small>(mínimo 6 caracteres)</small><input id="uPw" class="field" type="password" autocomplete="new-password"></label>
-      <label class="flabel">Repite la contraseña<input id="uPw2" class="field" type="password" autocomplete="new-password"></label>
+      <button type="button" class="btn primary" id="uGo">${L('Entrar', 'Sign in')}</button>`;
+    else if (view === 'new') body = `<h2 class="screen-h">${L('Crear usuario', 'Create user')}</h2>
+      <label class="flabel">${L('Nombre', 'Name')}<input id="uName" class="field" type="text" maxlength="16" autocomplete="username" autocapitalize="words"></label>
+      <label class="flabel">${L('Contraseña', 'Password')} <small>${L('(mínimo 6 caracteres)', '(at least 6 characters)')}</small><input id="uPw" class="field" type="password" autocomplete="new-password"></label>
+      <label class="flabel">${L('Repite la contraseña', 'Repeat password')}<input id="uPw2" class="field" type="password" autocomplete="new-password"></label>
       <p class="err" id="uErr" role="alert">${err || ''}</p>
-      <p class="fine">No se pide correo: solo nombre y contraseña. Anótala, porque no hay forma automática de recuperarla.</p>
-      <button type="button" class="btn primary" id="uGo">Crear y entrar</button>`;
-    else if (view === 'import') body = `<h2 class="screen-h">Recuperar usuario</h2>
-      <p class="lead">Pega el código de copia de seguridad que guardaste desde tu perfil.</p>
+      <p class="fine">${L('No se pide correo: solo nombre y contraseña. Anótala, porque no hay forma automática de recuperarla.', "No email needed: just a name and password. Write it down, because there's no automatic way to recover it.")}</p>
+      <button type="button" class="btn primary" id="uGo">${L('Crear y entrar', 'Create and sign in')}</button>`;
+    else if (view === 'import') body = `<h2 class="screen-h">${L('Recuperar usuario', 'Restore user')}</h2>
+      <p class="lead">${L('Pega el código de copia de seguridad que guardaste desde tu perfil.', 'Paste the backup code you saved from your profile.')}</p>
       <textarea id="uCode" class="field code" rows="5" spellcheck="false" autocomplete="off" placeholder="DIOC1-…"></textarea>
       <p class="err" id="uErr" role="alert">${err || ''}</p>
-      <button type="button" class="btn primary" id="uGo">Recuperar</button>`;
+      <button type="button" class="btn primary" id="uGo">${L('Recuperar', 'Restore')}</button>`;
     const sc = showScreen(`<div class="splash users">
-      <button type="button" class="ghost back" id="back">‹ Atrás</button>${body}${USERS_NOTE}</div>`,
+      <button type="button" class="ghost back" id="back">‹ ${L('Atrás', 'Back')}</button>${body}${USERS_NOTE}</div>`,
       [['#back', () => (view === 'pick' ? menuScreen() : usersScreen())], ['#uNew', () => usersScreen('new')], ['#uRem', () => usersScreen('remote')], ['#uImp', () => usersScreen('import')]]);
     sc.querySelectorAll('[data-uk]').forEach(b => b.addEventListener('click', () => usersScreen('login', b.dataset.uk)));
     const go = sc.querySelector('#uGo'), errEl = sc.querySelector('#uErr');
@@ -3578,20 +3664,20 @@ if (typeof module !== 'undefined') {
     const fail = m => { errEl.textContent = m; go.disabled = false; go.classList.remove('wait'); };
     const done = () => { loadBest(); menuScreen(); };
     const act = async () => {
-      go.disabled = true; go.classList.add('wait'); errEl.textContent = view === 'import' ? '' : 'Conectando…';
+      go.disabled = true; go.classList.add('wait'); errEl.textContent = view === 'import' ? '' : L('Conectando…', 'Connecting…');
       if (view === 'login') { const e = await Users.login((Users.get(arg) || {}).name, sc.querySelector('#uPw').value); return e ? fail(e) : done(); }
       if (view === 'remote') { const e = await Users.login(sc.querySelector('#uName').value, sc.querySelector('#uPw').value); return e ? fail(e) : done(); }
       if (view === 'new') {
         const pw = sc.querySelector('#uPw').value;
-        if (pw !== sc.querySelector('#uPw2').value) return fail('Las contraseñas no coinciden.');
+        if (pw !== sc.querySelector('#uPw2').value) return fail(L('Las contraseñas no coinciden.', "Passwords don't match."));
         const e = await Users.create(sc.querySelector('#uName').value, pw); return e ? fail(e) : done();
       }
       if (view === 'import') {
         const d = Users.parseCode(sc.querySelector('#uCode').value);
-        if (!d) return fail('Ese código no es válido. Cópialo completo, desde «DIOC1-».');
+        if (!d) return fail(L('Ese código no es válido. Cópialo completo, desde «DIOC1-».', 'That code is not valid. Copy all of it, starting from "DIOC1-".'));
         const k = ukey(d.u.name);
-        if (Users.exists(k) && go.dataset.ok !== '1') { go.dataset.ok = '1'; go.textContent = `Reemplazar a ${d.u.name}`; return fail(`Ya existe ${d.u.name} en este dispositivo. Si recuperas la copia, se reemplaza por la del código.`); }
-        return Users.importData(d) ? done() : fail('No se pudo guardar en este navegador.');
+        if (Users.exists(k) && go.dataset.ok !== '1') { go.dataset.ok = '1'; go.textContent = L(`Reemplazar a ${d.u.name}`, `Replace ${d.u.name}`); return fail(L(`Ya existe ${d.u.name} en este dispositivo. Si recuperas la copia, se reemplaza por la del código.`, `${d.u.name} already exists on this device. If you restore the backup, it will be replaced by the one in the code.`)); }
+        return Users.importData(d) ? done() : fail(L('No se pudo guardar en este navegador.', 'Could not save in this browser.'));
       }
     };
     go.addEventListener('click', act);
@@ -3602,14 +3688,14 @@ if (typeof module !== 'undefined') {
   function cloudBox(me, panel) {
     const c = me.cloud;
     if (c) {
-      const st = c.dirty ? 'Hay cambios por subir (se suben solos cuando haya internet).' : c.syncedAt ? `Guardado en la nube · ${fmtDate(c.syncedAt)} ${new Date(c.syncedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}` : 'Conectado a la nube.';
-      return `<div class="cloud-box ok"><span>☁</span><p>${st}</p><button type="button" class="btn mini" id="cSync">Sincronizar</button></div>`;
+      const st = c.dirty ? L('Hay cambios por subir (se suben solos cuando haya internet).', 'There are changes to upload (they upload by themselves when online).') : c.syncedAt ? `${L('Guardado en la nube', 'Saved in the cloud')} · ${fmtDate(c.syncedAt)} ${new Date(c.syncedAt).toLocaleTimeString(L('es-CL', 'en-GB'), { hour: '2-digit', minute: '2-digit' })}` : L('Conectado a la nube.', 'Connected to the cloud.');
+      return `<div class="cloud-box ok"><span>☁</span><p>${st}</p><button type="button" class="btn mini" id="cSync">${L('Sincronizar', 'Sync')}</button></div>`;
     }
-    if (panel === 'upload' || panel === 'upload-new') return `<div class="cloud-box up"><p><b>Subir a la nube</b> Así podrás entrar con este usuario desde cualquier dispositivo.</p>
-      <input id="upPw" class="field" type="password" placeholder="Tu contraseña actual" autocomplete="current-password">
-      ${panel === 'upload-new' ? '<p class="fine">En la nube la contraseña debe tener al menos 6 caracteres. Elige una nueva:</p><input id="upNew" class="field" type="password" placeholder="Contraseña nueva (mínimo 6)" autocomplete="new-password">' : ''}
-      <p class="err" id="upErr" role="alert"></p><button type="button" class="btn primary" id="upGo">Subir a la nube</button></div>`;
-    return `<div class="cloud-box"><span>⚠</span><p>Este usuario está <b>solo en este dispositivo</b>.</p><button type="button" class="btn mini" id="cUp">Subir a la nube</button></div>`;
+    if (panel === 'upload' || panel === 'upload-new') return `<div class="cloud-box up"><p><b>${L('Subir a la nube', 'Upload to the cloud')}</b> ${L('Así podrás entrar con este usuario desde cualquier dispositivo.', "That way you'll be able to sign in with this user from any device.")}</p>
+      <input id="upPw" class="field" type="password" placeholder="${L('Tu contraseña actual', 'Your current password')}" autocomplete="current-password">
+      ${panel === 'upload-new' ? `<p class="fine">${L('En la nube la contraseña debe tener al menos 6 caracteres. Elige una nueva:', 'In the cloud the password must be at least 6 characters. Choose a new one:')}</p><input id="upNew" class="field" type="password" placeholder="${L('Contraseña nueva (mínimo 6)', 'New password (at least 6)')}" autocomplete="new-password">` : ''}
+      <p class="err" id="upErr" role="alert"></p><button type="button" class="btn primary" id="upGo">${L('Subir a la nube', 'Upload to the cloud')}</button></div>`;
+    return `<div class="cloud-box"><span>⚠</span><p>${L('Este usuario está <b>solo en este dispositivo</b>.', 'This user is <b>only on this device</b>.')}</p><button type="button" class="btn mini" id="cUp">${L('Subir a la nube', 'Upload to the cloud')}</button></div>`;
   }
 
   // Perfil: mazmorras, estadísticas, logros, últimas partidas y copia de seguridad
@@ -3619,8 +3705,8 @@ if (typeof module !== 'undefined') {
     const got = ACH.filter(a => r.ach[a.id]).length;
     const games = ADV_ORDER.map(g => {
       const x = r.games[g], n = GAMES[g].levels.length;
-      const st = !x ? '<span class="dim">Sin jugar</span>' : x.wins ? `<b class="ok">Completada${x.wins > 1 ? ` ×${x.wins}` : ''}</b>` : `<span>Mejor etapa <b>${x.best}/${n}</b></span>`;
-      const extra = x && x.wins ? `<small>${x.bestRank ? `Rango: ${x.bestRank} · ` : ''}Récord: ${x.fastest} turnos</small>` : x ? `<small>${x.falls} caída${x.falls === 1 ? '' : 's'}</small>` : '';
+      const st = !x ? `<span class="dim">${L('Sin jugar', 'Not played')}</span>` : x.wins ? `<b class="ok">${L('Completada', 'Completed')}${x.wins > 1 ? ` ×${x.wins}` : ''}</b>` : `<span>${L('Mejor etapa', 'Best stage')} <b>${x.best}/${n}</b></span>`;
+      const extra = x && x.wins ? `<small>${x.bestRank ? `${L('Rango', 'Rank')}: ${LANG === 'en' ? ((ACH.find(a => a.id === x.bestRank) || {}).name || x.bestRank) : x.bestRank} · ` : ''}${L('Récord', 'Record')}: ${x.fastest} ${L('turnos', 'turns')}</small>` : x ? `<small>${x.falls} ${L(`caída${x.falls === 1 ? '' : 's'}`, x.falls === 1 ? 'fall' : 'falls')}</small>` : '';
       return `<div class="pg ${x && x.wins ? 'won' : ''}"><span class="pg-n">${GAMES[g].name}</span>${st}${extra}</div>`;
     }).join('');
     const cell = (v, l) => `<div><b>${v || 0}</b><span>${l}</span></div>`;
@@ -3628,37 +3714,37 @@ if (typeof module !== 'undefined') {
       const list = ACH.filter(a => a.t === t), n = list.filter(a => r.ach[a.id]).length;
       // dentro de cada rareza, primero los conseguidos
       list.sort((x, y) => (!!r.ach[y.id]) - (!!r.ach[x.id]));
-      return `<h4 class="tier-h ${t}"><i>${TIER_ICON}</i>${tn}<small>${n} de ${list.length}</small></h4><div class="ach-list">${list.map(a => {
+      return `<h4 class="tier-h ${t}"><i>${TIER_ICON}</i>${tn}<small>${n} ${L('de', 'of')} ${list.length}</small></h4><div class="ach-list">${list.map(a => {
         const h = r.ach[a.id];
         return `<div class="ach ${t} ${h ? 'on' : ''}"><b>${a.name}</b><span>${a.txt}</span><small class="cat">${a.g}${h ? ` · ${fmtDate(h.d)}${GAMES[h.g] ? ' · ' + GAMES[h.g].name : ''}` : ''}</small></div>`;
       }).join('')}</div>`;
     }).join('');
     const medals = `<div class="medals">${TIERS.map(([t, tn]) => `<span class="${t}"><i>${TIER_ICON}</i><b>${ACH.filter(a => a.t === t && r.ach[a.id]).length}</b>${tn}</span>`).join('')}</div>`;
-    const hist = r.hist.length ? r.hist.map(h => `<li class="${h.won ? 'won' : ''}"><b>${h.won ? 'Victoria' : 'Caída'}</b> · ${GAMES[h.g] ? GAMES[h.g].name : ''} · ${HEROES[h.h] ? HEROES[h.h].name : ''} · etapa ${h.st}/${h.n}${h.won ? ` · ${h.rank}` : ''}<small>${fmtDate(h.d)}</small></li>`).join('') : '<li class="dim">Todavía no hay partidas.</li>';
+    const hist = r.hist.length ? r.hist.map(h => `<li class="${h.won ? 'won' : ''}"><b>${h.won ? L('Victoria', 'Victory') : L('Caída', 'Fall')}</b> · ${GAMES[h.g] ? GAMES[h.g].name : ''} · ${HEROES[h.h] ? HEROES[h.h].name : ''} · ${L('etapa', 'stage')} ${h.st}/${h.n}${h.won ? ` · ${LANG === 'en' ? ((ACH.find(a => a.id === h.rank) || {}).name || h.rank) : h.rank}` : ''}<small>${fmtDate(h.d)}</small></li>`).join('') : `<li class="dim">${L('Todavía no hay partidas.', 'No games yet.')}</li>`;
     const sc = showScreen(`<div class="splash wide prof">
-      <button type="button" class="ghost back" id="back">‹ Atrás</button>
-      <div class="prof-head">${ICON_USER}<div><h2 class="screen-h">${esc(me.name)}</h2><small>Usuario desde ${fmtDate(me.created)} · ${got}/${ACH.length} logros</small></div></div>
+      <button type="button" class="ghost back" id="back">‹ ${L('Atrás', 'Back')}</button>
+      <div class="prof-head">${ICON_USER}<div><h2 class="screen-h">${esc(me.name)}</h2><small>${L('Usuario desde', 'User since')} ${fmtDate(me.created)} · ${got}/${ACH.length} ${L('logros', 'achievements')}</small></div></div>
       ${cloudBox(me, panel)}
-      <h3 class="pack-h">Mazmorras</h3><div class="prof-games">${games}</div>
-      <h3 class="pack-h">Estadísticas</h3>
-      <div class="prof-stats">${cell(t.wins, 'Victorias')}${cell(t.falls, 'Caídas')}${cell(t.kills, 'Monstruos vencidos')}${cell(t.hits, 'Golpes dados')}${cell(t.dmgIn, 'Daño recibido')}${cell(t.blocks, 'Ataques bloqueados')}${cell(t.chests, 'Cofres abiertos')}${cell(t.turns, 'Turnos jugados')}</div>
-      <h3 class="pack-h">Logros <small>${got} de ${ACH.length}</small></h3>${medals}<div class="prof-ach">${groups}</div>
-      <h3 class="pack-h">Últimas partidas</h3><ul class="prof-hist">${hist}</ul>
-      <h3 class="pack-h">Copia de seguridad</h3>
-      <p class="lead">Opcional: con la nube ya no hace falta, pero puedes guardar este código como respaldo extra. Con él recuperas tu usuario desde «Recuperar con copia de seguridad».</p>
-      <div id="bkBox">${panel === 'backup' ? `<textarea class="field code" rows="5" readonly id="bkCode">${Users.exportCode()}</textarea><p class="fine" id="bkMsg" aria-live="polite"></p><button type="button" class="btn" id="bkCopy">Copiar código</button>` : '<button type="button" class="btn" id="bkShow">Crear copia de seguridad</button>'}</div>
+      <h3 class="pack-h">${L('Mazmorras', 'Dungeons')}</h3><div class="prof-games">${games}</div>
+      <h3 class="pack-h">${L('Estadísticas', 'Stats')}</h3>
+      <div class="prof-stats">${cell(t.wins, L('Victorias', 'Victories'))}${cell(t.falls, L('Caídas', 'Falls'))}${cell(t.kills, L('Monstruos vencidos', 'Monsters defeated'))}${cell(t.hits, L('Golpes dados', 'Hits landed'))}${cell(t.dmgIn, L('Daño recibido', 'Damage taken'))}${cell(t.blocks, L('Ataques bloqueados', 'Attacks blocked'))}${cell(t.chests, L('Cofres abiertos', 'Chests opened'))}${cell(t.turns, L('Turnos jugados', 'Turns played'))}</div>
+      <h3 class="pack-h">${L('Logros', 'Achievements')} <small>${got} ${L('de', 'of')} ${ACH.length}</small></h3>${medals}<div class="prof-ach">${groups}</div>
+      <h3 class="pack-h">${L('Últimas partidas', 'Recent games')}</h3><ul class="prof-hist">${hist}</ul>
+      <h3 class="pack-h">${L('Copia de seguridad', 'Backup')}</h3>
+      <p class="lead">${L('Opcional: con la nube ya no hace falta, pero puedes guardar este código como respaldo extra. Con él recuperas tu usuario desde «Recuperar con copia de seguridad».', 'Optional: with the cloud you no longer need it, but you can keep this code as an extra backup. With it you restore your user from "Restore from backup".')}</p>
+      <div id="bkBox">${panel === 'backup' ? `<textarea class="field code" rows="5" readonly id="bkCode">${Users.exportCode()}</textarea><p class="fine" id="bkMsg" aria-live="polite"></p><button type="button" class="btn" id="bkCopy">${L('Copiar código', 'Copy code')}</button>` : `<button type="button" class="btn" id="bkShow">${L('Crear copia de seguridad', 'Create backup')}</button>`}</div>
       <div class="menu-btns prof-acts">
-        <button type="button" class="btn primary" id="pMenu">Ir al menú</button>
-        <button type="button" class="btn" id="pOut">Cerrar sesión</button>
-        <button type="button" class="ghost danger" id="pDel">Borrar este usuario</button>
+        <button type="button" class="btn primary" id="pMenu">${L('Ir al menú', 'Go to menu')}</button>
+        <button type="button" class="btn" id="pOut">${L('Cerrar sesión', 'Sign out')}</button>
+        <button type="button" class="ghost danger" id="pDel">${L('Borrar este usuario', 'Delete this user')}</button>
       </div>
       <div id="delBox"></div>${USERS_NOTE}</div>`,
-      [['#back', menuScreen], ['#pMenu', menuScreen], ['#cSync', async () => { const b = $('#cSync'); b.disabled = true; b.textContent = 'Sincronizando…'; await Users.sync(); profileScreen(); }],
+      [['#back', menuScreen], ['#pMenu', menuScreen], ['#cSync', async () => { const b = $('#cSync'); b.disabled = true; b.textContent = L('Sincronizando…', 'Syncing…'); await Users.sync(); profileScreen(); }],
        ['#cUp', () => profileScreen('upload')], ['#pOut', () => { Users.logout(); loadBest(); menuScreen(); }], ['#bkShow', () => { profileScreen('backup'); setTimeout(() => { const b = $('#bkBox'); if (b) b.scrollIntoView({ block: 'center' }); }, 30); }]]);
     const up = sc.querySelector('#upGo');
     if (up) up.addEventListener('click', async () => {
       const er = sc.querySelector('#upErr'), pw = sc.querySelector('#upPw').value, np = sc.querySelector('#upNew');
-      up.disabled = true; er.textContent = 'Conectando…';
+      up.disabled = true; er.textContent = L('Conectando…', 'Connecting…');
       if (np) { const e1 = await Users.setPassword(pw, np.value); if (e1) { er.textContent = e1; up.disabled = false; return; } }
       const e = await Users.upload(np ? np.value : pw);
       if (e === 'short') { profileScreen('upload-new'); return; }
@@ -3669,14 +3755,15 @@ if (typeof module !== 'undefined') {
     if (cp) cp.addEventListener('click', () => {
       const code = sc.querySelector('#bkCode'), m = sc.querySelector('#bkMsg');
       let p = null; try { p = navigator.clipboard && navigator.clipboard.writeText(code.value); } catch (e) {}
-      if (p && p.then) p.then(() => { m.textContent = 'Copiado. Pégalo en una nota o en un mensaje para ti.'; }, () => { code.select(); m.textContent = 'Selecciona el texto y cópialo a mano.'; });
-      else { code.select(); m.textContent = 'Selecciona el texto y cópialo a mano.'; }
+      const manual = L('Selecciona el texto y cópialo a mano.', 'Select the text and copy it manually.');
+      if (p && p.then) p.then(() => { m.textContent = L('Copiado. Pégalo en una nota o en un mensaje para ti.', 'Copied. Paste it in a note or a message to yourself.'); }, () => { code.select(); m.textContent = manual; });
+      else { code.select(); m.textContent = manual; }
     });
     sc.querySelector('#pDel').addEventListener('click', () => {
       const box = sc.querySelector('#delBox');
-      box.innerHTML = `<div class="del-box"><p class="lead">Se borrarán el usuario, sus logros, estadísticas y partidas, también de la nube. No se puede deshacer. Escribe tu contraseña para confirmar.</p>
-        <input id="dPw" class="field" type="password" autocomplete="current-password" aria-label="Contraseña"><p class="err" id="dErr" role="alert"></p>
-        <button type="button" class="btn danger" id="dGo">Borrar definitivamente</button></div>`;
+      box.innerHTML = `<div class="del-box"><p class="lead">${L('Se borrarán el usuario, sus logros, estadísticas y partidas, también de la nube. No se puede deshacer. Escribe tu contraseña para confirmar.', "The user, its achievements, stats and games will be deleted, from the cloud too. This can't be undone. Enter your password to confirm.")}</p>
+        <input id="dPw" class="field" type="password" autocomplete="current-password" aria-label="${L('Contraseña', 'Password')}"><p class="err" id="dErr" role="alert"></p>
+        <button type="button" class="btn danger" id="dGo">${L('Borrar definitivamente', 'Delete permanently')}</button></div>`;
       box.querySelector('#dGo').addEventListener('click', async () => {
         const e = await Users.remove(Users.cur, box.querySelector('#dPw').value);
         if (e) box.querySelector('#dErr').textContent = e; else { loadBest(); menuScreen(); }
@@ -3686,35 +3773,35 @@ if (typeof module !== 'undefined') {
   }
 
   const ADV_INFO = {
-    base: { img: 'img/core.jpg', alt: 'Portada de One Card Dungeon', tag: 'Original', txt: '12 niveles y tres demonios.' },
-    mguf: { img: 'img/mguf.jpg', alt: "Portada de One Card Dungeon: M'Guf-yn Returns", tag: 'Expansión', txt: '12 niveles, 4 jefes, cofres y 4 héroes.' },
-    peak: { img: 'img/peak.jpg', alt: 'Portada de One Card Dungeon: Eternal Peak', tag: 'Expansión', txt: '10 niveles, ventiscas, Sherpa y objetos.' },
-    harbour: { img: 'img/harbour.jpg', alt: 'Portada de One Card Dungeon: Harbour Clash', tag: 'Expansión', txt: '8 niveles, agua, Corsario y objetos.' },
-    hell: { img: 'img/hell.jpg', alt: "Portada de One Card Dungeon: Hell's Door", tag: 'Expansión', txt: '12 niveles, 4 jefes, casillas malditas, la Piedra de la Perdición y objetos.' }
+    base: { img: 'img/core.jpg', alt: L('Portada de One Card Dungeon', 'One Card Dungeon cover'), tag: 'Original', txt: L('12 niveles y tres demonios.', '12 levels and three demons.') },
+    mguf: { img: 'img/mguf.jpg', alt: L("Portada de One Card Dungeon: M'Guf-yn Returns", "One Card Dungeon: M'Guf-yn Returns cover"), tag: L('Expansión', 'Expansion'), txt: L('12 niveles, 4 jefes, cofres y 4 héroes.', '12 levels, 4 bosses, chests and 4 heroes.') },
+    peak: { img: 'img/peak.jpg', alt: L('Portada de One Card Dungeon: Eternal Peak', 'One Card Dungeon: Eternal Peak cover'), tag: L('Expansión', 'Expansion'), txt: L('10 niveles, ventiscas, Sherpa y objetos.', '10 levels, blizzards, Sherpa and items.') },
+    harbour: { img: 'img/harbour.jpg', alt: L('Portada de One Card Dungeon: Harbour Clash', 'One Card Dungeon: Harbour Clash cover'), tag: L('Expansión', 'Expansion'), txt: L('8 niveles, agua, Corsario y objetos.', '8 levels, water, Corsair and items.') },
+    hell: { img: 'img/hell.jpg', alt: L("Portada de One Card Dungeon: Hell's Door", "One Card Dungeon: Hell's Door cover"), tag: L('Expansión', 'Expansion'), txt: L('12 niveles, 4 jefes, casillas malditas, la Piedra de la Perdición y objetos.', '12 levels, 4 bosses, cursed tiles, the Stone of Doom and items.') }
   };
   const ADV_ORDER = ['base', 'mguf', 'peak', 'harbour', 'hell'];
 
   function lockedSheet(g) {
     const us = unlockState(g), U = UNLOCK[g];
-    const have = us.have.length ? us.have.map(h => HEROES[h].name).join(', ') : 'ninguno todavía';
+    const have = us.have.length ? us.have.map(h => HEROES[h].name).join(', ') : L('ninguno todavía', 'none yet');
     const miss = [];
-    if (us.have.length < 2) miss.push(`${2 - us.have.length} héroe${us.have.length === 1 ? '' : 's'} más`);
-    if (!us.fromPack) miss.push(`uno de ${GAMES[U.pack].name}`);
+    if (us.have.length < 2) miss.push(L(`${2 - us.have.length} héroe${us.have.length === 1 ? '' : 's'} más`, `${2 - us.have.length} more hero${us.have.length === 1 ? '' : 'es'}`));
+    if (!us.fromPack) miss.push(L(`uno de ${GAMES[U.pack].name}`, `one from ${GAMES[U.pack].name}`));
     openSheet(`<h3>${ICON_LOCK} ${GAMES[g].name}</h3>
       <p class="lead">${us.req}</p>
-      <p class="fine">Héroes que ya cuentan: <b>${have}</b>.${miss.length ? ` Te falta: ${miss.join(' y ')}.` : ''}${U.own ? ` Solo cuentan las victorias en las que todos tus objetos eran de ${GAMES[U.from].name}.` : ''}</p>
-      <button type="button" class="btn primary" id="lkOk">Entendido</button>`, [['#lkOk', closeSheet]], true);
+      <p class="fine">${L('Héroes que ya cuentan', 'Heroes that already count')}: <b>${have}</b>.${miss.length ? L(` Te falta: ${miss.join(' y ')}.`, ` Missing: ${miss.join(' and ')}.`) : ''}${U.own ? L(` Solo cuentan las victorias en las que todos tus objetos eran de ${GAMES[U.from].name}.`, ` Only wins where all your items were from ${GAMES[U.from].name} count.`) : ''}</p>
+      <button type="button" class="btn primary" id="lkOk">${L('Entendido', 'Got it')}</button>`, [['#lkOk', closeSheet]], true);
   }
 
   function adventureScreen() {
     const slots = loadSlots();
     const sc = showScreen(`<div class="splash wide">
-      <button type="button" class="ghost back" id="back">‹ Atrás</button>
-      <h2 class="screen-h">Elige la aventura</h2>
+      <button type="button" class="ghost back" id="back">‹ ${L('Atrás', 'Back')}</button>
+      <h2 class="screen-h">${L('Elige la aventura', 'Choose your adventure')}</h2>
       <div class="adv-list">${ADV_ORDER.map(k => `<button type="button" class="adv-card" data-game="${k}">
         <img src="${ADV_INFO[k].img}" alt="${ADV_INFO[k].alt}" width="440" height="614" loading="eager" decoding="async">
-        <span class="adv-tag">${ADV_INFO[k].tag}</span>${slots.some(s => s.game === k) ? '<span class="adv-tag run">En curso</span>' : ''}${unlockState(k).ok ? '' : `<span class="adv-lock">${ICON_LOCK}</span>`}<b>${GAMES[k].name}</b><p>${unlockState(k).ok ? ADV_INFO[k].txt : '<em class="req">Bloqueada. ' + unlockState(k).req + '</em>'}</p></button>`).join('')}</div>
-      <p class="fine">Portadas © Little Rocket Games. One Card Dungeon es de Barny Skinner.</p></div>`,
+        <span class="adv-tag">${ADV_INFO[k].tag}</span>${slots.some(s => s.game === k) ? `<span class="adv-tag run">${L('En curso', 'In progress')}</span>` : ''}${unlockState(k).ok ? '' : `<span class="adv-lock">${ICON_LOCK}</span>`}<b>${GAMES[k].name}</b><p>${unlockState(k).ok ? ADV_INFO[k].txt : '<em class="req">' + L('Bloqueada. ', 'Locked. ') + unlockState(k).req + '</em>'}</p></button>`).join('')}</div>
+      <p class="fine">${L('Portadas © Little Rocket Games. One Card Dungeon es de Barny Skinner.', 'Covers © Little Rocket Games. One Card Dungeon is by Barny Skinner.')}</p></div>`,
       [['#back', menuScreen]]);
     sc.querySelectorAll('[data-game]').forEach(b => { const us = unlockState(b.dataset.game); if (!us.ok) b.classList.add('locked'); });
     sc.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => {
@@ -3723,11 +3810,11 @@ if (typeof module !== 'undefined') {
       const x = slots.find(s => s.game === b.dataset.game);
       if (!x) return heroScreen(b.dataset.game, false);
       const lv = GAMES[x.game].levels[x.g.levelIdx];
-      openSheet(`<h3>${GAMES[x.game].name}: partida en curso</h3>
-        <p class="lead">Tienes una partida aquí con ${HEROES[x.g.hero].name}, ${stageLabel(lv).toLowerCase()}. Si empiezas otra, esa se pierde.</p>
-        <button type="button" class="btn primary" id="axRes">Retomar</button>
-        <button type="button" class="btn" id="axNew">Empezar de nuevo</button>
-        <button type="button" class="btn" id="axNo">Cancelar</button>`,
+      openSheet(`<h3>${GAMES[x.game].name}: ${L('partida en curso', 'game in progress')}</h3>
+        <p class="lead">${L(`Tienes una partida aquí con ${HEROES[x.g.hero].name}, ${stageLabel(lv).toLowerCase()}. Si empiezas otra, esa se pierde.`, `You have a game here with the ${HEROES[x.g.hero].name}, ${stageLabel(lv).toLowerCase()}. If you start another, that one is lost.`)}</p>
+        <button type="button" class="btn primary" id="axRes">${L('Retomar', 'Resume')}</button>
+        <button type="button" class="btn" id="axNew">${L('Empezar de nuevo', 'Start over')}</button>
+        <button type="button" class="btn" id="axNo">${L('Cancelar', 'Cancel')}</button>`,
         [['#axRes', () => { closeSheet(); resume(x.g); }], ['#axNew', () => { closeSheet(); heroScreen(x.game, false); }], ['#axNo', closeSheet]], true);
     }));
   }
@@ -3738,16 +3825,16 @@ if (typeof module !== 'undefined') {
     const card = k => heroOpen(k) ? `<button type="button" class="hero-card" data-hero="${k}">
         <span class="ico">${HERO_ICONS[k]}</span><span><b>${HEROES[k].name}</b><p>${HEROES[k].txt}</p></span></button>`
       : `<button type="button" class="hero-card locked" disabled>
-        <span class="ico">${ICON_LOCK}</span><span><b>${HEROES[k].name}</b><p>Se desbloquea con ${GAMES[HEROES[k].pack].name}.</p></span></button>`;
+        <span class="ico">${ICON_LOCK}</span><span><b>${HEROES[k].name}</b><p>${L('Se desbloquea con', 'Unlocks with')} ${GAMES[HEROES[k].pack].name}.</p></span></button>`;
     const section = pk => { const hs = heroesOf(pk.key); return hs.length ? `<h3 class="pack-h">${pk.name}</h3><div class="hero-list">${hs.map(card).join('')}</div>` : ''; };
     const mine = PACKS.filter(pk => own.includes(pk.key)), others = PACKS.filter(pk => !own.includes(pk.key));
     const sc = showScreen(`<div class="splash wide">
-      <button type="button" class="ghost back" id="back">‹ Atrás</button>
-      <h2 class="screen-h">Elige a tu héroe</h2>
-      <p class="lead">${GAMES[game].name}: héroes de la caja original${game === 'base' ? '' : ' y de esta expansión'}.</p>
+      <button type="button" class="ghost back" id="back">‹ ${L('Atrás', 'Back')}</button>
+      <h2 class="screen-h">${L('Elige a tu héroe', 'Choose your hero')}</h2>
+      <p class="lead">${GAMES[game].name}: ${L(`héroes de la caja original${game === 'base' ? '' : ' y de esta expansión'}`, `heroes from the original box${game === 'base' ? '' : ' and this expansion'}`)}.</p>
       ${mine.map(section).join('')}
       ${more ? others.map(section).join('') : ''}
-      <button type="button" class="btn ${more ? '' : 'primary'}" id="moreH">${more ? 'Ocultar héroes de otras expansiones' : 'Héroes de otras expansiones'}</button></div>`,
+      <button type="button" class="btn ${more ? '' : 'primary'}" id="moreH">${more ? L('Ocultar héroes de otras expansiones', 'Hide heroes from other expansions') : L('Héroes de otras expansiones', 'Heroes from other expansions')}</button></div>`,
       [['#back', adventureScreen], ['#moreH', () => heroScreen(game, !more)]]);
     sc.querySelectorAll('[data-hero]').forEach(b => b.addEventListener('click', () => itemsScreen(game, b.dataset.hero, null, more)));
     if (more) { const h = sc.querySelector('#moreH'); if (h) h.scrollIntoView({ block: 'start' }); }
@@ -3771,26 +3858,26 @@ if (typeof module !== 'undefined') {
         <span class="ico">${ITEM_ICONS[k]}</span><span><b>${ITEMS[k].name}</b><p>${ITEMS[k].txt}</p></span><i class="tick" aria-hidden="true"></i></button>`;
     const list = () => order.map(([pk, g]) => {
       const ks = pool.filter(k => ITEM_PACK[k] === pk); if (!ks.length) return '';
-      return `<h3 class="pack-h">${GAME_TITLE[g]}${g === game ? '<small>esta aventura</small>' : ''}</h3>` + ks.map(card).join('');
+      return `<h3 class="pack-h">${GAME_TITLE[g]}${g === game ? `<small>${L('esta aventura', 'this adventure')}</small>` : ''}</h3>` + ks.map(card).join('');
     }).join('');
     const sc = showScreen(`<div class="splash wide">
-      <button type="button" class="ghost back" id="back">‹ Atrás</button>
-      <h2 class="screen-h">${must ? 'Tus tres objetos' : 'Objetos (opcional)'}</h2>
-      <p class="lead">${must ? `Se han sorteado tres. Puedes quedártelos o elegir los que prefieras para ${HEROES[hero].name}.` : `Puedes jugar sin objetos o con tres, al azar o a tu elección.`} Cada objeto se usa una sola vez.</p>
+      <button type="button" class="ghost back" id="back">‹ ${L('Atrás', 'Back')}</button>
+      <h2 class="screen-h">${must ? L('Tus tres objetos', 'Your three items') : L('Objetos (opcional)', 'Items (optional)')}</h2>
+      <p class="lead">${must ? L(`Se han sorteado tres. Puedes quedártelos o elegir los que prefieras para ${HEROES[hero].name}.`, `Three have been drawn. Keep them or pick the ones you prefer for the ${HEROES[hero].name}.`) : L('Puedes jugar sin objetos o con tres, al azar o a tu elección.', 'You can play without items or with three, at random or of your choice.')} ${L('Cada objeto se usa una sola vez.', 'Each item can be used only once.')}</p>
       <div class="hero-list" id="itList">${list()}</div>
       <p class="err" id="itMsg" role="status"></p>
-      <div class="actions"><button type="button" class="btn mini" id="itRoll">Sortear tres</button>${must ? '' : '<button type="button" class="btn mini" id="itNone">Ninguno</button>'}</div>
-      <button type="button" class="btn primary" id="itGo">Empezar</button></div>`,
+      <div class="actions"><button type="button" class="btn mini" id="itRoll">${L('Sortear tres', 'Draw three')}</button>${must ? '' : `<button type="button" class="btn mini" id="itNone">${L('Ninguno', 'None')}</button>`}</div>
+      <button type="button" class="btn primary" id="itGo">${L('Empezar', 'Start')}</button></div>`,
       [['#back', () => heroScreen(game, !!more)],
        ['#itGo', () => { if (pick.length === 3 || (!must && !pick.length)) startGame(hero, game, pick); }]]);
     const go = sc.querySelector('#itGo'), msg = sc.querySelector('#itMsg');
-    const refresh = () => { go.disabled = !(pick.length === 3 || (!must && !pick.length)); go.textContent = !pick.length && !must ? 'Empezar sin objetos' : 'Empezar'; };
+    const refresh = () => { go.disabled = !(pick.length === 3 || (!must && !pick.length)); go.textContent = !pick.length && !must ? L('Empezar sin objetos', 'Start without items') : L('Empezar', 'Start'); };
     sc.querySelector('#itList').addEventListener('click', e => {
       const b = e.target.closest('[data-it]'); if (!b) return;
       const k = b.dataset.it;
       if (pick.includes(k)) pick = pick.filter(x => x !== k);
       else if (pick.length < 3) pick = pick.concat(k);
-      else { msg.textContent = 'Ya tienes tres: quita uno antes de elegir otro.'; return; }
+      else { msg.textContent = L('Ya tienes tres: quita uno antes de elegir otro.', 'You already have three: remove one before picking another.'); return; }
       msg.textContent = '';
       b.classList.toggle('chosen', pick.includes(k)); b.setAttribute('aria-pressed', pick.includes(k));
       refresh();
@@ -3803,16 +3890,16 @@ if (typeof module !== 'undefined') {
   }
 
   const START_MSG = {
-    base: 'Vence a todos los monstruos de cada nivel.',
-    mguf: "M'Guf-yn Returns: abre cofres para ganar puntos extra y derrota a los comandantes.",
-    peak: 'Montaña Eterna: las casillas de ventisca restan 1 a tu Atq y Def.',
-    harbour: 'Harbour Clash: los monstruos en agua se vuelven más fuertes.',
-    hell: 'La Puerta del Infierno: si pisas una casilla maldita, los monstruos se fortalecen. La Piedra de la Perdición se rompe a costa de tu Vida.'
+    base: L('Vence a todos los monstruos de cada nivel.', 'Defeat every monster on each level.'),
+    mguf: L("M'Guf-yn Returns: abre cofres para ganar puntos extra y derrota a los comandantes.", "M'Guf-yn Returns: open chests for extra points and defeat the commanders."),
+    peak: L('Montaña Eterna: las casillas de ventisca restan 1 a tu Atq y Def.', 'Eternal Peak: blizzard tiles take 1 off your Atk and Def.'),
+    harbour: L('Harbour Clash: los monstruos en agua se vuelven más fuertes.', 'Harbour Clash: monsters in water get stronger.'),
+    hell: L('La Puerta del Infierno: si pisas una casilla maldita, los monstruos se fortalecen. La Piedra de la Perdición se rompe a costa de tu Vida.', "Hell's Door: if you step on a cursed tile, the monsters get stronger. Breaking the Stone of Doom costs you Health.")
   };
   function startGame(hero, game, items) {
     G = E.newRun(hero, game, items); G.totalTurns = 0; G.runId = newRunId(); G.trackAbil = true; G.abilEver = false; G.startItems = (items || []).slice(); lastHp = START_HP; builtLevel = -1;
     hideScreen(); render();
-    say(`<b>${HEROES[hero].name}.</b> ${START_MSG[game]} Tira los dados para empezar.`);
+    say(`<b>${HEROES[hero].name}.</b> ${START_MSG[game]} ${L('Tira los dados para empezar.', 'Roll the dice to begin.')}`);
   }
 
   function resume(g) {
@@ -3822,7 +3909,7 @@ if (typeof module !== 'undefined') {
     lastHp = G.adv.hp; builtLevel = -1;
     hideScreen(); render();
     if (G.phase === 'clear') nextStep();
-    else say(G.levelIdx === 0 && G.turnNo === 1 && !G.turn.dice ? `Una carta, ${LEVELS.length} etapas. Tira los dados para empezar.` : `${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}.`);
+    else say(G.levelIdx === 0 && G.turnNo === 1 && !G.turn.dice ? L(`Una carta, ${LEVELS.length} etapas. Tira los dados para empezar.`, `One card, ${LEVELS.length} stages. Roll the dice to begin.`) : `${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}.`);
   }
 
   function goMenu() { if (busy) return; closeSheet(); menuScreen(); Users.sync(); }
@@ -3831,22 +3918,22 @@ if (typeof module !== 'undefined') {
     const t = G.totalTurns, stt = G.stats, rid = G.runId, tr = G.trackAbil, ae = G.abilEver, si = G.startItems;
     G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; G.runId = rid; G.trackAbil = tr; G.abilEver = ae; G.startItems = si; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
     closeSheet(); hideScreen(); render();
-    say(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`);
+    say(L(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`, `You retry ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Roll the dice.`));
   }
 
 
 
   function keepSheet() {
     const ks = ['spd', 'atk', 'def'].filter(k => G.prev && G.prev[k] != null);
-    const veil = openSheet(`<h3>Conservar un dado</h3>
-      <p class="lead">Habilidad del Paladín, una vez por nivel. Elige la habilidad cuyo dado del turno anterior quieres repetir; solo se tiran los otros dos.</p>
-      <div class="choices">${ks.map(k => `<button type="button" class="choice" data-k="${k}"><b>${LONG[k]}</b><span>dado <em>${G.prev[k]}</em></span></button>`).join('')}</div>
-      <button type="button" class="btn" id="no">Cancelar</button>`, [['#no', closeSheet]], true);
+    const veil = openSheet(`<h3>${L('Conservar un dado', 'Keep a die')}</h3>
+      <p class="lead">${L('Habilidad del Paladín, una vez por nivel. Elige la habilidad cuyo dado del turno anterior quieres repetir; solo se tiran los otros dos.', "Paladin's ability, once per level. Choose the skill whose die from last turn you want to keep; only the other two are rolled.")}</p>
+      <div class="choices">${ks.map(k => `<button type="button" class="choice" data-k="${k}"><b>${LONG[k]}</b><span>${L('dado', 'die')} <em>${G.prev[k]}</em></span></button>`).join('')}</div>
+      <button type="button" class="btn" id="no">${L('Cancelar', 'Cancel')}</button>`, [['#no', closeSheet]], true);
     veil.querySelectorAll('.choice').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.k;
       closeSheet();
       E.rollWithKeep(G, k);
-      animateRoll(`Conservas el dado de ${LONG[k]} (<b>${G.turn.dice[0]}</b>). Reparte los otros dos.`);
+      animateRoll(L(`Conservas el dado de ${LONG[k]} (<b>${G.turn.dice[0]}</b>). Reparte los otros dos.`, `You keep the ${LONG[k]} die (<b>${G.turn.dice[0]}</b>). Assign the other two.`));
     }));
   }
 
@@ -3867,9 +3954,9 @@ if (typeof module !== 'undefined') {
     busy = true;
     E.applyBreak(G, c);
     Sfx.play('lvl');
-    const msg = c === 'heal' ? 'Te curas hasta 6 de Vida.' : `${LONG[c]} sube a ${G.adv[c]}.`;
+    const msg = c === 'heal' ? L('Te curas hasta 6 de Vida.', 'You heal up to 6 Health.') : L(`${LONG[c]} sube a ${G.adv[c]}.`, `${LONG[c]} goes up to ${G.adv[c]}.`);
     noteBest();
-    await flipTo(() => { E.nextLevel(G); builtLevel = -1; busy = false; render(); say(`<b>${msg}</b> ${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}. Partida guardada.`); });
+    await flipTo(() => { E.nextLevel(G); builtLevel = -1; busy = false; render(); say(`<b>${msg}</b> ${stageLabel(LEVELS[G.levelIdx])}: ${LEVELS[G.levelIdx].title}. ${L('Partida guardada.', 'Game saved.')}`); });
   }
 
   async function animateRoll(msg) {
@@ -3883,52 +3970,52 @@ if (typeof module !== 'undefined') {
     say(msg);
   }
 
-  const rollMsg = base => (G.turn.boosted ? '<b>Clérigo:</b> ¡tres dados iguales! Cada uno sube 2. ' : '') + base;
+  const rollMsg = base => (G.turn.boosted ? L('<b>Clérigo:</b> ¡tres dados iguales! Cada uno sube 2. ', '<b>Cleric:</b> three matching dice! Each goes up by 2. ') : '') + base;
   async function doRoll() {
     if (rolling || G.phase !== 'energy' || G.turn.dice) return;
     E.rollTurn(G);
-    await animateRoll(rollMsg('Reparte los dados entre Mov, Atq y Def.'));
+    await animateRoll(rollMsg(L('Reparte los dados entre Mov, Atq y Def.', 'Assign the dice to Mov, Atk and Def.')));
   }
 
   function onAbility() {
     const ab = E.abilityInfo(G);
     if (!ab || rolling || busy) return;
     if (ab.id === 'keep') keepSheet();
-    else if (ab.id === 'reroll') { E.useReroll(G); animateRoll(rollMsg('Vuelves a tirar. Reparte los dados otra vez.')); }
+    else if (ab.id === 'reroll') { E.useReroll(G); animateRoll(rollMsg(L('Vuelves a tirar. Reparte los dados otra vez.', 'You reroll. Assign the dice again.'))); }
     else if (ab.id === 'sherpa') {
       E.toggleSherpa(G);
       render();
-      say(G.sherpaOn ? 'Habilidad del Sherpa: tu próximo traslado <b>ignora los muros</b>, pero no puedes terminar sobre uno. Toca el destino.' : 'Habilidad cancelada.');
+      say(G.sherpaOn ? L('Habilidad del Sherpa: tu próximo traslado <b>ignora los muros</b>, pero no puedes terminar sobre uno. Toca el destino.', "Sherpa's ability: your next move <b>ignores walls</b>, but you can't end on one. Tap the destination.") : L('Habilidad cancelada.', 'Ability cancelled.'));
     }
     else if (ab.id === 'knight') {
       E.toggleKnight(G);
       render();
-      say(G.turn.knight ? 'Habilidad del Caballero: reparte los tres dados y pon <b>dos en la misma habilidad</b>.' : 'Habilidad cancelada: un dado por habilidad.');
+      say(G.turn.knight ? L('Habilidad del Caballero: reparte los tres dados y pon <b>dos en la misma habilidad</b>.', "Knight's ability: assign the three dice and put <b>two on the same skill</b>.") : L('Habilidad cancelada: un dado por habilidad.', 'Ability cancelled: one die per skill.'));
     }
     else if (ab.id === 'rogue') {
       E.useRogue(G);
       render();
-      say('Habilidad del Pícaro: <b>+1</b> a cada dado (máximo 6).');
+      say(L('Habilidad del Pícaro: <b>+1</b> a cada dado (máximo 6).', "Rogue's ability: <b>+1</b> to each die (maximum 6)."));
     }
     else if (ab.id === 'corsair') {
       E.toggleCorsair(G);
       render();
-      say(G.corsairOn ? 'Habilidad del Corsario: toca <b>cualquier casilla libre</b> para abordarla sin gastar Movimiento.' : 'Habilidad cancelada.');
+      say(G.corsairOn ? L('Habilidad del Corsario: toca <b>cualquier casilla libre</b> para abordarla sin gastar Movimiento.', "Corsair's ability: tap <b>any empty tile</b> to board it without spending Move.") : L('Habilidad cancelada.', 'Ability cancelled.'));
     }
     else if (ab.id === 'necro') {
       mode = mode === 'necro' ? null : 'necro';
       render();
-      say(mode ? 'Nigromante: toca el monstruo que quieres dañar. Perderás 1 de Vida.' : 'Habilidad cancelada.');
+      say(mode ? L('Nigromante: toca el monstruo que quieres dañar. Perderás 1 de Vida.', "Necromancer: tap the monster you want to damage. You'll lose 1 Health.") : L('Habilidad cancelada.', 'Ability cancelled.'));
     }
     else if (ab.id === 'demon') {
       mode = mode ? null : 'demonPick';
       render();
-      say(mode ? 'Cazador de demonios: toca el monstruo que quieres mover.' : 'Habilidad cancelada.');
+      say(mode ? L('Cazador de demonios: toca el monstruo que quieres mover.', 'Demon Hunter: tap the monster you want to move.') : L('Habilidad cancelada.', 'Ability cancelled.'));
     }
     else if (ab.id === 'ranger') {
       E.toggleRanger(G);
       render();
-      say(G.turn.ranger ? 'Habilidad del Ranger: un dado irá a <b>Alc</b> en lugar de Mov.' : 'Habilidad cancelada: vuelve a repartir a Mov, Atq y Def.');
+      say(G.turn.ranger ? L('Habilidad del Ranger: un dado irá a <b>Alc</b> en lugar de Mov.', "Ranger's ability: one die goes to <b>Rng</b> instead of Mov.") : L('Habilidad cancelada: vuelve a repartir a Mov, Atq y Def.', 'Ability cancelled: assign to Mov, Atk and Def again.'));
     }
   }
 
@@ -3961,13 +4048,13 @@ if (typeof module !== 'undefined') {
     if (!E.assignComplete(G.turn)) return;
     E.confirmEnergy(G);
     render();
-    say(nothingLeft() ? 'No puedes hacer nada útil: termina el turno.' : 'Muévete o ataca. Cuando termines, Fin de turno.');
+    say(nothingLeft() ? L('No puedes hacer nada útil: termina el turno.', "There's nothing useful left to do: end your turn.") : L('Muévete o ataca. Cuando termines, Fin de turno.', "Move or attack. When you're done, End turn."));
   }
 
   const hitFx = m => { const el = tok.mons.get(m.id); if (el) { el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 500); } };
-  const whyMsg = (info, need, have, what) => info.why === 'range' ? `${what} está a distancia <b>${info.rd}</b> y tu Alcance es <b>${G.turn.rng || G.adv.rng}</b>. Acércate o mejora Alcance.`
-    : info.why === 'los' ? 'Sin línea de visión: un muro, el cofre u otro monstruo lo tapa.'
-    : `Te faltan puntos: cada golpe cuesta <b>${need}</b> de Atq y te quedan <b>${have}</b>.`;
+  const whyMsg = (info, need, have, what) => info.why === 'range' ? L(`${what} está a distancia <b>${info.rd}</b> y tu Alcance es <b>${G.turn.rng || G.adv.rng}</b>. Acércate o mejora Alcance.`, `${what} is at distance <b>${info.rd}</b> and your Range is <b>${G.turn.rng || G.adv.rng}</b>. Get closer or improve Range.`)
+    : info.why === 'los' ? L('Sin línea de visión: un muro, el cofre u otro monstruo lo tapa.', 'No line of sight: a wall, the chest or another monster blocks it.')
+    : L(`Te faltan puntos: cada golpe cuesta <b>${need}</b> de Atq y te quedan <b>${have}</b>.`, `Not enough points: each hit costs <b>${need}</b> Atk and you have <b>${have}</b> left.`);
 
   async function onTile(i) {
     if (G.phase !== 'move' || busy) return;
@@ -3975,10 +4062,10 @@ if (typeof module !== 'undefined') {
     const m = G.mons.find(o => idx(o.x, o.y) === i);
     // Corona de laurel: elegir al monstruo
     if (mode === 'laurelPick') {
-      if (!m) { say('Toca a un monstruo.'); return; }
+      if (!m) { say(L('Toca a un monstruo.', 'Tap a monster.')); return; }
       if (!E.useItem(G, 'laurel')) { mode = null; render(); return; }
       E.laurelStart(G, m); mode = null; render();
-      say(`<b>Corona de laurel.</b> El monstruo tiene <b>${G.laurel.spdLeft}</b> de Mov y <b>${G.laurel.atkLeft}</b> de Atq. Toca una casilla marcada para moverlo o a otro monstruo para atacarlo.`);
+      say(L(`<b>Corona de laurel.</b> El monstruo tiene <b>${G.laurel.spdLeft}</b> de Mov y <b>${G.laurel.atkLeft}</b> de Atq. Toca una casilla marcada para moverlo o a otro monstruo para atacarlo.`, `<b>Laurel Crown.</b> The monster has <b>${G.laurel.spdLeft}</b> Mov and <b>${G.laurel.atkLeft}</b> Atk. Tap a marked tile to move it or another monster to attack it.`));
       return;
     }
     // Corona de laurel: orden en curso
@@ -3987,9 +4074,9 @@ if (typeof module !== 'undefined') {
       if (m && m !== me) {
         const info = E.laurelAttackInfo(G, m);
         if (!info.ok) {
-          say(info.why === 'range' ? `Ese monstruo está a distancia <b>${info.rd}</b> y el que obedece alcanza <b>${E.mStat(G, me, 'rng')}</b>.`
-            : info.why === 'los' ? 'Sin línea de visión: algo lo tapa.'
-            : `Le faltan puntos: golpear cuesta <b>${E.mStat(G, m, 'def')}</b> de Atq y le quedan <b>${G.laurel.atkLeft}</b>.`);
+          say(info.why === 'range' ? L(`Ese monstruo está a distancia <b>${info.rd}</b> y el que obedece alcanza <b>${E.mStat(G, me, 'rng')}</b>.`, `That monster is at distance <b>${info.rd}</b> and the obedient one reaches <b>${E.mStat(G, me, 'rng')}</b>.`)
+            : info.why === 'los' ? L('Sin línea de visión: algo lo tapa.', 'No line of sight: something blocks it.')
+            : L(`Le faltan puntos: golpear cuesta <b>${E.mStat(G, m, 'def')}</b> de Atq y le quedan <b>${G.laurel.atkLeft}</b>.`, `Not enough points: a hit costs <b>${E.mStat(G, m, 'def')}</b> Atk and it has <b>${G.laurel.atkLeft}</b> left.`));
           return;
         }
         const dead = E.laurelAttack(G, m);
@@ -3997,26 +4084,26 @@ if (typeof module !== 'undefined') {
         floatText(m.x, m.y, dead ? '✕' : '−1', 'good');
         hitFx(m); render();
         if (E.levelCleared(G)) { E.laurelEnd(G); levelClear(); return; }
-        say(dead ? '<b>¡Abatido por su propio compañero!</b>' : `Golpe. Le quedan <b>${m.hp}</b> de Vida.`);
+        say(dead ? L('<b>¡Abatido por su propio compañero!</b>', '<b>Taken down by its own comrade!</b>') : L(`Golpe. Le quedan <b>${m.hp}</b> de Vida.`, `Hit. It has <b>${m.hp}</b> Health left.`));
         return;
       }
       if (m === me || lv.walls[i]) return;
       const path = E.laurelMove(G, i);
-      if (!path) { say('Esa casilla no vale: está fuera de su Movimiento o no hay camino.'); return; }
+      if (!path) { say(L('Esa casilla no vale: está fuera de su Movimiento o no hay camino.', "That tile won't do: it's out of its Move or there's no path.")); return; }
       busy = true;
       const el = tok.mons.get(me.id); if (el) el.dataset.anim = '1';
       render();
-      say('El monstruo obedece…');
+      say(L('El monstruo obedece…', 'The monster obeys…'));
       if (el) await glide(el, path, G.laurel ? Math.max(1, E.mStat(G, me, 'spd')) : 1);
       busy = false; render();
-      say(`Le quedan <b>${G.laurel.spdLeft}</b> de Mov y <b>${G.laurel.atkLeft}</b> de Atq.`);
+      say(L(`Le quedan <b>${G.laurel.spdLeft}</b> de Mov y <b>${G.laurel.atkLeft}</b> de Atq.`, `It has <b>${G.laurel.spdLeft}</b> Mov and <b>${G.laurel.atkLeft}</b> Atk left.`));
       return;
     }
     // Habilidad del Nigromante
     if (mode === 'necro') {
-      if (!m) { say('Toca a un monstruo.'); return; }
+      if (!m) { say(L('Toca a un monstruo.', 'Tap a monster.')); return; }
       const info = E.necroInfo(G, m);
-      if (!info.ok) { say(whyMsg(info, 0, 0, 'Ese monstruo')); return; }
+      if (!info.ok) { say(whyMsg(info, 0, 0, L('Ese monstruo', 'That monster'))); return; }
       mode = null;
       const dead = E.necroStrike(G, m);
       sfxStrike(dead); sfxHurt();
@@ -4024,45 +4111,45 @@ if (typeof module !== 'undefined') {
       hitFx(m);
       render();
       if (E.levelCleared(G)) { levelClear(); return; }
-      say(`<b>Sacrificio.</b> Pierdes 1 de Vida y ${dead ? 'el monstruo cae' : `le quedan <b>${m.hp}</b> de Vida`}.`);
+      say(L(`<b>Sacrificio.</b> Pierdes 1 de Vida y ${dead ? 'el monstruo cae' : `le quedan <b>${m.hp}</b> de Vida`}.`, `<b>Sacrifice.</b> You lose 1 Health and ${dead ? 'the monster falls' : `it has <b>${m.hp}</b> Health left`}.`));
       return;
     }
     // Habilidad del Cazador de demonios
     if (mode === 'demonPick') {
-      if (!m) { say('Toca a un monstruo.'); return; }
+      if (!m) { say(L('Toca a un monstruo.', 'Tap a monster.')); return; }
       mode = { demon: m }; render();
-      say('Ahora toca la casilla marcada a la que lo mueves (hasta 3 de Mov).');
+      say(L('Ahora toca la casilla marcada a la que lo mueves (hasta 3 de Mov).', 'Now tap the marked tile to move it to (up to 3 Mov).'));
       return;
     }
     if (mode && mode.demon) {
       const mm = mode.demon;
-      if (m && m !== mm) { mode = { demon: m }; render(); say('Elige a qué casilla mueves a ese otro monstruo.'); return; }
+      if (m && m !== mm) { mode = { demon: m }; render(); say(L('Elige a qué casilla mueves a ese otro monstruo.', 'Choose which tile to move that other monster to.')); return; }
       const path = E.demonMove(G, mm, i);
-      if (!path) { say('Esa casilla no vale: debe estar libre y a 3 de Mov como máximo del monstruo.'); return; }
+      if (!path) { say(L('Esa casilla no vale: debe estar libre y a 3 de Mov como máximo del monstruo.', "That tile won't do: it must be empty and at most 3 Mov from the monster.")); return; }
       mode = null; busy = true;
       const el = tok.mons.get(mm.id); if (el) el.dataset.anim = '1';
       render();
-      say('Mueves al monstruo…');
+      say(L('Mueves al monstruo…', 'You move the monster…'));
       if (el) await glide(el, path, 3);
       busy = false;
       render();
-      say('<b>Cazador de demonios.</b> El monstruo cambia de sitio.');
+      say(L('<b>Cazador de demonios.</b> El monstruo cambia de sitio.', '<b>Demon Hunter.</b> The monster changes place.'));
       return;
     }
     if (G.chest && !G.chest.open && i === G.chest.at) {
       const info = E.chestInfo(G);
-      if (!info.ok) { say(whyMsg(info, G.chest.val, E.atkAvail(G), 'El cofre')); return; }
+      if (!info.ok) { say(whyMsg(info, G.chest.val, E.atkAvail(G), L('El cofre', 'The chest'))); return; }
       const val = G.chest.val;
       E.openChest(G);
       stat('chests'); Sfx.play('chest');
       floatText(...XY(i), '+' + val, 'good');
       render();
-      say(`<b>Cofre abierto.</b> Ganas <b>${val}</b> punto${val > 1 ? 's' : ''} de botín para sumar a una habilidad en tus próximas fases de Energía.`);
+      say(L(`<b>Cofre abierto.</b> Ganas <b>${val}</b> punto${val > 1 ? 's' : ''} de botín para sumar a una habilidad en tus próximas fases de Energía.`, `<b>Chest opened.</b> You get <b>${val}</b> loot point${val > 1 ? 's' : ''} to add to a skill in your next Energy phases.`));
       return;
     }
     if (G.stone && !G.stone.broken && i === G.stone.at) {
       const info = E.stoneInfo(G);
-      if (!info.ok) { say(whyMsg(info, G.stone.val, E.atkAvail(G), 'La piedra')); return; }
+      if (!info.ok) { say(whyMsg(info, G.stone.val, E.atkAvail(G), L('La piedra', 'The stone'))); return; }
       const val = G.stone.val, dmgM = G.fist ? 2 : 1;
       const before = G.mons.map(o => [o.x, o.y]);
       const alive = E.breakStone(G);
@@ -4075,20 +4162,20 @@ if (typeof module !== 'undefined') {
       if (!alive) { G.phase = 'dead'; render(); deathSheet(); return; }
       render();
       if (E.levelCleared(G)) { levelClear(); return; }
-      say(`<b>La Piedra de la Perdición se rompe</b> (−${val} Atq). Todos los monstruos reciben ${dmgM} de daño y tú 1.${rev ? ' <b>Colgante de alma:</b> vuelves con 1 de Vida.' : ''}`);
+      say(L(`<b>La Piedra de la Perdición se rompe</b> (−${val} Atq). Todos los monstruos reciben ${dmgM} de daño y tú 1.${rev ? ' <b>Colgante de alma:</b> vuelves con 1 de Vida.' : ''}`, `<b>The Stone of Doom breaks</b> (−${val} Atk). All monsters take ${dmgM} damage and you take 1.${rev ? ' <b>Soul Pendant:</b> you come back with 1 Health.' : ''}`));
       return;
     }
     if (lv.walls[i]) return;
     if (m) {
       const info = E.attackInfo(G, m);
-      if (!info.ok) { say(whyMsg(info, E.mStat(G, m, 'def'), E.atkAvail(G), 'Ese monstruo')); return; }
+      if (!info.ok) { say(whyMsg(info, E.mStat(G, m, 'def'), E.atkAvail(G), L('Ese monstruo', 'That monster'))); return; }
       const dead = E.attackMon(G, m);
       sfxStrike(dead);
       floatText(m.x, m.y, dead ? '✕' : '−1', 'good');
       hitFx(m);
       render();
       if (E.levelCleared(G)) { levelClear(); return; }
-      say(dead ? `<b>${lv.mon.name} abatido.</b>` : `Golpe. Le quedan <b>${m.hp}</b> de Vida.`);
+      say(dead ? L(`<b>${lv.mon.name} abatido.</b>`, `<b>${lv.mon.name} down.</b>`) : L(`Golpe. Le quedan <b>${m.hp}</b> de Vida.`, `Hit. It has <b>${m.hp}</b> Health left.`));
       return;
     }
     if (i === idx(G.adv.x, G.adv.y)) return;
@@ -4102,36 +4189,36 @@ if (typeof module !== 'undefined') {
       busy = true;
       tok.adv.dataset.anim = '1';
       render();
-      say(boarding ? '¡Al abordaje!' : 'Te mueves…');
+      say(boarding ? L('¡Al abordaje!', 'Board!') : L('Te mueves…', 'You move…'));
       await glide(tok.adv, path, boarding ? 14 : G.turn.spd);
       busy = false;
       render();
       say(`${boarding ? 'Abordaje.' : 'Te mueves.'}${E.blizzPen(G) ? ' <b>Ventisca:</b> −1 a tu Atq y Def mientras estés aquí.' : ''}`);
-    } else if (R.dist[i] < Infinity) say(`Llegar ahí cuesta <b>${R.dist[i]}</b> de Mov y te quedan <b>${G.turn.spdLeft}</b>.`);
-    else say('No hay camino hasta esa casilla.');
+    } else if (R.dist[i] < Infinity) say(L(`Llegar ahí cuesta <b>${R.dist[i]}</b> de Mov y te quedan <b>${G.turn.spdLeft}</b>.`, `Getting there costs <b>${R.dist[i]}</b> Mov and you have <b>${G.turn.spdLeft}</b> left.`));
+    else say(L('No hay camino hasta esa casilla.', "There's no path to that tile."));
   }
 
   /* ---------- objetos ---------- */
   function itemSheet(id) {
     if (busy || rolling || !G || G.phase === 'monsters') return;
     const it = ITEMS[id], ok = E.itemUsable(G, id);
-    const why = id === 'herbs' ? 'Se te ofrecerá sola cuando un ataque te haga daño.'
-      : id === 'cloak' ? 'Úsala en la fase de Energía o de movimiento, en un nivel con ventiscas.'
-      : id === 'sands' ? 'Úsala en la fase de Energía o de movimiento, en un nivel con agua.'
-      : id === 'holy' ? 'Úsala en la fase de Energía o de movimiento, en un nivel con casillas malditas.'
-      : id === 'fist' ? 'Úsala en tu fase de movimiento, antes de romper la Piedra de la Perdición.'
-      : id === 'laurel' ? 'Solo en tu fase de movimiento y ataque, con monstruos en el mapa. Al terminar la orden acaba tu turno.'
-      : id === 'pendant' ? 'Se usa sola cuando tu Vida llegaría a 0.'
-      : id === 'mail' ? 'Se te ofrecerá sola cuando un ataque te haga daño.'
-      : id === 'gorgon' ? 'Úsala en la fase de Energía o de movimiento; ese turno los monstruos no se mueven.'
-      : id === 'flame' || id === 'eye' ? 'Solo en la fase de Energía, con los dados ya tirados.'
-      : id === 'hourglass' ? 'Solo en tu fase de movimiento y ataque, antes de que actúen los monstruos.'
-      : 'Solo en tu fase de movimiento y ataque, después de confirmar la Energía.';
+    const why = id === 'herbs' ? L('Se te ofrecerá sola cuando un ataque te haga daño.', "It'll be offered automatically when an attack would hurt you.")
+      : id === 'cloak' ? L('Úsala en la fase de Energía o de movimiento, en un nivel con ventiscas.', 'Use it in the Energy or movement phase, on a level with blizzards.')
+      : id === 'sands' ? L('Úsala en la fase de Energía o de movimiento, en un nivel con agua.', 'Use it in the Energy or movement phase, on a level with water.')
+      : id === 'holy' ? L('Úsala en la fase de Energía o de movimiento, en un nivel con casillas malditas.', 'Use it in the Energy or movement phase, on a level with cursed tiles.')
+      : id === 'fist' ? L('Úsala en tu fase de movimiento, antes de romper la Piedra de la Perdición.', 'Use it in your movement phase, before breaking the Stone of Doom.')
+      : id === 'laurel' ? L('Solo en tu fase de movimiento y ataque, con monstruos en el mapa. Al terminar la orden acaba tu turno.', 'Only in your move and attack phase, with monsters on the map. Your turn ends when the order ends.')
+      : id === 'pendant' ? L('Se usa sola cuando tu Vida llegaría a 0.', 'It triggers by itself when your Health would reach 0.')
+      : id === 'mail' ? L('Se te ofrecerá sola cuando un ataque te haga daño.', "It'll be offered automatically when an attack would hurt you.")
+      : id === 'gorgon' ? L('Úsala en la fase de Energía o de movimiento; ese turno los monstruos no se mueven.', "Use it in the Energy or movement phase; that turn monsters don't move.")
+      : id === 'flame' || id === 'eye' ? L('Solo en la fase de Energía, con los dados ya tirados.', 'Only in the Energy phase, with the dice already rolled.')
+      : id === 'hourglass' ? L('Solo en tu fase de movimiento y ataque, antes de que actúen los monstruos.', 'Only in your move and attack phase, before the monsters act.')
+      : L('Solo en tu fase de movimiento y ataque, después de confirmar la Energía.', 'Only in your move and attack phase, after confirming Energy.');
     openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS[id]}</span><h3>${it.name}</h3></div>
       <p class="lead">${it.txt}</p>
       ${ok ? '' : `<p class="fine">${why}</p>`}
-      <button type="button" class="btn primary" id="iUse" ${ok ? '' : 'disabled'}>Usar</button>
-      <button type="button" class="btn" id="iNo">Cerrar</button>`,
+      <button type="button" class="btn primary" id="iUse" ${ok ? '' : 'disabled'}>${L('Usar', 'Use')}</button>
+      <button type="button" class="btn" id="iNo">${L('Cerrar', 'Close')}</button>`,
       [['#iNo', closeSheet], ['#iUse', () => useItemUI(id)]], true);
   }
 
@@ -4142,36 +4229,36 @@ if (typeof module !== 'undefined') {
     if (id === 'laurel') {
       if (!E.itemUsable(G, 'laurel')) return;
       mode = 'laurelPick'; render();
-      say('<b>Corona de laurel.</b> Toca el monstruo al que das la orden. Se moverá y atacará a otros monstruos con sus propias cifras.');
+      say(L('<b>Corona de laurel.</b> Toca el monstruo al que das la orden. Se moverá y atacará a otros monstruos con sus propias cifras.', '<b>Laurel Crown.</b> Tap the monster you give the order to. It will move and attack other monsters with its own stats.'));
       return;
     }
     if (!E.useItem(G, id)) return;
     render();
     const t = G.turn;
-    if (id === 'cloak') say('<b>Capa de cuero.</b> Ignoras las ventiscas hasta el final del nivel.');
-    else if (id === 'axe') say(`<b>Cuerda y piolet.</b> Este turno: Atq <b>${t.atk}</b> (te quedan <b>${E.atkAvail(G)}</b>) y Alcance <b>${t.rng}</b>.`);
-    else if (id === 'wyrm') say(`<b>Extracto de Wyrm.</b> Mov +4: te quedan <b>${t.spdLeft}</b>.`);
-    else if (id === 'powder') say('<b>Pólvora negra.</b> Tu próximo golpe daña también a todos los demás monstruos.');
-    else if (id === 'sands') say('<b>Arenas ocultas.</b> Los monstruos ignoran el agua hasta el final del nivel.');
-    else if (id === 'gorgon') say('<b>Cabeza de Gorgona.</b> Este turno los monstruos no se moverán.');
-    else if (id === 'holy') say('<b>Agua bendita.</b> Los monstruos ignoran las casillas malditas hasta el final del nivel.');
-    else if (id === 'fist') say('<b>Puño de hierro.</b> Al romper la Piedra, los monstruos recibirán 2 de daño.');
-    else if (id === 'hourglass') say('<b>Reloj de arena.</b> Los monstruos no actúan: nueva fase de Energía. Tira los dados.');
+    if (id === 'cloak') say(L('<b>Capa de cuero.</b> Ignoras las ventiscas hasta el final del nivel.', '<b>Leather Cloak.</b> You ignore blizzards until the end of the level.'));
+    else if (id === 'axe') say(L(`<b>Cuerda y piolet.</b> Este turno: Atq <b>${t.atk}</b> (te quedan <b>${E.atkAvail(G)}</b>) y Alcance <b>${t.rng}</b>.`, `<b>Rope and Ice Axe.</b> This turn: Atk <b>${t.atk}</b> (<b>${E.atkAvail(G)}</b> left) and Range <b>${t.rng}</b>.`));
+    else if (id === 'wyrm') say(L(`<b>Extracto de Wyrm.</b> Mov +4: te quedan <b>${t.spdLeft}</b>.`, `<b>Wyrm Extract.</b> Mov +4: you have <b>${t.spdLeft}</b> left.`));
+    else if (id === 'powder') say(L('<b>Pólvora negra.</b> Tu próximo golpe daña también a todos los demás monstruos.', '<b>Black Powder.</b> Your next hit also damages every other monster.'));
+    else if (id === 'sands') say(L('<b>Arenas ocultas.</b> Los monstruos ignoran el agua hasta el final del nivel.', '<b>Hidden Sands.</b> Monsters ignore water until the end of the level.'));
+    else if (id === 'gorgon') say(L('<b>Cabeza de Gorgona.</b> Este turno los monstruos no se moverán.', "<b>Gorgon's Head.</b> The monsters won't move this turn."));
+    else if (id === 'holy') say(L('<b>Agua bendita.</b> Los monstruos ignoran las casillas malditas hasta el final del nivel.', '<b>Holy Water.</b> Monsters ignore cursed tiles until the end of the level.'));
+    else if (id === 'fist') say(L('<b>Puño de hierro.</b> Al romper la Piedra, los monstruos recibirán 2 de daño.', '<b>Iron Fist.</b> When you break the Stone, the monsters will take 2 damage.'));
+    else if (id === 'hourglass') say(L('<b>Reloj de arena.</b> Los monstruos no actúan: nueva fase de Energía. Tira los dados.', "<b>Hourglass.</b> The monsters don't act: new Energy phase. Roll the dice."));
   }
 
   function eyeSheet() {
     const t = G.turn;
-    openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.eye}</span><h3>Ojo de dragón</h3></div>
-      <p class="lead">Elige el dado que se convertirá en un D12. Se tira de nuevo y lo asignas como un dado normal.</p>
+    openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.eye}</span><h3>${ITEMS.eye.name}</h3></div>
+      <p class="lead">${L('Elige el dado que se convertirá en un D12. Se tira de nuevo y lo asignas como un dado normal.', "Choose the die that becomes a D12. It's rolled again and you assign it like a normal die.")}</p>
       <div class="dice-row pick">${[0, 1, 2].map(i => t.lock === i ? dieHTML(t.dice[i], 'locked', (t.d12 || [])[i])
         : dieHTML(t.dice[i], '', (t.d12 || [])[i]).replace('<span class="die', `<button type="button" data-e="${i}" class="die`).replace('</span>', '</button>')).join('')}</div>
-      <button type="button" class="btn" id="eNo">Cancelar</button>`, [['#eNo', closeSheet]], true);
+      <button type="button" class="btn" id="eNo">${L('Cancelar', 'Cancel')}</button>`, [['#eNo', closeSheet]], true);
     document.querySelectorAll('#veil [data-e]').forEach(b => b.addEventListener('click', () => {
       const i = +b.dataset.e;
       closeSheet();
       keepSet = new Set([0, 1, 2].filter(x => x !== i));
       if (!E.useEye(G, i)) { keepSet = new Set(); return; }
-      animateRoll(`<b>Ojo de dragón.</b> Sacas un <b>${G.turn.dice[i]}</b> con el D12. Reparte o revisa tu reparto.`);
+      animateRoll(L(`<b>Ojo de dragón.</b> Sacas un <b>${G.turn.dice[i]}</b> con el D12. Reparte o revisa tu reparto.`, `<b>Dragon's Eye.</b> You roll a <b>${G.turn.dice[i]}</b> on the D12. Assign or review your dice.`));
     }));
   }
 
@@ -4179,16 +4266,16 @@ if (typeof module !== 'undefined') {
   // Por defecto se gastan todos, así que lo habitual es un solo toque en la habilidad.
   function lootSheet(n0) {
     const t = G.turn, n = Math.max(1, Math.min(n0 || (t.loot && t.loot.n) || G.loot, G.loot));
-    const pl = x => `punto${x > 1 ? 's' : ''}`;
-    openSheet(`<div class="item-head"><span class="ico">${ICON_CHEST}</span><h3>Botín del cofre</h3></div>
-      <p class="lead">Tienes <b>${G.loot}</b> ${pl(G.loot)}. Toca la habilidad a la que quieres sumarlos${G.loot > 1 ? '. Este turno solo puedes usar una habilidad; los puntos que no gastes quedan para otro turno' : ''}.</p>
-      ${G.loot > 1 ? `<div class="stepper"><button type="button" class="btn mini" id="lMinus" ${n <= 1 ? 'disabled' : ''}>−</button><b>${n}</b><span class="stl">${pl(n)} a gastar</span><button type="button" class="btn mini" id="lPlus" ${n >= G.loot ? 'disabled' : ''}>+</button></div>` : ''}
-      <div class="choices">${['spd', 'atk', 'def', 'rng'].map(x => `<button type="button" class="choice ${t.loot && t.loot.k === x ? 'chosen' : ''}" data-lk="${x}"><b>${LONG[x]}</b><span>suma ${n}</span></button>`).join('')}</div>
-      ${t.loot && t.loot.k ? '<button type="button" class="btn" id="lClear">Quitar botín</button>' : '<button type="button" class="btn" id="lNo">Cancelar</button>'}`,
+    const pl = x => L(`punto${x > 1 ? 's' : ''}`, `point${x > 1 ? 's' : ''}`);
+    openSheet(`<div class="item-head"><span class="ico">${ICON_CHEST}</span><h3>${L('Botín del cofre', 'Chest loot')}</h3></div>
+      <p class="lead">${L(`Tienes <b>${G.loot}</b> ${pl(G.loot)}. Toca la habilidad a la que quieres sumarlos${G.loot > 1 ? '. Este turno solo puedes usar una habilidad; los puntos que no gastes quedan para otro turno' : ''}.`, `You have <b>${G.loot}</b> ${pl(G.loot)}. Tap the skill you want to add them to${G.loot > 1 ? ". This turn you can only use one skill; points you don't spend are kept for another turn" : ''}.`)}</p>
+      ${G.loot > 1 ? `<div class="stepper"><button type="button" class="btn mini" id="lMinus" ${n <= 1 ? 'disabled' : ''}>−</button><b>${n}</b><span class="stl">${pl(n)} ${L('a gastar', 'to spend')}</span><button type="button" class="btn mini" id="lPlus" ${n >= G.loot ? 'disabled' : ''}>+</button></div>` : ''}
+      <div class="choices">${['spd', 'atk', 'def', 'rng'].map(x => `<button type="button" class="choice ${t.loot && t.loot.k === x ? 'chosen' : ''}" data-lk="${x}"><b>${LONG[x]}</b><span>${L('suma', 'adds')} ${n}</span></button>`).join('')}</div>
+      ${t.loot && t.loot.k ? `<button type="button" class="btn" id="lClear">${L('Quitar botín', 'Remove loot')}</button>` : `<button type="button" class="btn" id="lNo">${L('Cancelar', 'Cancel')}</button>`}`,
       [['#lMinus', () => lootSheet(n - 1)], ['#lPlus', () => lootSheet(n + 1)], ['#lNo', closeSheet],
        ['#lClear', () => { E.setLoot(G, null, 0); closeSheet(); render(); }]], true);
     document.querySelectorAll('#veil [data-lk]').forEach(b => b.addEventListener('click', () => {
-      const k = b.dataset.lk; E.setLoot(G, k, n); closeSheet(); render(); say(`Botín: <b>+${n}</b> a ${LONG[k]}.`);
+      const k = b.dataset.lk; E.setLoot(G, k, n); closeSheet(); render(); say(L(`Botín: <b>+${n}</b> a ${LONG[k]}.`, `Loot: <b>+${n}</b> to ${LONG[k]}.`));
     }));
   }
 
@@ -4198,17 +4285,17 @@ if (typeof module !== 'undefined') {
       const die = i => t.lock === i
         ? dieHTML(t.dice[i], 'locked', (t.d12 || [])[i])
         : dieHTML(t.dice[i], picks.has(i) ? 'sel' : '', (t.d12 || [])[i]).replace('<span class="die', `<button type="button" data-p="${i}" class="die`).replace('</span>', '</button>');
-      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.flame}</span><h3>Llama del destino</h3></div>
-        <p class="lead">Toca los dados que quieres volver a tirar. Te quedas con la segunda tirada.</p>
+      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.flame}</span><h3>${ITEMS.flame.name}</h3></div>
+        <p class="lead">${L('Toca los dados que quieres volver a tirar. Te quedas con la segunda tirada.', 'Tap the dice you want to reroll. You keep the second roll.')}</p>
         <div class="dice-row pick">${[0, 1, 2].map(die).join('')}</div>
-        <button type="button" class="btn primary" id="fGo" ${picks.size ? '' : 'disabled'}>Volver a tirar${picks.size ? ' (' + picks.size + ')' : ''}</button>
-        <button type="button" class="btn" id="fNo">Cancelar</button>`,
+        <button type="button" class="btn primary" id="fGo" ${picks.size ? '' : 'disabled'}>${L('Volver a tirar', 'Reroll')}${picks.size ? ' (' + picks.size + ')' : ''}</button>
+        <button type="button" class="btn" id="fNo">${L('Cancelar', 'Cancel')}</button>`,
         [['#fNo', closeSheet], ['#fGo', () => {
           const list = [...picks];
           closeSheet();
           keepSet = new Set([0, 1, 2].filter(i => !list.includes(i)));
           if (!E.useFlame(G, list)) { keepSet = new Set(); return; }
-          animateRoll('<b>Llama del destino.</b> Dados nuevos: reparte o revisa tu reparto.');
+          animateRoll(L('<b>Llama del destino.</b> Dados nuevos: reparte o revisa tu reparto.', '<b>Flame of Fate.</b> New dice: assign or review your dice.'));
         }]], true);
       document.querySelectorAll('#veil [data-p]').forEach(b => b.addEventListener('click', () => {
         const i = +b.dataset.p;
@@ -4221,10 +4308,10 @@ if (typeof module !== 'undefined') {
 
   function askHerbs(dmg) {
     return new Promise(res => {
-      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.herbs}</span><h3>Hierbas curativas</h3></div>
-        <p class="lead">Te van a hacer <b>${dmg}</b> de daño. Con las hierbas solo recibirías <b>${Math.ceil(dmg / 2)}</b>. Se gastan al usarlas.</p>
-        <button type="button" class="btn primary" id="hUse">Usar hierbas (−${Math.ceil(dmg / 2)})</button>
-        <button type="button" class="btn" id="hNo">Recibir ${dmg}</button>`,
+      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.herbs}</span><h3>${ITEMS.herbs.name}</h3></div>
+        <p class="lead">${L(`Te van a hacer <b>${dmg}</b> de daño. Con las hierbas solo recibirías <b>${Math.ceil(dmg / 2)}</b>. Se gastan al usarlas.`, `You're about to take <b>${dmg}</b> damage. With the herbs you'd only take <b>${Math.ceil(dmg / 2)}</b>. They're used up.`)}</p>
+        <button type="button" class="btn primary" id="hUse">${L('Usar hierbas', 'Use herbs')} (−${Math.ceil(dmg / 2)})</button>
+        <button type="button" class="btn" id="hNo">${L('Recibir', 'Take')} ${dmg}</button>`,
         [['#hUse', () => { closeSheet(); res(true); }], ['#hNo', () => { closeSheet(); res(false); }]], false);
     });
   }
@@ -4232,10 +4319,10 @@ if (typeof module !== 'undefined') {
   function askMail(e) {
     return new Promise(res => {
       const w = Math.floor(e.total / (e.def + 3));
-      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.mail}</span><h3>Cota de malla</h3></div>
-        <p class="lead">Te van a hacer <b>${e.dmg}</b> de daño. Con la cota tu Defensa sube de <b>${e.def}</b> a <b>${e.def + 3}</b> y recibirías <b>${w}</b>. Se gasta al usarla.</p>
-        <button type="button" class="btn primary" id="mUse">Usar la cota (${w})</button>
-        <button type="button" class="btn" id="mNo">Recibir ${e.dmg}</button>`,
+      openSheet(`<div class="item-head"><span class="ico">${ITEM_ICONS.mail}</span><h3>${ITEMS.mail.name}</h3></div>
+        <p class="lead">${L(`Te van a hacer <b>${e.dmg}</b> de daño. Con la cota tu Defensa sube de <b>${e.def}</b> a <b>${e.def + 3}</b> y recibirías <b>${w}</b>. Se gasta al usarla.`, `You're about to take <b>${e.dmg}</b> damage. With the mail your Defence goes from <b>${e.def}</b> to <b>${e.def + 3}</b> and you'd take <b>${w}</b>. It's used up.`)}</p>
+        <button type="button" class="btn primary" id="mUse">${L('Usar la cota', 'Use the mail')} (${w})</button>
+        <button type="button" class="btn" id="mNo">${L('Recibir', 'Take')} ${e.dmg}</button>`,
         [['#mUse', () => { closeSheet(); res(true); }], ['#mNo', () => { closeSheet(); res(false); }]], false);
     });
   }
@@ -4245,7 +4332,7 @@ if (typeof module !== 'undefined') {
     G.phase = 'clear';
     noteBest();
     render();
-    say(`<b>${LEVELS[G.levelIdx].boss ? 'Jefe derrotado.' : 'Nivel superado.'}</b>`);
+    say(`<b>${LEVELS[G.levelIdx].boss ? L('Jefe derrotado.', 'Boss defeated.') : L('Nivel superado.', 'Level cleared.')}</b>`);
     await sleep(650);
     busy = false;
     nextStep();
@@ -4261,22 +4348,22 @@ if (typeof module !== 'undefined') {
   function bossSheet() {
     const nxt = LEVELS[G.levelIdx + 1], m = nxt.mon;
     openSheet(`<div class="item-head"><span class="ico boss">${ICONS[m.key]}</span><h3>${m.name}</h3></div>
-      <p class="lead">Antes de seguir, te espera ${G.game === 'hell' ? 'un jefe del Infierno' : "un comandante de M'Guf-yn"}. Este mapa es una prolongación del nivel: <b>no puedes mejorar ni curarte</b> antes del combate.${G.loot > 0 ? ` Conservas <b>${G.loot}</b> punto${G.loot > 1 ? 's' : ''} del cofre.` : ''}</p>
-      <div class="stats boss-stats"><div><b>${m.hp}</b><span>Vida</span></div><div><b>${m.spd}</b><span>Vel</span></div><div><b>${m.atk}</b><span>Atq</span></div><div><b>${m.def}</b><span>Def</span></div><div><b>${m.rng}</b><span>Alc</span></div></div>
-      <button type="button" class="btn primary" id="bGo">Enfrentarlo</button>`, [['#bGo', goBoss]], false);
+      <p class="lead">${L(`Antes de seguir, te espera ${G.game === 'hell' ? 'un jefe del Infierno' : "un comandante de M'Guf-yn"}. Este mapa es una prolongación del nivel: <b>no puedes mejorar ni curarte</b> antes del combate.${G.loot > 0 ? ` Conservas <b>${G.loot}</b> punto${G.loot > 1 ? 's' : ''} del cofre.` : ''}`, `Before going on, ${G.game === 'hell' ? 'a boss of Hell' : "a commander of M'Guf-yn"} awaits. This map is an extension of the level: <b>you can't upgrade or heal</b> before the fight.${G.loot > 0 ? ` You keep <b>${G.loot}</b> chest point${G.loot > 1 ? 's' : ''}.` : ''}`)}</p>
+      <div class="stats boss-stats"><div><b>${m.hp}</b><span>${L('Vida', 'Health')}</span></div><div><b>${m.spd}</b><span>${L('Vel', 'Spd')}</span></div><div><b>${m.atk}</b><span>${NAMES.atk}</span></div><div><b>${m.def}</b><span>Def</span></div><div><b>${m.rng}</b><span>${NAMES.rng}</span></div></div>
+      <button type="button" class="btn primary" id="bGo">${L('Enfrentarlo', 'Face it')}</button>`, [['#bGo', goBoss]], false);
   }
 
   async function goBoss() {
     closeSheet();
     busy = true;
-    await flipTo(() => { E.nextLevel(G); builtLevel = -1; busy = false; render(); say(`<b>${LEVELS[G.levelIdx].mon.name}.</b> Es un jefe: lo representa un dado de 12 caras.`); });
+    await flipTo(() => { E.nextLevel(G); builtLevel = -1; busy = false; render(); say(L(`<b>${LEVELS[G.levelIdx].mon.name}.</b> Es un jefe: lo representa un dado de 12 caras.`, `<b>${LEVELS[G.levelIdx].mon.name}.</b> It's a boss: it's shown with a 12-sided die.`)); });
   }
 
   function undo() {
     if (G.phase !== 'move' || busy || !G.undo.length) return;
     E.popUndo(G);
     render();
-    say('Acción deshecha.');
+    say(L('Acción deshecha.', 'Action undone.'));
   }
 
   async function endTurn() {
@@ -4285,7 +4372,7 @@ if (typeof module !== 'undefined') {
     G.phase = 'monsters';
     render();
     renderTiles();
-    say('Los monstruos se mueven…');
+    say(L('Los monstruos se mueven…', 'The monsters move…'));
     await sleep(250);
     const ev = E.playMonsters(G);
     for (const e of ev) {
@@ -4316,9 +4403,9 @@ if (typeof module !== 'undefined') {
             tok.adv.classList.add('blocked'); setTimeout(() => tok.adv.classList.remove('blocked'), 600);
           }
           renderHP();
-          say(`Atacan <b>${e.ids.length}</b>: Ataque total <b>${e.total}</b> ÷ Defensa <b>${e.def}</b> = <b>${e.dmg}</b> de daño.${e.dmg ? (dmg < e.dmg ? `${usedMail ? ' Con la cota' : ''}${usedHerbs ? (usedMail ? ' y las hierbas' : ' Con las hierbas') : ''} recibes <b>${dmg}</b>.` : '') : ' <b>¡Bloqueado!</b>'}`);
+          say(L(`Atacan <b>${e.ids.length}</b>: Ataque total <b>${e.total}</b> ÷ Defensa <b>${e.def}</b> = <b>${e.dmg}</b> de daño.${e.dmg ? (dmg < e.dmg ? `${usedMail ? ' Con la cota' : ''}${usedHerbs ? (usedMail ? ' y las hierbas' : ' Con las hierbas') : ''} recibes <b>${dmg}</b>.` : '') : ' <b>¡Bloqueado!</b>'}`, `<b>${e.ids.length}</b> attack: total Attack <b>${e.total}</b> ÷ Defence <b>${e.def}</b> = <b>${e.dmg}</b> damage.${e.dmg ? (dmg < e.dmg ? `${usedMail ? ' With the mail' : ''}${usedHerbs ? (usedMail ? ' and the herbs' : ' With the herbs') : ''} you take <b>${dmg}</b>.` : '') : ' <b>Blocked!</b>'}`));
           await sleep(650);
-        } else say('Ningún monstruo te alcanza este turno.');
+        } else say(L('Ningún monstruo te alcanza este turno.', 'No monster reaches you this turn.'));
       }
     }
     G.totalTurns++;
@@ -4326,8 +4413,8 @@ if (typeof module !== 'undefined') {
     busy = false;
     if (G.phase === 'dead') { render(); deathSheet(); return; }
     render();
-    if (G.revived) { G.revived = false; say('<b>Colgante de alma.</b> Caes, pero vuelves a la vida con 1 de Vida. Tira los dados.'); }
-    else if (!ev.some(e => e.t === 'attack' && e.ids.length)) say('Ningún monstruo te alcanza. Tira los dados.');
+    if (G.revived) { G.revived = false; say(L('<b>Colgante de alma.</b> Caes, pero vuelves a la vida con 1 de Vida. Tira los dados.', '<b>Soul Pendant.</b> You fall, but come back to life with 1 Health. Roll the dice.')); }
+    else if (!ev.some(e => e.t === 'attack' && e.ids.length)) say(L('Ningún monstruo te alcanza. Tira los dados.', 'No monster reaches you. Roll the dice.'));
   }
 
   /* ---------- arranque ---------- */
@@ -4340,7 +4427,7 @@ if (typeof module !== 'undefined') {
       if (b.id === 'btnRoll') doRoll(); else if (b.id === 'btnConfirm') doConfirm();
       else if (b.id === 'btnAbil') onAbility();
       else if (b.id === 'btnUndo') undo(); else if (b.id === 'btnEnd') endTurn();
-      else if (b.id === 'btnLaurelNo') { mode = null; render(); say('Orden cancelada: conservas la Corona.'); }
+      else if (b.id === 'btnLaurelNo') { mode = null; render(); say(L('Orden cancelada: conservas la Corona.', 'Order cancelled: you keep the Crown.')); }
       else if (b.id === 'btnLaurelEnd') { E.laurelEnd(G); render(); endTurn(); }
     });
     $('#items').addEventListener('click', e => { const b = e.target.closest('[data-item]'); if (b) itemSheet(b.dataset.item); });
@@ -4371,12 +4458,26 @@ if (typeof module !== 'undefined') {
       updShown = true;
       const bar = document.createElement('div');
       bar.className = 'updbar'; bar.setAttribute('role', 'status');
-      bar.innerHTML = '<span>Hay una versión nueva del juego.</span><button type="button" class="btn mini">Actualizar</button>';
+      bar.innerHTML = `<span>${L('Hay una versión nueva del juego.', "There's a new version of the game.")}</span><button type="button" class="btn mini">${L('Actualizar', 'Update')}</button>`;
       bar.querySelector('button').addEventListener('click', () => location.reload());
       document.body.appendChild(bar);
     }).catch(() => {});
   }
+  // textos fijos de la plantilla HTML
+  function localizeStatic() {
+    if (LANG !== 'en') return;
+    const set = (sel, attrs, text) => { const e = $(sel); if (!e) return; for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v); if (text != null) e.textContent = text; };
+    set('#btnSnd', { 'aria-label': 'Sound', title: 'Sound' });
+    set('#btnRules', { 'aria-label': 'Rules', title: 'Rules' });
+    set('#btnPass', { 'aria-label': 'Pause and menu', title: 'Pause' });
+    set('#heroBox', { 'aria-label': 'Your adventurer' });
+    set('.panel', { 'aria-label': 'Controls' });
+    set('[data-act="rules"]', null, 'Rules'); set('[data-act="pass"]', null, 'Pause'); set('[data-act="snd"]', null, 'Sound');
+    set('[data-act="classic"]', { title: 'Use the real card as the board, with coloured dice' }, 'Classic'); set('[data-act="menu"]', null, 'Menu');
+    set('#sysBox .fine', null, 'Unofficial version of One Card Dungeon, by Barny Skinner. Covers and playmat © Little Rocket Games.');
+  }
   function start(data) {
+    localizeStatic();
     migrateSaves();
     loadBest();
     checkUpdate();

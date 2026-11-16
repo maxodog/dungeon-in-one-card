@@ -1,6 +1,6 @@
 import asyncio, json, subprocess, sys
 from playwright.async_api import async_playwright
-def mk(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/engine.js');"+js+";console.log(JSON.stringify(st));"]).decode()
+def mk(js): return subprocess.check_output(['node','-e',"const E=require('/home/claude/dungeon-in-one-card/src/engine.js');"+js+";console.log(JSON.stringify(st));"]).decode()
 CASES={
  'hell_lord': mk("const st=E.newRun('paladin','hell',[]);for(let i=0;i<15;i++)E.nextLevel(st);E.rollTurn(st)"),
  'base_orc':  mk("const st=E.newRun('ranger','base',[]);for(let i=0;i<2;i++)E.nextLevel(st);E.rollTurn(st)"),
@@ -8,8 +8,8 @@ CASES={
 }
 async def shot(name, vw, vh, classic, tag):
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
-        ctx=await b.new_context(viewport={'width':vw,'height':vh})
+        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox', '--lang=es-CL'])
+        ctx=await b.new_context(locale='es-CL', viewport={'width':vw,'height':vh})
         await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s); localStorage.setItem('dioc-classic','%s')"%(json.dumps(CASES[name]),'1' if classic else '0'))
         pg=await ctx.new_page(); errs=[]; pg.on('pageerror',lambda e:errs.append(str(e)))
         await pg.goto('file:///home/claude/dungeon-in-one-card/index.html'); await pg.wait_for_timeout(300); await pg.click('#mContinue'); await pg.wait_for_timeout(900)

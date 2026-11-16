@@ -5,10 +5,10 @@ def st(game, items, hero='paladin'):
     return subprocess.check_output(['node','-e',js]).decode()
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--lang=es-CL'])
         for (w,h) in ((1920,1080),(1366,768)):
             for game,items,hero in (('base',[],'paladin'),('hell',['pendant','holy','mail'],'demonhunter')):
-                ctx = await b.new_context(viewport={'width':w,'height':h})
+                ctx = await b.new_context(locale='es-CL', viewport={'width':w,'height':h})
                 await ctx.add_init_script("localStorage.setItem('dioc-unlock-all','1')")
                 await ctx.add_init_script("localStorage.setItem('dioc-run-v3', %s)" % json.dumps(st(game,items,hero)))
                 page = await ctx.new_page(); errs=[]
@@ -21,7 +21,7 @@ async def main():
                 print(game,w,h,ov,errs)
                 await ctx.close()
         # menús
-        ctx = await b.new_context(viewport={'width':1920,'height':1080}); page = await ctx.new_page()
+        ctx = await b.new_context(locale='es-CL', viewport={'width':1920,'height':1080}); page = await ctx.new_page()
         await ctx.add_init_script("localStorage.setItem('dioc-unlock-all','1')")
         await page.goto('file:///home/claude/dungeon-in-one-card/index.html'); await page.wait_for_timeout(500)
         await page.screenshot(path='/tmp/dk_menu.png')
