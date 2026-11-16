@@ -1916,6 +1916,7 @@
     G = g; useGame(G.game || 'base');
     if (G.totalTurns == null) G.totalTurns = 0;
     if (G.phase === 'monsters') G.phase = 'move';
+    if (!G.mons.length && G.phase !== 'won' && G.phase !== 'dead') G.phase = 'clear';   // se guardó con el nivel ya vencido
     lastHp = G.adv.hp; builtLevel = -1;
     hideScreen(); render();
     if (G.phase === 'clear') nextStep();
