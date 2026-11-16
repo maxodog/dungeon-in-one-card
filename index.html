@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="75511c2279">
+<meta name="build" content="f4f924e515">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -226,7 +226,7 @@ button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 .choice b { font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
 .choice span { font-size: 15px; color: var(--muted); }
 .choice span em { font-style: normal; color: var(--torch); font-weight: 700; }
-.choice.wide { grid-column: 1 / -1; border-color: var(--torch); }
+.choice.wide { grid-column: 1 / -1; }
 .choice:disabled { opacity: .4; }
 
 @media (max-width: 360px) {
@@ -850,7 +850,8 @@ body.tight .dice-row.moving { display: none; }
 .lang-sw button:focus-visible { outline: 2px solid var(--torch); outline-offset: 2px; }
 #classicBtn[hidden] { display: none !important; }
 /* campaña en la pantalla de mejora */
-.camp-btn { display: block; width: 100%; margin-top: 14px; }
+.camp-btn { display: block; width: 100%; margin-top: 14px; border: 1.5px solid var(--torch); color: var(--torch); }
+.camp-btn:hover { border-color: var(--torch); color: var(--chalk); }
 .camp { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line, #3a3560); border-radius: 10px; background: rgba(255,255,255,.03); }
 .camp h4 { margin: 4px 0 8px; font-size: 14px; }
 .camp-r { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 13px; border-bottom: 1px dashed rgba(255,255,255,.08); }
