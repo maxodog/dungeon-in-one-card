@@ -599,14 +599,14 @@ function laurelEnd(st) { st.laurel = null; }
 function pushUndo(st) {
   st.undo.push(JSON.stringify({ x: st.adv.x, y: st.adv.y, hp: st.adv.hp, mons: st.mons,
                                 spdLeft: st.turn.spdLeft, atkLeft: st.turn.atkLeft, sherpaOn: !!st.sherpaOn, corsairOn: !!st.corsairOn,
-                                abil: !!st.abil, powder: !!st.powder, chestOpen: st.chest ? st.chest.open : null, loot: st.loot,
+                                abil: !!st.abil, abilEver: !!st.abilEver, powder: !!st.powder, chestOpen: st.chest ? st.chest.open : null, loot: st.loot,
                                 stoneBroken: st.stone ? st.stone.broken : null, fist: !!st.fist }));
 }
 function popUndo(st) {
   const s = JSON.parse(st.undo.pop());
   st.adv.x = s.x; st.adv.y = s.y; st.adv.hp = s.hp; st.mons = s.mons;
   st.turn.spdLeft = s.spdLeft; st.turn.atkLeft = s.atkLeft;
-  st.sherpaOn = s.sherpaOn; st.corsairOn = s.corsairOn; st.abil = s.abil; st.powder = s.powder;
+  st.sherpaOn = s.sherpaOn; st.corsairOn = s.corsairOn; st.abil = s.abil; if ('abilEver' in s) st.abilEver = s.abilEver; st.powder = s.powder;
   if (st.chest && s.chestOpen != null) st.chest.open = s.chestOpen;
   st.loot = s.loot;
   if (st.stone && s.stoneBroken != null) st.stone.broken = s.stoneBroken;

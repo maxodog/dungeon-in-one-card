@@ -726,7 +726,7 @@
       if (won) {
         gm.wins++; gm.best = N;
         gm.heroes = gm.heroes || []; if (!gm.heroes.includes(G.hero)) gm.heroes.push(G.hero);
-        gm.pure = gm.pure || []; if (pureRun(game, G.startItems) && !gm.pure.includes(G.hero)) gm.pure.push(G.hero);
+        gm.pure = gm.pure || []; if (pureRun(game, runItems()) && !gm.pure.includes(G.hero)) gm.pure.push(G.hero);
         if (gm.fastest == null || turns < gm.fastest) gm.fastest = turns;
         if (RANK_ORDER.indexOf(rank) > RANK_ORDER.indexOf(gm.bestRank)) gm.bestRank = rank;
         if (!r.heroes.includes(G.hero)) r.heroes.push(G.hero);
@@ -788,6 +788,7 @@
   const GUEST_KEY = 'dioc-guest-prog-v1';
   const unlockAll = () => { try { return localStorage.getItem('dioc-unlock-all') === '1'; } catch (e) { return false; } };   // para pruebas
   const guestProg = () => { try { return JSON.parse(localStorage.getItem(GUEST_KEY)) || {}; } catch (e) { return {}; } };
+  const runItems = () => G.startItems || (G.cp && G.cp.items) || G.items || [];
   const pureRun = (game, items) => !PACK_OF_GAME[game] || (!!items && items.every(i => ITEM_PACK[i] === PACK_OF_GAME[game]));
   // héroes con los que se completó una aventura (todos) y los que lo hicieron solo con objetos de esa aventura
   function progOf(g) {
@@ -823,7 +824,7 @@
     if (Users.cur || !G) return;
     const o = guestProg(), x = o[G.game] = Object.assign({ heroes: [], pure: [], played: true }, o[G.game]);
     x.played = true;
-    if (won) { if (!x.heroes.includes(G.hero)) x.heroes.push(G.hero); if (pureRun(G.game, G.startItems) && !x.pure.includes(G.hero)) x.pure.push(G.hero); }
+    if (won) { if (!x.heroes.includes(G.hero)) x.heroes.push(G.hero); if (pureRun(G.game, runItems()) && !x.pure.includes(G.hero)) x.pure.push(G.hero); }
     try { localStorage.setItem(GUEST_KEY, JSON.stringify(o)); } catch (e) {}
   }
 
