@@ -373,7 +373,7 @@
       try { localStorage.setItem(saveKey(G.game) + ':t', String(Date.now())); } catch (e) {}
       if (G.phase === 'won' || G.abandoned) { localStorage.removeItem(saveKey(G.game)); return; }
       let sv = G;
-      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.trackAbil = G.trackAbil; sv.abilEver = G.abilEver; sv.startItems = G.startItems; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
+      if (G.phase === 'dead') { sv = E.retryLevel(G); sv.totalTurns = G.totalTurns; sv.runId = G.runId; sv.trackAbil = G.trackAbil; sv.abilEver = G.abilEver; sv.startItems = G.startItems; sv.ups = G.ups; sv.stats = Object.assign({}, G.stats, { deaths: ((G.stats || {}).deaths || 0) + 1 }); }
       localStorage.setItem(saveKey(G.game), JSON.stringify(sv));
     } catch (e) {}
   }
@@ -1397,8 +1397,34 @@
       <p class="lead">${L('Elige <b>una</b> mejora.', 'Choose <b>one</b> upgrade.')}</p>
       <div class="choices">${ch}
         <button type="button" class="choice wide" data-c="heal" ${full ? 'disabled' : ''}><b>${L('Curarte', 'Heal')}</b><span>${L('Vida', 'Health')} <em>${a.hp}</em> → <em>${START_HP}</em></span></button>
-      </div>`, [], false);
+      </div>
+      <div class="camp" id="camp" hidden>${campaignHTML()}</div>
+      <button type="button" class="ghost camp-btn" id="campBtn" aria-expanded="false">${L('Ver la campaña hasta ahora', 'View the campaign so far')}</button>`, [], false);
     document.querySelectorAll('#veil .choice').forEach(b => b.addEventListener('click', () => chooseBreak(b.dataset.c)));
+    const cb = document.querySelector('#campBtn');
+    if (cb) cb.addEventListener('click', () => { const box = document.querySelector('#camp'), open = box.hidden; box.hidden = !open; cb.setAttribute('aria-expanded', String(open));
+      cb.textContent = open ? L('Ocultar la campaña', 'Hide the campaign') : L('Ver la campaña hasta ahora', 'View the campaign so far'); if (open) box.scrollIntoView({ block: 'nearest' }); });
+  }
+  // resumen de la campaña en curso: progreso, cifras, mejoras elegidas y combate
+  function campaignHTML() {
+    const s = G.stats || {}, a = G.adv, lv = LEVELS[G.levelIdx], N = LEVELS.length;
+    const row = (k, v) => `<div class="camp-r"><span>${k}</span><b>${v}</b></div>`;
+    const ups = (G.ups || []).map(u => `<li><span>${u.s}</span><b>${u.c === 'heal' ? L('Curarte', 'Heal') : '+1 ' + LONG[u.c]}</b></li>`).join('');
+    const items = (G.items || []).map(k => (ITEMS[k] || {}).name).filter(Boolean);
+    return `<h4>${GAMES[G.game].name} · ${HEROES[G.hero].name}</h4>
+      ${row(L('Superado', 'Cleared'), `${stageLabel(lv)} ${L('de', 'of')} ${N}`)}
+      ${row(L('Vida', 'Health'), `${a.hp} / ${START_HP}`)}
+      ${row(L('Habilidades', 'Skills'), ['spd', 'atk', 'def', 'rng'].map(k => `${NAMES[k]} ${a[k]}`).join(' · '))}
+      ${row(L('Turnos', 'Turns'), G.totalTurns || 0)}
+      ${row(L('Monstruos vencidos', 'Monsters defeated'), s.kills || 0)}
+      ${row(L('Golpes dados', 'Hits landed'), s.hits || 0)}
+      ${row(L('Daño recibido', 'Damage taken'), s.dmgIn || 0)}
+      ${row(L('Ataques bloqueados', 'Attacks blocked'), s.blocks || 0)}
+      ${G.game !== 'base' ? row(L('Cofres abiertos', 'Chests opened'), s.chests || 0) : ''}
+      ${row(L('Caídas', 'Falls'), s.deaths || 0)}
+      ${items.length ? row(L('Objetos sin usar', 'Unused items'), items.join(', ')) : ''}
+      <h4>${L('Mejoras elegidas', 'Upgrades chosen')}</h4>
+      ${ups ? `<ul class="camp-ups">${ups}</ul>` : `<p class="fine">${L('Esta es tu primera mejora.', 'This is your first upgrade.')}</p>`}`;
   }
 
   async function deathSheet() {
@@ -1899,8 +1925,8 @@
   function goMenu() { if (busy) return; closeSheet(); menuScreen(); Users.sync(); }
 
   function retry() {
-    const t = G.totalTurns, stt = G.stats, rid = G.runId, tr = G.trackAbil, ae = G.abilEver, si = G.startItems;
-    G = E.retryLevel(G); G.totalTurns = t; G.stats = stt; G.runId = rid; G.trackAbil = tr; G.abilEver = ae; G.startItems = si; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
+    const t = G.totalTurns, stt = G.stats, rid = G.runId, tr = G.trackAbil, ae = G.abilEver, si = G.startItems, ups = G.ups;
+    G = E.retryLevel(G); G.ups = ups; G.totalTurns = t; G.stats = stt; G.runId = rid; G.trackAbil = tr; G.abilEver = ae; G.startItems = si; stat('deaths'); lastHp = G.adv.hp; builtLevel = -1;
     closeSheet(); hideScreen(); render();
     say(L(`Reintentas ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Tira los dados.`, `You retry ${stageLabel(LEVELS[G.levelIdx]).toLowerCase()}: ${LEVELS[G.levelIdx].title}. Roll the dice.`));
   }
@@ -1937,6 +1963,7 @@
     closeSheet();
     busy = true;
     E.applyBreak(G, c);
+    G.ups = (G.ups || []).concat([{ s: stageLabel(LEVELS[G.levelIdx]), c, hp: G.adv.hp }]);
     Sfx.play('lvl');
     const msg = c === 'heal' ? L('Te curas hasta 6 de Vida.', 'You heal up to 6 Health.') : L(`${LONG[c]} sube a ${G.adv[c]}.`, `${LONG[c]} goes up to ${G.adv[c]}.`);
     noteBest();
