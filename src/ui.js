@@ -487,7 +487,7 @@
         try { return JSON.parse(j.fields.data.stringValue); } catch (e) { return null; }
       },
       async push(c, name, data) {
-        await call(DOC(c.uid), { method: 'PATCH', headers: { Authorization: 'Bearer ' + await token(c), 'Content-Type': 'application/json' },
+        await call(DOC(c.uid) + '?updateMask.fieldPaths=name&updateMask.fieldPaths=data&updateMask.fieldPaths=updated', { method: 'PATCH', headers: { Authorization: 'Bearer ' + await token(c), 'Content-Type': 'application/json' },
           body: JSON.stringify({ fields: { name: { stringValue: name }, data: { stringValue: JSON.stringify(data) }, updated: { integerValue: String(Date.now()) } } }) });
       },
       async remove(c) {

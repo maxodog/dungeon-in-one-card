@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060d1a">
-<meta name="build" content="db7792c7a3">
+<meta name="build" content="f0ec342981">
 <title>Dungeon in One Card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2508,7 +2508,7 @@ if (typeof module !== 'undefined') {
         try { return JSON.parse(j.fields.data.stringValue); } catch (e) { return null; }
       },
       async push(c, name, data) {
-        await call(DOC(c.uid), { method: 'PATCH', headers: { Authorization: 'Bearer ' + await token(c), 'Content-Type': 'application/json' },
+        await call(DOC(c.uid) + '?updateMask.fieldPaths=name&updateMask.fieldPaths=data&updateMask.fieldPaths=updated', { method: 'PATCH', headers: { Authorization: 'Bearer ' + await token(c), 'Content-Type': 'application/json' },
           body: JSON.stringify({ fields: { name: { stringValue: name }, data: { stringValue: JSON.stringify(data) }, updated: { integerValue: String(Date.now()) } } }) });
       },
       async remove(c) {
