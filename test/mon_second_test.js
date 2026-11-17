@@ -1,6 +1,6 @@
-// Segunda oportunidad: los monstruos sin disparo usan la velocidad que les sobra; nunca superan su velocidad total
-const E = require('../engine.js');
-let fired = 0, over = 0, worse = 0, tot = 0;
+// Secuencia estricta: en una fase cada monstruo se mueve como máximo una vez y nunca gasta más que su Velocidad.
+const E = require('../src/engine.js');
+let dobles = 0, over = 0, movs = 0, tot = 0;
 for (const game of ['base', 'harbour', 'hell', 'peak', 'mguf']) {
   const n = E.GAMES[game].levels.length;
   for (let li = 0; li < n; li++) for (let it = 0; it < 800; it++) {
@@ -18,11 +18,11 @@ for (const game of ['base', 'harbour', 'hell', 'peak', 'mguf']) {
       cost[e.id] = (cost[e.id] || 0) + c;
     }
     const moves = ev.filter(e => e.t === 'move').map(e => e.id);
-    if (new Set(moves).size < moves.length) fired++;
+    movs += moves.length;
+    if (new Set(moves).size < moves.length) dobles++;
     for (const id in cost) if (cost[id] > m0.spd) over++;
   }
 }
-console.log(`${tot} casos, segunda oportunidad usada en ${fired}, excesos de velocidad: ${over}`);
-if (over) { console.log('FALLO'); process.exit(1); }
-console.log(fired > 0 ? 'ok  segunda oportunidad respeta la velocidad' : 'FALLO: nunca se usó');
-if (!fired) process.exit(1);
+console.log(`${tot} casos, ${movs} movimientos, monstruos que se movieron dos veces: ${dobles}, excesos de velocidad: ${over}`);
+if (dobles || over) { console.log('FALLO'); process.exit(1); }
+console.log('ok  un movimiento por monstruo y por fase, sin pasarse de la Velocidad');

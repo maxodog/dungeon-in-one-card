@@ -1,4 +1,4 @@
-const E = require('/home/claude/dungeon-in-one-card/engine.js');
+const E = require('/home/claude/dungeon-in-one-card/src/engine.js');
 const st = E.newRun ? E.newRun('knight') : null;
 let ok = true; const chk = (c, m) => { if (!c) { ok = false; console.log('FALLA', m); } };
 st.adv.spd = 5;

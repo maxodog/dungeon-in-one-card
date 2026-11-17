@@ -823,7 +823,10 @@ function attackers(st) {
 
 // Muta el estado y devuelve los eventos para animarlos
 function playMonsters(st) {
-  const lv = lvOf(st), advI = idx(st.adv.x, st.adv.y), ev = [], spent = new Map();
+  const lv = lvOf(st), advI = idx(st.adv.x, st.adv.y), ev = [];
+  // Secuencia estricta y una sola vuelta: en orden de cercanía, cada monstruo decide solo para sí mismo con el
+  // tablero tal como está en ese momento (no predice los movimientos de los otros monstruos ni del aventurero) y
+  // no vuelve a moverse después. Si le da lo mismo, se queda quieto.
   const order = st.mons.slice().sort((a, b) =>
     rangeDist(lv, advI, idx(a.x, a.y)) - rangeDist(lv, advI, idx(b.x, b.y)) || a.id - b.id);
   if (!st.gorgon) for (const m of order) {     // Cabeza de Gorgona: este turno no se mueven
@@ -835,28 +838,8 @@ function playMonsters(st) {
       for (let c = to; c !== -1; c = D.prev[c]) path.push(c);
       path.reverse();
       const [x, y] = XY(to); m.x = x; m.y = y;
-      spent.set(m.id, D.dist[to]);
       ev.push({ t: 'move', id: m.id, from, to, path });
     }
-  }
-  // Segunda oportunidad: un monstruo que se quedó sin disparo (otro monstruo se interpuso después de que se colocara) usa
-  // la velocidad que le sobra para buscar una casilla desde la que sí pueda atacar. Solo se mueve si eso suma un atacante.
-  if (!st.gorgon) for (const m of order) {
-    if (!st.mons.includes(m) || attackers(st).includes(m)) continue;
-    const left = m.spd - (spent.get(m.id) || 0);
-    if (left < 2) continue;
-    const from = idx(m.x, m.y), before = attackers(st).length;
-    const saveSpd = m.spd; m.spd = left;
-    const to = chooseMove(lv, st, m);
-    m.spd = saveSpd;
-    if (to === from) continue;
-    const bl = new Array(N).fill(false); bl[advI] = true;
-    const D = dijkstra(lv, from, bl, bl), path = [];
-    for (let c = to; c !== -1; c = D.prev[c]) path.push(c);
-    path.reverse();
-    const [x, y] = XY(to); m.x = x; m.y = y;
-    if (attackers(st).length > before) { spent.set(m.id, (spent.get(m.id) || 0) + D.dist[to]); ev.push({ t: 'move', id: m.id, from, to, path }); }
-    else { const [fx, fy] = XY(from); m.x = fx; m.y = fy; }
   }
   const att = attackers(st);
   const total = att.reduce((s, m) => s + mStat(st, m, 'atk'), 0);
