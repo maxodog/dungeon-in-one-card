@@ -322,8 +322,20 @@ function setupLevel(st, i, keep) {
   st.levelIdx = i;
   const [x, y] = XY(lv.start);
   st.adv.x = x; st.adv.y = y;
+  // Red de seguridad: si una aparición cae sobre la casilla del cofre (que cuenta como muro), se corre a la más cercana libre
+  const blocka = lv.chestAt >= 0 && !lv.stairs.includes(lv.chestAt) ? lv.chestAt : -1;
+  const usadas = new Set();
   st.mons = lv.spawns.map((s, n) => {
-    const [mx, my] = XY(s);
+    let p = s;
+    if (p === blocka || usadas.has(p)) {
+      const libre = [];
+      for (let k = 0; k < N; k++) if (k !== blocka && k !== lv.start && !lv.walls[k] && !usadas.has(k) && !lv.spawns.includes(k)) libre.push(k);
+      const [sx, sy] = XY(s);
+      libre.sort((a, b) => (Math.abs(XY(a)[0] - sx) + Math.abs(XY(a)[1] - sy)) - (Math.abs(XY(b)[0] - sx) + Math.abs(XY(b)[1] - sy)));
+      if (libre.length) p = libre[0];
+    }
+    usadas.add(p);
+    const [mx, my] = XY(p);
     const m = lv.mon;
     return { id: n + 1, x: mx, y: my, hp: m.hp, maxHp: m.hp, spd: m.spd, atk: m.atk, def: m.def, rng: m.rng };
   });
@@ -473,10 +485,19 @@ function abilityInfo(st) {
 }
 
 /* ---------- Fase del aventurero ---------- */
+// Casilla del cofre cerrado: cuenta como muro (nadie la pisa ni la ocupa) hasta que se abre. Si el cofre está
+// sobre una escalera no bloquea: si no, no se podría salir del nivel sin abrirlo.
+function chestBlock(st) {
+  const lv = lvOf(st);
+  if (!st.chest || st.chest.open || lv.chestAt < 0 || lv.stairs.includes(lv.chestAt)) return -1;
+  return lv.chestAt;
+}
+
 function reachFromAdv(st) {
   const lv = lvOf(st), src = idx(st.adv.x, st.adv.y);
   const blocked = new Array(N).fill(false);
   for (const m of st.mons) blocked[idx(m.x, m.y)] = true;
+  const cb = chestBlock(st); if (cb >= 0) blocked[cb] = true;
   if (st.corsairOn) {
     const dist = new Array(N).fill(Infinity), prev = new Array(N).fill(-1);
     for (let i = 0; i < N; i++) if (i !== src && !lv.walls[i] && !blocked[i]) { dist[i] = 1; prev[i] = src; }
@@ -485,7 +506,7 @@ function reachFromAdv(st) {
   if (st.sherpaOn) {
     // Sherpa: los muros cuentan como casillas normales al moverse, pero no se puede terminar en uno
     const R = dijkstra({ walls: lv.voids }, src, blocked, blocked);
-    for (let i = 0; i < N; i++) if (lv.walls[i]) R.dist[i] = Infinity;
+    for (let i = 0; i < N; i++) if (lv.walls[i] || i === cb) R.dist[i] = Infinity;
     return R;
   }
   // Una diagonal queda cerrada si las dos casillas contiguas están ocupadas (muros o monstruos): no se cuela entre ellos
@@ -565,6 +586,7 @@ function laurelReach(st) {
   const m = laurelMon(st), lv = lvOf(st), advI = idx(st.adv.x, st.adv.y), me = idx(m.x, m.y);
   const bl = new Array(N).fill(false); bl[advI] = true;
   for (const o of st.mons) if (o !== m) bl[idx(o.x, o.y)] = true;
+  const cb = chestBlock(st); if (cb >= 0) bl[cb] = true;
   return dijkstra(lv, me, bl, bl);
 }
 function laurelMove(st, i) {
@@ -642,8 +664,9 @@ function demonReach(st, m) {
   const lv = lvOf(st), advI = idx(st.adv.x, st.adv.y), me = idx(m.x, m.y);
   const others = st.mons.filter(o => o !== m).map(o => idx(o.x, o.y));
   const bl = new Array(N).fill(false); bl[advI] = true;
+  const cb = chestBlock(st); if (cb >= 0) bl[cb] = true;
   const D = dijkstra(lv, me, bl, bl), ok = new Array(N).fill(false);
-  for (let i = 0; i < N; i++) if (i !== me && !lv.walls[i] && i !== advI && !others.includes(i) && D.dist[i] <= 3) ok[i] = true;
+  for (let i = 0; i < N; i++) if (i !== me && !lv.walls[i] && i !== cb && i !== advI && !others.includes(i) && D.dist[i] <= 3) ok[i] = true;
   return { ok, dist: D.dist, prev: D.prev };
 }
 function demonMove(st, m, i) {
@@ -743,10 +766,11 @@ function chooseMove(lv, st, m) {
   const others = st.mons.filter(o => o !== m).map(o => idx(o.x, o.y));
   const blocked = new Array(N).fill(false);
   blocked[advI] = true;
+  const cb = chestBlock(st); if (cb >= 0) blocked[cb] = true;   // el cofre cerrado es un muro más
   const D = dijkstra(lv, me, blocked, blocked);
   const spd = Math.max(0, m.spd);
   // casilla donde puede terminar: libre (sin muro, aventurero ni otro monstruo) y con camino; la propia también vale
-  const stand = i => i === me || (!lv.walls[i] && i !== advI && !others.includes(i) && D.dist[i] < Infinity);
+  const stand = i => i === me || (!lv.walls[i] && i !== cb && i !== advI && !others.includes(i) && D.dist[i] < Infinity);
   const R = i => m.rng + (monBonus(st, m, i).rng || 0);   // el Alcance depende de la casilla (agua)
   const canHit = i => rangeDist(lv, i, advI) <= R(i) && hasLOS(lv, i, advI, others);
 
@@ -1080,6 +1104,6 @@ if (typeof module !== 'undefined') {
     necroInfo, necroStrike, demonReach, demonMove, chestInfo, openChest, stoneInfo, breakStone, reviveIfDead, resolveAttack,
     laurelStart, laurelMon, laurelReach, laurelMove, laurelAttackInfo, laurelAttack, laurelEnd, ORIENTS_HELL, LEVEL_DEFS_HELL, BOSS_DEFS_HELL,
     itemUsable, useItem, useFlame, useEye, resolveDamage, blizzPen, atkAvail, heroDef,
-    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, PW7_GAMES, PW8_GAME, pw7Total, reachFromAdv, attackInfo, moveAdv, attackMon, popUndo, _dbg,
+    encodePassword, decodePassword, retryLevel, PW_TOTAL, PW5_TOTAL, PW7_GAMES, PW8_GAME, pw7Total, reachFromAdv, chestBlock, attackInfo, moveAdv, attackMon, popUndo, _dbg,
     playMonsters, endTurnCleanup, levelCleared, afterClear, applyBreak, SKILL_MAX, nextLevel, attackers, freshTurn, chooseMove };
 }
